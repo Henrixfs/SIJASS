@@ -6,6 +6,7 @@ Universidad Nacional de San Cristóbal de Huamanga — Escuela Profesional de In
 **Autor:** Flores Saras, Henry Josue (27220123)
 
 **Docente:** Ing. Lizbeth Jaico Quispe
+
 Ayacucho, Perú — 2026
 
 ---
