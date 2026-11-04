@@ -16,7 +16,7 @@ Toda la documentación clasifica cada artefacto o capacidad con uno de los sigui
 | **Pendiente de validación** | Decisión o meta que requiere evidencia externa (pruebas de campo, usuarios, especialista, norma vigente) | Acta, informe de prueba o confirmación institucional |
 | **Futuro** | Fuera del MVP; solo se planifica | Ninguna; requiere nueva decisión de alcance |
 
-**Situación al 2026-11-04:** solo existe un **prototipo** TypeScript de dominio en [`tecnologia/siJASS-clean-architecture/`](../tecnologia/siJASS-clean-architecture/README.md), que instala con `npm ci`, pasa lint, compila y pasa sus 5 pruebas en CI (Node.js 20 y 22) en el PR #3, aún sin fusionar; sigue sin ser un componente del MVP porque conserva el modelo heredado (DT03–DT06). La PWA, la API NestJS, PostgreSQL, la sincronización y el asistente RAG son **diseño propuesto**.
+**Situación al 2026-11-04:** solo existe un **prototipo** TypeScript de dominio en [`tecnologia/siJASS-clean-architecture/`](../tecnologia/siJASS-clean-architecture/README.md), que instala con `npm ci`, pasa lint, compila y pasa sus 5 pruebas en CI (Node.js 20 y 22) en el PR #3, fusionado a `main` (merge `c1c3c0a`, [CI en `main`](https://github.com/Henrixfs/SIJASS/actions/runs/41888275471)); sigue sin ser un componente del MVP porque conserva el modelo heredado (DT03–DT06). La PWA, la API NestJS, PostgreSQL, la sincronización y el asistente RAG son **diseño propuesto**.
 
 ## 2. Problema
 
@@ -65,7 +65,7 @@ Las etapas se definen por **criterios de salida verificables**, no por fechas co
 
 | Etapa | Entregable | Criterio de salida | Estado |
 |---|---|---|---|
-| 0 — Saneamiento | Prototipo compilable, `package-lock.json`, CI con lint, build y pruebas, documentación alineada | `npm ci`, build y pruebas pasan en CI; enlaces e identificadores documentales verificados | Criterios de salida cumplidos en el [PR #3](https://github.com/Henrixfs/SIJASS/pull/3) con [CI en verde](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941); pendiente de fusión a `main` (DT01, DT02 y DT07 resueltas; DT03–DT06 pasan a la Etapa 1) |
+| 0 — Saneamiento | Prototipo compilable, `package-lock.json`, CI con lint, build y pruebas, documentación alineada | `npm ci`, build y pruebas pasan en CI; enlaces e identificadores documentales verificados | Criterios de salida cumplidos en el [PR #3](https://github.com/Henrixfs/SIJASS/pull/3) con [CI en verde](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941); fusionados a `main` en el PR #3 (merge `c1c3c0a`, [CI en `main`](https://github.com/Henrixfs/SIJASS/actions/runs/41888275471)) (DT01, DT02 y DT07 resueltas; DT03–DT06 pasan a la Etapa 1) |
 | 1 — Dominio y persistencia | Modelo `Medicion` manual, `Pago`, `Membresia`, migraciones PostgreSQL, auditoría | Invariantes y transacciones probadas contra PostgreSQL | Diseño propuesto |
 | 2 — Flujos esenciales en línea | API NestJS con OpenAPI, frontend React con autenticación, RBAC, padrón, pagos e historial | Pruebas de contrato, E2E y denegación entre JASS (PT06, PT13, PT14) | Diseño propuesto |
 | 3 — Operación offline | PWA instalable, cola Dexie de mediciones, `POST /sync` idempotente | Cero duplicados en reintentos; cero pérdidas observadas en el protocolo PT05; conflictos visibles | Diseño propuesto |

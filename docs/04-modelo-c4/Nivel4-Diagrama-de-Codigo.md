@@ -123,7 +123,7 @@ classDiagram
 ## 3. Migración del prototipo al diseño objetivo
 
 1. Validar el contrato objetivo con operadores y la JASS piloto.
-2. ~~Corregir la deuda de compilación (DT01, DT02) e incorporar CI.~~ Hecho en el cambio `s0-saneamiento-prototipo` (PR #3, pendiente de fusión).
+2. ~~Corregir la deuda de compilación (DT01, DT02) e incorporar CI.~~ Hecho en el cambio `s0-saneamiento-prototipo` (PR #3, fusionado a `main`).
 3. Escribir primero las pruebas de validación, autorización y corrección (PT01, PT02, PT09, PT10).
 4. Sustituir los campos heredados mediante un cambio explícito y documentado, sin renombrados silenciosos.
 5. Implementar los repositorios PostgreSQL, la unidad de trabajo y la idempotencia transaccional (PT04, PT11, PT12).
