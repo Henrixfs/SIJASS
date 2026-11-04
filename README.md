@@ -169,7 +169,7 @@ flowchart TB
 |---|---|
 | Requisitos, decisiones y diagramas | Diseño propuesto; pendiente de validación con usuarios reales |
 | Entidad `Medicion`, caso de uso y repositorios en memoria | Prototipo con el modelo de datos anterior |
-| Pruebas del prototipo | 5 pruebas unitarias; la compilación falla en instalación limpia por falta de `@types/node` (verificado el 2026-10-28) |
+| Pruebas del prototipo | 5 pruebas unitarias sobre el modelo heredado; `npm ci`, lint, build y pruebas pasan en CI con Node.js 20 y 22 ([ejecución del PR #3](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941), fusionado a `main` en el PR #3, con [CI en verde sobre `main`](https://github.com/Henrixfs/SIJASS/actions/runs/41888275471)). Antes del cambio `s0-saneamiento-prototipo` la compilación fallaba por falta de `@types/node` (DT01) |
 | PWA, API NestJS, PostgreSQL, sincronización y asistente RAG | No implementados |
 
 La documentación se actualizó antes que el código: el prototipo **no satisface aún** los requisitos del MVP. Ver la [deuda técnica](docs/00-alcance-y-roadmap.md#6-deuda-técnica-conocida) y el [plan de pruebas](docs/05-trazabilidad-y-validacion/plan-pruebas.md).
