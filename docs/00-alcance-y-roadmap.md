@@ -1,4 +1,4 @@
-# 00. Alcance, hoja de ruta y estado del proyecto — SIJASS
+# 00. Alcance, hoja de ruta y estado del proyecto — | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) | Abierta (Etapa 1) | Abierta (Etapa 1) | Abierta (Etapa 1) | Abierta (Etapa 1) | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) | Abierta (Etapa 1) | Abierta (Etapa 1) | Abierta (Etapa 1) | Abierta (Etapa 1) | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) ||||||||||||||SIJASS
 
 **Versión del documento:** 2026-10-28 · **Estado global:** diseño propuesto con un prototipo de dominio; ningún componente del MVP está desplegado.
 
@@ -16,7 +16,7 @@ Toda la documentación clasifica cada artefacto o capacidad con uno de los sigui
 | **Pendiente de validación** | Decisión o meta que requiere evidencia externa (pruebas de campo, usuarios, especialista, norma vigente) | Acta, informe de prueba o confirmación institucional |
 | **Futuro** | Fuera del MVP; solo se planifica | Ninguna; requiere nueva decisión de alcance |
 
-**Situación al 2026-10-28:** solo existe un **prototipo** TypeScript de dominio en [`tecnologia/siJASS-clean-architecture/`](../tecnologia/siJASS-clean-architecture/README.md). La PWA, la API NestJS, PostgreSQL, la sincronización y el asistente RAG son **diseño propuesto**.
+**Situación al 2026-11-04:** solo existe un **prototipo** TypeScript de dominio en [`tecnologia/siJASS-clean-architecture/`](../tecnologia/siJASS-clean-architecture/README.md), que instala con `npm ci`, pasa lint, compila y pasa sus 5 pruebas en CI (Node.js 20 y 22) en el PR #3, aún sin fusionar; sigue sin ser un componente del MVP porque conserva el modelo heredado (DT03–DT06). La PWA, la API NestJS, PostgreSQL, la sincronización y el asistente RAG son **diseño propuesto**.
 
 ## 2. Problema
 
@@ -65,7 +65,7 @@ Las etapas se definen por **criterios de salida verificables**, no por fechas co
 
 | Etapa | Entregable | Criterio de salida | Estado |
 |---|---|---|---|
-| 0 — Saneamiento | Prototipo compilable, `package-lock.json`, CI con build y pruebas, documentación alineada | `npm ci`, build y pruebas pasan en CI; enlaces e identificadores documentales verificados | En curso (documentación actualizada; deuda de código abierta) |
+| 0 — Saneamiento | Prototipo compilable, `package-lock.json`, CI con lint, build y pruebas, documentación alineada | `npm ci`, build y pruebas pasan en CI; enlaces e identificadores documentales verificados | Criterios de salida cumplidos en el [PR #3](https://github.com/Henrixfs/SIJASS/pull/3) con [CI en verde](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941); pendiente de fusión a `main` (DT01, DT02 y DT07 resueltas; DT03–DT06 pasan a la Etapa 1) |
 | 1 — Dominio y persistencia | Modelo `Medicion` manual, `Pago`, `Membresia`, migraciones PostgreSQL, auditoría | Invariantes y transacciones probadas contra PostgreSQL | Diseño propuesto |
 | 2 — Flujos esenciales en línea | API NestJS con OpenAPI, frontend React con autenticación, RBAC, padrón, pagos e historial | Pruebas de contrato, E2E y denegación entre JASS (PT06, PT13, PT14) | Diseño propuesto |
 | 3 — Operación offline | PWA instalable, cola Dexie de mediciones, `POST /sync` idempotente | Cero duplicados en reintentos; cero pérdidas observadas en el protocolo PT05; conflictos visibles | Diseño propuesto |
@@ -77,17 +77,17 @@ Las etapas se definen por **criterios de salida verificables**, no por fechas co
 
 ## 6. Deuda técnica conocida
 
-Identificada durante la auditoría del 2026-10-28. Se documenta aquí porque este trabajo es exclusivamente documental; su corrección corresponde a un cambio de código posterior.
+Identificada durante la auditoría del 2026-10-28. DT01, DT02 y DT07 se resolvieron el 2026-11-04 con el cambio `s0-saneamiento-prototipo` (evidencia de CI enlazada en la columna *Estado*); DT03–DT06 corresponden a la Etapa 1.
 
-| ID | Deuda | Impacto | Acción propuesta |
-|---|---|---|---|
-| DT01 | `package.json` no declara `@types/node`; `npm test` falla en instalación limpia con `TS2307: Cannot find module 'node:test'` | El prototipo no compila tal como está versionado | Añadir `@types/node` como dependencia de desarrollo |
-| DT02 | No existe `package-lock.json` | Builds no reproducibles; no se puede usar `npm ci` | Generar y versionar el lockfile |
-| DT03 | `Medicion` conserva `confianza`, `confirmada` y `modeloId` del diseño anterior basado en IA fotográfica | El código no refleja el registro manual del MVP | Migrar al contrato de [diseño interno](03-diseno-de-software/diseno-interno/diseno-interno-de-modulos.md) |
-| DT04 | `Medicion` no incluye `jassId`, método, unidad, autor ni hora de toma | No hay aislamiento por JASS ni trazabilidad | Incorporar los campos y sus invariantes |
-| DT05 | `OperacionesMemoria` registra UUID en un `Set` independiente de `MedicionesMemoria` y sin hash de contenido | No demuestra idempotencia transaccional ni detección de conflictos | Implementar idempotencia junto con la escritura en PostgreSQL |
-| DT06 | `MedicionesMemoria.guardar` lanza un `Error` genérico ante un identificador repetido, comportamiento que el puerto `RepositorioMediciones` no especifica | Una implementación PostgreSQL podría comportarse distinto (riesgo para LSP) | Especificar en el puerto un error de dominio para duplicados y probar ambas implementaciones con la misma batería |
-| DT07 | No existe CI ni lint | Ninguna verificación automática | Añadir GitHub Actions con build, pruebas y lint |
+| ID | Deuda | Impacto | Acción propuesta | Estado |
+|---|---|---|---|---|
+| DT01 | `package.json` no declara `@types/node`; `npm test` falla en instalación limpia con `TS2307: Cannot find module 'node:test'` | El prototipo no compila tal como está versionado | Añadir `@types/node` como dependencia de desarrollo | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) |
+| DT02 | No existe `package-lock.json` | Builds no reproducibles; no se puede usar `npm ci` | Generar y versionar el lockfile | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) |
+| DT03 | `Medicion` conserva `confianza`, `confirmada` y `modeloId` del diseño anterior basado en IA fotográfica | El código no refleja el registro manual del MVP | Migrar al contrato de [diseño interno](03-diseno-de-software/diseno-interno/diseno-interno-de-modulos.md) | Abierta (Etapa 1) |
+| DT04 | `Medicion` no incluye `jassId`, método, unidad, autor ni hora de toma | No hay aislamiento por JASS ni trazabilidad | Incorporar los campos y sus invariantes | Abierta (Etapa 1) |
+| DT05 | `OperacionesMemoria` registra UUID en un `Set` independiente de `MedicionesMemoria` y sin hash de contenido | No demuestra idempotencia transaccional ni detección de conflictos | Implementar idempotencia junto con la escritura en PostgreSQL | Abierta (Etapa 1) |
+| DT06 | `MedicionesMemoria.guardar` lanza un `Error` genérico ante un identificador repetido, comportamiento que el puerto `RepositorioMediciones` no especifica | Una implementación PostgreSQL podría comportarse distinto (riesgo para LSP) | Especificar en el puerto un error de dominio para duplicados y probar ambas implementaciones con la misma batería | Abierta (Etapa 1) |
+| DT07 | No existe CI ni lint | Ninguna verificación automática | Añadir GitHub Actions con build, pruebas y lint | Resuelta por `s0-saneamiento-prototipo` (commit `9725d15`, [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)) |
 
 ## 7. Decisiones abiertas
 

@@ -2,12 +2,13 @@
 
 **Estado:** plan de calidad para la arquitectura objetivo. Ninguna prueba del MVP ha sido ejecutada; el prototipo contiene cinco pruebas unitarias sobre el modelo anterior.
 
-## 1. Situación verificada del prototipo (2026-10-28)
+## 1. Situación verificada del prototipo
 
 | Comprobación | Resultado |
 |---|---|
-| `npm install` y `npm test` en una copia limpia de `tecnologia/siJASS-clean-architecture/` (Node.js 22.22.0, npm 10.9.4) | **Falla la compilación**: `TS2307: Cannot find module 'node:test'` y `'node:assert'` por falta de `@types/node` (DT01) |
-| La misma copia con `@types/node` añadido localmente, **sin versionar el cambio** | Las 5 pruebas pasan (5/5) |
+| **2026-10-28, antes de `s0-saneamiento-prototipo`:** `npm install` y `npm test` en una copia limpia de `tecnologia/siJASS-clean-architecture/` (Node.js 22.22.0, npm 10.9.4) | **Falla la compilación**: `TS2307: Cannot find module 'node:test'` y `'node:assert'` por falta de `@types/node` (DT01) |
+| **2026-10-28:** la misma copia con `@types/node` añadido localmente, **sin versionar el cambio** | Las 5 pruebas pasan (5/5) |
+| **2026-11-04, tras `s0-saneamiento-prototipo`:** `npm ci`, `npm run lint`, `npm run build` y `npm test` en copia limpia (Node.js 24 local; Node.js 20 y 22 en [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941), commit `9725d15`, PR #3 sin fusionar) | Todos terminan con código 0; 5/5 pruebas pasan; DT01 y DT02 resueltas |
 
 Esta verificación solo demuestra que el dominio del prototipo se comporta como sus pruebas esperan; no valida PWA, API, base de datos, sincronización ni RAG.
 
@@ -45,7 +46,7 @@ Esta verificación solo demuestra que el dominio del prototipo se comporta como 
 | PT18 | Integración | Falla del proveedor de notificaciones | Reintento sin duplicar el evento de negocio | RF12 | Futuro |
 | PT19 | Unitario | Datos incompletos o incoherentes (hora futura, posible duplicado, rango configurado) | Advertencia determinística sin modificar el valor | RF15, RNF03 | Pendiente |
 | PT20 | Resiliencia | Servicio RAG o proveedor de LLM fuera de servicio | El asistente informa indisponibilidad; el registro sin conexión sigue funcionando | RF10, RF13, RNF01 | Pendiente |
-| PT21 | Calidad documental | Enlaces relativos, identificadores, sintaxis Mermaid y coherencia de la matriz | Sin enlaces rotos ni identificadores huérfanos | Transversal | Ejecutada manualmente el 2026-10-28; pendiente de automatizar en CI |
+| PT21 | Calidad documental | Enlaces relativos, identificadores, sintaxis Mermaid y coherencia de la matriz | Sin enlaces rotos ni identificadores huérfanos | Transversal | Enlaces relativos e identificadores (HU, RF, RNF, ADR, PT, DT y criterios C01–C16): automatizados con `scripts/verificar-docs.mjs` en el job `documentacion` del [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941) (PR #3, sin fusionar). Sintaxis Mermaid y coherencia semántica de la matriz: siguen siendo manuales (última ejecución 2026-10-28) |
 | PT22 | Rendimiento | Guardado local de 50 mediciones en un teléfono de gama baja del piloto | Percentil 95 ≤ 2 s | RNF02 | Pendiente |
 | PT23 | Usabilidad | Prueba de tareas con operadores reales | Tasa de éxito, tiempo y errores registrados | RNF06 | Pendiente |
 | PT24 | Privacidad | Fotografía con metadatos de ubicación; consulta al asistente | Metadatos eliminados; URLs temporales; ninguna solicitud al LLM contiene datos personales | RF03, RF13, RNF10 | Pendiente |

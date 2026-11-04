@@ -6,7 +6,9 @@
 
 ```text
 tecnologia/siJASS-clean-architecture/
-├── package.json                      # Scripts build y test; dependencia de desarrollo: typescript
+├── package.json                      # Scripts build, lint y test; devDependencies: typescript, @types/node, eslint, typescript-eslint
+├── package-lock.json                 # Instalación reproducible con npm ci
+├── eslint.config.mjs                 # ESLint (reglas recommended) sobre src/
 ├── tsconfig.json                     # ES2022, NodeNext, strict; compila src/ en dist/
 └── src/
     ├── dominio/medicion.ts           # Interfaz Medicion y función crearMedicion (validaciones)
@@ -28,32 +30,39 @@ tecnologia/siJASS-clean-architecture/
 Desde esta carpeta, con Node.js 20 o superior:
 
 ```bash
-npm install
-```
-
-```bash
+npm ci
+npm run lint
 npm test
 ```
 
-**Resultado verificado el 2026-10-28** (Node.js 22.22.0, npm 10.9.4, copia limpia): la compilación **falla** con `TS2307: Cannot find module 'node:test'` porque `package.json` no declara `@types/node`. Al añadir `@types/node` localmente, sin versionar el cambio, las cinco pruebas pasan. La corrección se deja como deuda técnica (DT01) para un cambio de código posterior.
+`npm test` compila con `tsc` y ejecuta las cinco pruebas con `node:test`.
+
+**Resultado verificado el 2026-11-04** (cambio `s0-saneamiento-prototipo`): en copia limpia, `npm ci`, `npm run lint`, `npm run build` y `npm test` terminan con código 0 y pasan 5/5 pruebas, en Node.js 24 localmente y en GitHub Actions con Node.js 20 y 22 sobre el commit `9725d15` ([ejecución](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941)). Esto solo respalda el dominio del prototipo con su modelo heredado; no valida PWA, API, base de datos, sincronización ni RAG.
+
+## Deuda resuelta
+
+| Deuda | Estado |
+|---|---|
+| DT01 — falta `@types/node` | Resuelta por `s0-saneamiento-prototipo`: `@types/node@^20` declarado |
+| DT02 — sin `package-lock.json` | Resuelta por `s0-saneamiento-prototipo`: lockfile versionado; `npm ci` funciona |
+| DT07 — sin CI ni lint | Resuelta por `s0-saneamiento-prototipo`: ESLint y GitHub Actions (instalación, lint, build y pruebas en Node.js 20 y 22, más verificación documental) |
 
 ## Limitaciones
 
 | Limitación | Deuda |
 |---|---|
-| No declara `@types/node`; no compila en instalación limpia | DT01 |
-| No existe `package-lock.json`; no puede usarse `npm ci` | DT02 |
 | `Medicion` usa `cloroMgL`, `confianza`, `confirmada` y `modeloId` del diseño anterior | DT03 |
 | `Medicion` no incluye `jassId`, método, unidad, autor ni revisiones | DT04 |
 | `OperacionesMemoria` guarda UUID en un `Set` separado de las mediciones y sin hash de contenido: no demuestra idempotencia transaccional ni detección de conflictos | DT05 |
 | `MedicionesMemoria.guardar` lanza un `Error` genérico ante identificadores repetidos, comportamiento no especificado por el puerto | DT06 |
-| Sin CI ni lint | DT07 |
+
+DT03–DT06 permanecen abiertas y se abordan en la Etapa 1.
 
 No implementa React, PWA, IndexedDB, NestJS, PostgreSQL, API HTTP, autorización, sincronización ni RAG. Las deudas se describen en el [alcance y hoja de ruta](../../docs/00-alcance-y-roadmap.md#6-deuda-técnica-conocida).
 
 ## Migración prevista
 
-1. Corregir DT01 y DT02 e incorporar CI con build, pruebas y lint.
+1. ~~Corregir DT01 y DT02 e incorporar CI con build, pruebas y lint.~~ Hecho en `s0-saneamiento-prototipo`.
 2. Rediseñar `Medicion` según el [diseño interno](../../docs/03-diseno-de-software/diseno-interno/diseno-interno-de-modulos.md): registro manual con JASS, método, unidad, autor y revisiones.
 3. Añadir pruebas de fechas, unidades, correcciones y pertenencia a JASS (PT01–PT03, PT09, PT10).
 4. Integrar la idempotencia y el efecto de negocio en una transacción PostgreSQL (PT04, PT11, PT12).
