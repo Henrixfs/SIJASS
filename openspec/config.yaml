@@ -1,0 +1,43 @@
+
+schema: spec-driven
+
+context: |
+  Proyecto: SIJASS.
+  Sistema Inteligente de Gestión y Monitoreo de Agua
+  para Juntas Administradoras de Servicios de Saneamiento.
+
+  Arquitectura:
+  - Frontend: React + TypeScript + Vite
+  - PWA: Workbox + Dexie + IndexedDB
+  - Backend: NestJS con Clean Architecture
+  - Base de datos: PostgreSQL
+  - IA: RAG con Python y FastAPI
+  - API REST/JSON y OpenAPI
+
+  Documentación base:
+  - README.md
+  - docs/00-alcance-y-roadmap.md
+  - docs/01-analisis-de-sistema/
+  - docs/02-arquitectura-software/
+  - docs/03-diseno-de-software/
+  - docs/04-modelo-c4/
+  - docs/05-trazabilidad-y-validacion/
+  - docs/06-estrategia-ia/
+  - docs/07-evaluacion-final/rubrica-trabajo-final.md
+  - docs/07-evaluacion-final/matriz-cumplimiento.md
+
+  El desarrollo debe cumplir los 16 criterios
+  de evaluación del trabajo final (C01-C16, ver
+  la rúbrica). La matriz de cumplimiento indica
+  el estado real de cada criterio; toda propuesta
+  de cambio cita los criterios Cnn a los que aporta
+  y actualiza la matriz al cerrarse. No se declara
+  cumplido un criterio sin evidencia verificable.
+
+  Reglas:
+  - Desarrollo dirigido por especificaciones.
+  - No implementar sin requisitos verificables.
+  - Respetar la arquitectura documentada.
+  - Incluir pruebas unitarias y de integración.
+  - Mantener trazabilidad de cambios.
+  - No estimar cloro mediante imágenes sin validación.

@@ -127,8 +127,11 @@ flowchart TB
 │   ├── 05-trazabilidad-y-validacion/
 │   │   ├── matriz-trazabilidad.md               # HU → RF → RNF → DA → ADR → pruebas
 │   │   └── plan-pruebas.md                      # PT01–PT25
-│   └── 06-estrategia-ia/
-│       └── estrategia-ia-sin-dataset.md         # Asistente RAG y evolución de la IA
+│   ├── 06-estrategia-ia/
+│   │   └── estrategia-ia-sin-dataset.md         # Asistente RAG y evolución de la IA
+│   └── 07-evaluacion-final/
+│       ├── rubrica-trabajo-final.md             # Los 16 criterios oficiales (C01–C16)
+│       └── matriz-cumplimiento.md               # Estado y evidencia por criterio
 └── tecnologia/
     └── siJASS-clean-architecture/               # Prototipo TypeScript de dominio
 ```
@@ -153,6 +156,7 @@ flowchart TB
 | 11 | [C4 nivel 1](docs/04-modelo-c4/Nivel1-Diagrama-de-Contexto-del-Sistema.md) · [nivel 2](docs/04-modelo-c4/Nivel2-Diagrama-de-Contenedores.md) · [nivel 3](docs/04-modelo-c4/Nivel3-Diagrama-de-Componentes.md) · [nivel 4](docs/04-modelo-c4/Nivel4-Diagrama-de-Codigo.md) | Modelo C4 |
 | 12 | [Matriz de trazabilidad](docs/05-trazabilidad-y-validacion/matriz-trazabilidad.md) · [Plan de pruebas](docs/05-trazabilidad-y-validacion/plan-pruebas.md) | Trazabilidad y validación |
 | 13 | [Estrategia de IA](docs/06-estrategia-ia/estrategia-ia-sin-dataset.md) | RAG sin dataset propio |
+| 14 | [Rúbrica del trabajo final](docs/07-evaluacion-final/rubrica-trabajo-final.md) · [Matriz de cumplimiento](docs/07-evaluacion-final/matriz-cumplimiento.md) | 16 criterios de evaluación y su estado real |
 | — | [Prototipo](tecnologia/siJASS-clean-architecture/README.md) | Código de dominio existente |
 
 ---
