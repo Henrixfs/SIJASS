@@ -34,9 +34,9 @@
 
 ## 6. Integración final
 
-- [ ] 6.1 En una copia limpia del commit final, ejecutar `npm ci && npm run lint && npm test` y `node scripts/verificar-docs.mjs`; verificar que todo termina con código 0 y que el CI del PR coincide.
-- [ ] 6.2 Confirmar que la configuración de OpenSpec (`openspec/`, `.claude/`, `.agents/`) y la rúbrica y matriz quedan confirmadas en commits del PR (hoy figuran sin versionar); verificar con `git status` sin archivos sin seguimiento relevantes.
-- [ ] 6.3 Ejecutar `openspec validate s0-saneamiento-prototipo --strict`; verificar que no reporta errores.
+- [x] 6.1 En una copia limpia del commit final, ejecutar `npm ci && npm run lint && npm test` y `node scripts/verificar-docs.mjs`; verificar que todo termina con código 0 y que el CI del PR coincide.
+- [x] 6.2 Confirmar que la configuración de OpenSpec (`openspec/`, `.claude/`, `.agents/`) y la rúbrica y matriz quedan confirmadas en commits del PR (hoy figuran sin versionar); verificar con `git status` sin archivos sin seguimiento relevantes.
+- [x] 6.3 Ejecutar `openspec validate s0-saneamiento-prototipo --strict`; verificar que no reporta errores.
 
 ## Workflow follow-up
 
