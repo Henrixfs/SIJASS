@@ -2,27 +2,27 @@
 
 ## 1. Instalación reproducible y compilación (DT01, DT02)
 
-- [ ] 1.1 En `tecnologia/siJASS-clean-architecture/`, añadir `@types/node@^20` como devDependency y `"engines": {"node": ">=20"}` a `package.json`; verificar que `npm install` termina sin errores.
-- [ ] 1.2 Generar y versionar `package-lock.json`; verificar en una copia limpia (sin `node_modules/` ni `dist/`) que `npm ci` termina con código 0 y no modifica el lockfile (`git diff --exit-code package-lock.json`).
-- [ ] 1.3 Verificar que `npm test` en la copia limpia compila sin `TS2307` y que pasan las 5 pruebas existentes (`# pass 5`, `# fail 0`).
-- [ ] 1.4 Verificar el escenario negativo: añadir temporalmente una dependencia solo en `package.json` y comprobar que `npm ci` falla; revertir el cambio temporal.
+- [x] 1.1 En `tecnologia/siJASS-clean-architecture/`, añadir `@types/node@^20` como devDependency y `"engines": {"node": ">=20"}` a `package.json`; verificar que `npm install` termina sin errores.
+- [x] 1.2 Generar y versionar `package-lock.json`; verificar en una copia limpia (sin `node_modules/` ni `dist/`) que `npm ci` termina con código 0 y no modifica el lockfile (`git diff --exit-code package-lock.json`).
+- [x] 1.3 Verificar que `npm test` en la copia limpia compila sin `TS2307` y que pasan las 5 pruebas existentes (`# pass 5`, `# fail 0`).
+- [x] 1.4 Verificar el escenario negativo: añadir temporalmente una dependencia solo en `package.json` y comprobar que `npm ci` falla; revertir el cambio temporal.
 
 ## 2. Lint (parte de DT07)
 
-- [ ] 2.1 Añadir devDependencies `eslint` (9.x) y `typescript-eslint`, crear `eslint.config.mjs` (flat config, reglas `recommended`, alcance `src/**/*.ts`, ignora `dist/`) y el script `"lint": "eslint src"`; verificar que `npm run lint` se ejecuta y reporta resultados.
-- [ ] 2.2 Resolver los hallazgos de lint sobre `src/` sin cambiar comportamiento (corregir o, solo si es inevitable, desactivar una regla puntual con comentario que cite la Etapa 1); verificar que `npm run lint` termina con código 0 y que `npm test` sigue pasando 5/5.
-- [ ] 2.3 Verificar el escenario negativo: introducir temporalmente una variable sin usar en `src/` y comprobar que `npm run lint` falla con archivo y línea; revertir.
+- [x] 2.1 Añadir devDependencies `eslint` (9.x) y `typescript-eslint`, crear `eslint.config.mjs` (flat config, reglas `recommended`, alcance `src/**/*.ts`, ignora `dist/`) y el script `"lint": "eslint src"`; verificar que `npm run lint` se ejecuta y reporta resultados.
+- [x] 2.2 Resolver los hallazgos de lint sobre `src/` sin cambiar comportamiento (corregir o, solo si es inevitable, desactivar una regla puntual con comentario que cite la Etapa 1); verificar que `npm run lint` termina con código 0 y que `npm test` sigue pasando 5/5.
+- [x] 2.3 Verificar el escenario negativo: introducir temporalmente una variable sin usar en `src/` y comprobar que `npm run lint` falla con archivo y línea; revertir.
 
 ## 3. Verificación documental
 
-- [ ] 3.1 Crear `scripts/verificar-docs.mjs` (Node, sin dependencias): valida enlaces relativos en `*.md` (excluye `node_modules`, `.git`, `openspec/`, `.claude/`, `.agents/`; ignora URLs absolutas y anclas), `RFnn` contra `docs/01-analisis-de-sistema/03-requisitos-funcionales.md`, `PTnn` contra `docs/05-trazabilidad-y-validacion/plan-pruebas.md` y `DTnn` contra la tabla del roadmap, más `HUnn` (`02-historias-del-usuario.md`), `RNFnn` (`04-atributos-de-calidad.md`) y `ADR-nnn` (`07-decisiones-arquitectonicas.md`), y que la rúbrica y la matriz de `docs/07-evaluacion-final/` contengan `C01`–`C16` exactamente una vez; sale con código 1 e informa archivo y destino/identificador. Verificar que `node scripts/verificar-docs.mjs` termina con código 0 e imprime el total de enlaces revisados (antes de crear `docs/07-evaluacion-final/` eran 50).
-- [ ] 3.2 Probar el script con casos negativos temporales (enlace roto, `RF99`, `PT99`, `DT99`, `HU99`, `RNF99`, `ADR-099`, `C17` en un `.md`, y la eliminación de la fila C07 de la matriz) y verificar que cada uno produce código 1 con mensaje que identifica archivo y origen del problema; revertir los casos.
-- [ ] 3.3 Añadir un script `docs:check` en un `package.json` raíz o documentar el comando en el README del repositorio; verificar que el comando documentado se ejecuta tal como está escrito.
+- [x] 3.1 Crear `scripts/verificar-docs.mjs` (Node, sin dependencias): valida enlaces relativos en `*.md` (excluye `node_modules`, `.git`, `openspec/`, `.claude/`, `.agents/`; ignora URLs absolutas y anclas), `RFnn` contra `docs/01-analisis-de-sistema/03-requisitos-funcionales.md`, `PTnn` contra `docs/05-trazabilidad-y-validacion/plan-pruebas.md` y `DTnn` contra la tabla del roadmap, más `HUnn` (`02-historias-del-usuario.md`), `RNFnn` (`04-atributos-de-calidad.md`) y `ADR-nnn` (`07-decisiones-arquitectonicas.md`), y que la rúbrica y la matriz de `docs/07-evaluacion-final/` contengan `C01`–`C16` exactamente una vez; sale con código 1 e informa archivo y destino/identificador. Verificar que `node scripts/verificar-docs.mjs` termina con código 0 e imprime el total de enlaces revisados (antes de crear `docs/07-evaluacion-final/` eran 50).
+- [x] 3.2 Probar el script con casos negativos temporales (enlace roto, `RF99`, `PT99`, `DT99`, `HU99`, `RNF99`, `ADR-099`, `C17` en un `.md`, y la eliminación de la fila C07 de la matriz) y verificar que cada uno produce código 1 con mensaje que identifica archivo y origen del problema; revertir los casos.
+- [x] 3.3 Añadir un script `docs:check` en un `package.json` raíz o documentar el comando en el README del repositorio; verificar que el comando documentado se ejecuta tal como está escrito.
 
 ## 4. CI (DT07)
 
-- [ ] 4.1 Crear `.github/workflows/ci.yml` con disparadores `push` y `pull_request` y el job `prototipo` (matriz Node 20 y 22, `actions/checkout@v4`, `actions/setup-node@v4` con caché npm, pasos `npm ci`, `npm run lint`, `npm run build`, `npm test` con `working-directory` del prototipo); verificar con `actionlint` o revisión de sintaxis YAML (`node -e` con parser YAML o `yq`) y que los comandos del job pasan localmente en secuencia.
-- [ ] 4.2 Añadir el job `documentacion` (Node 22, `node scripts/verificar-docs.mjs`) al mismo workflow; verificar que los dos jobs son independientes (sin `needs`) y que el comando pasa localmente.
+- [x] 4.1 Crear `.github/workflows/ci.yml` con disparadores `push` y `pull_request` y el job `prototipo` (matriz Node 20 y 22, `actions/checkout@v4`, `actions/setup-node@v4` con caché npm, pasos `npm ci`, `npm run lint`, `npm run build`, `npm test` con `working-directory` del prototipo); verificar con `actionlint` o revisión de sintaxis YAML (`node -e` con parser YAML o `yq`) y que los comandos del job pasan localmente en secuencia.
+- [x] 4.2 Añadir el job `documentacion` (Node 22, `node scripts/verificar-docs.mjs`) al mismo workflow; verificar que los dos jobs son independientes (sin `needs`) y que el comando pasa localmente.
 - [ ] 4.3 Subir la rama, abrir el pull request contra `main` y verificar que ambos jobs (`prototipo` en Node 20 y 22, y `documentacion`) terminan en verde; anotar la URL de la ejecución como evidencia.
 
 ## 5. Alineación documental con evidencia
