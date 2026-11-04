@@ -132,6 +132,8 @@ flowchart TB
 │   └── 07-evaluacion-final/
 │       ├── rubrica-trabajo-final.md             # Los 16 criterios oficiales (C01–C16)
 │       └── matriz-cumplimiento.md               # Estado y evidencia por criterio
+├── scripts/
+│   └── verificar-docs.mjs                       # Verificación de enlaces e identificadores
 └── tecnologia/
     └── siJASS-clean-architecture/               # Prototipo TypeScript de dominio
 ```
@@ -171,6 +173,18 @@ flowchart TB
 | PWA, API NestJS, PostgreSQL, sincronización y asistente RAG | No implementados |
 
 La documentación se actualizó antes que el código: el prototipo **no satisface aún** los requisitos del MVP. Ver la [deuda técnica](docs/00-alcance-y-roadmap.md#6-deuda-técnica-conocida) y el [plan de pruebas](docs/05-trazabilidad-y-validacion/plan-pruebas.md).
+
+---
+
+## Verificación local
+
+Requiere Node.js 20 o superior. Desde la raíz del repositorio:
+
+```bash
+node scripts/verificar-docs.mjs
+```
+
+Comprueba que los enlaces relativos de los `.md` resuelven, que los identificadores (HU, RF, RNF, ADR, PT, DT) existen en su documento fuente y que la [rúbrica](docs/07-evaluacion-final/rubrica-trabajo-final.md) y la [matriz de cumplimiento](docs/07-evaluacion-final/matriz-cumplimiento.md) conservan los criterios C01–C16. Termina con código distinto de 0 si encuentra un problema. Para el prototipo de dominio, véase su [README](tecnologia/siJASS-clean-architecture/README.md).
 
 ---
 
