@@ -4,14 +4,14 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
 
 ## 1. Modelo de dominio (DT03, DT04)
 
-- [ ] 1.1 Crear `src/dominio/errores.ts` con `ErrorDominio` (con `codigo`), `ErrorValidacion` (motivos cerrados de D1) y `ErrorMedicionDuplicada`. Verificar con una prueba unitaria en `src/pruebas/unitarias/errores.test.ts` que cada clase conserva su `codigo`, que `instanceof` funciona según la jerarquía y que un motivo fuera del conjunto no compila (`// @ts-expect-error`).
-- [ ] 1.2 Crear `src/dominio/catalogo.ts` con `METODOS_MEDICION = ['comparador-dpd', 'colorimetro']` (congelado) y `UNIDAD_MEDICION = 'mg/L'`. Verificar con una prueba unitaria que el catálogo contiene exactamente esos dos códigos y no se puede modificar.
-- [ ] 1.3 Implementar la validación estricta de instantes ISO 8601 de D1 (zona obligatoria, de 0 a 3 decimales, horas `00`–`23`, día de calendario existente, normalización a UTC con `toISOString()`). Verificar con una prueba de tabla de casos:
+- [x] 1.1 Crear `src/dominio/errores.ts` con `ErrorDominio` (con `codigo`), `ErrorValidacion` (motivos cerrados de D1) y `ErrorMedicionDuplicada`. Verificar con una prueba unitaria en `src/pruebas/unitarias/errores.test.ts` que cada clase conserva su `codigo`, que `instanceof` funciona según la jerarquía y que un motivo fuera del conjunto no compila (`// @ts-expect-error`).
+- [x] 1.2 Crear `src/dominio/catalogo.ts` con `METODOS_MEDICION = ['comparador-dpd', 'colorimetro']` (congelado) y `UNIDAD_MEDICION = 'mg/L'`. Verificar con una prueba unitaria que el catálogo contiene exactamente esos dos códigos y no se puede modificar.
+- [x] 1.3 Implementar la validación estricta de instantes ISO 8601 de D1 (zona obligatoria, de 0 a 3 decimales, horas `00`–`23`, día de calendario existente, normalización a UTC con `toISOString()`). Verificar con una prueba de tabla de casos:
   - `2026-02-30T08:00:00Z`, `2026-02-29T08:00:00Z`, `2026-10-12T08:00:00`, `2026-10-12`, `2026-10-12 08:00:00Z`, `2026-10-12T24:00:00Z` y `2026-10-12T08:00:00.123456Z` dan `fecha-invalida`;
   - `2028-02-29T08:00:00Z` se acepta;
   - `2026-10-12T08:00:00-05:00` da `2026-10-12T13:00:00.000Z`;
   - el resultado no cambia al ejecutar con `TZ=UTC` y con `TZ=America/Lima`.
-- [ ] 1.4 Reescribir `src/dominio/medicion.ts`:
+- [x] 1.4 Reescribir `src/dominio/medicion.ts`:
   - `Medicion` con el contrato del diseño interno §4, sin `cloroMgL`, `confianza`, `confirmada` ni `modeloId`;
   - `crearMedicion(comando, { jassId, usuarioId, origen, id, registradaEn, toleranciaMs })`, con campos permitidos, UUID, valor, unidad, método, fecha y tolerancia en el orden fijo de D1;
   - `-0` normalizado a `0`, estado `vigente`, revisión 1 y resultado congelado.
@@ -24,13 +24,13 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - `evidenciaId` presente, ausente y malformado;
   - tolerancia: exactamente +5 min se acepta, +5 min + 1 ms se rechaza, tolerancia 0 con +1 ms se rechaza, una toma de días atrás se acepta;
   - estado `vigente` y revisión 1.
-- [ ] 1.5 Eliminar el código y las pruebas que dependen del modelo heredado: `src/pruebas/dominio.test.ts`, `RegistrarMedicionCasoUso`, `OperacionesMemoria` y `RepositorioOperaciones.registrar`. Grupos 2 y 3 los reemplazan. Cambiar el script `test` a `npm run build && node --test dist/pruebas/unitarias/*.test.js`. Verificar:
+- [x] 1.5 Eliminar el código y las pruebas que dependen del modelo heredado: `src/pruebas/dominio.test.ts`, `RegistrarMedicionCasoUso`, `OperacionesMemoria` y `RepositorioOperaciones.registrar`. Grupos 2 y 3 los reemplazan. Cambiar el script `test` a `npm run build && node --test dist/pruebas/unitarias/*.test.js`. Verificar:
   - `npm run lint && npm test` terminan con código 0 y ejecutan más de cero pruebas;
   - `grep -rnE "confianza|confirmada|modeloId|cloroMgL" src` solo encuentra las pruebas que comprueban su rechazo.
 
 ## 2. Puertos y batería de contrato en memoria (DT06)
 
-- [ ] 2.1 Reescribir `src/dominio/puertos.ts` con:
+- [x] 2.1 Reescribir `src/dominio/puertos.ts` con:
   - `ContextoActor`, `Origen`, `Reloj` y `GeneradorIds`;
   - `RepositorioMediciones`: `guardar` lanza `ErrorMedicionDuplicada` ante el mismo `(jassId, id)`; `buscar(jassId, id)`; `listar(jassId, { reservorioId })` ordenado por `tomadaEn` descendente y luego por `id`;
   - `RepositorioReservorios.existeEnJass(jassId, reservorioId)`;
@@ -38,7 +38,7 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - `UnidadDeTrabajo.ejecutar`.
 
   Cada contrato y precondición se documenta con TSDoc, en particular que el reservorio pertenece a la JASS. Verificar que `npm run build` y `npm run lint` terminan con código 0.
-- [ ] 2.2 Crear `src/pruebas/contrato/repositorio-mediciones.ts`, una función que recibe una fábrica de implementación y registra los casos de la spec `persistencia-mediciones`:
+- [x] 2.2 Crear `src/pruebas/contrato/repositorio-mediciones.ts`, una función que recibe una fábrica de implementación y registra los casos de la spec `persistencia-mediciones`:
   - guardar y buscar con todos los campos (PT03);
   - `ErrorMedicionDuplicada` sin alterar la original;
   - mismo `id` en dos JASS;
@@ -46,8 +46,8 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - listado propio con orden total.
 
   Verificar que el archivo no coincide con el patrón `*.test.js`, de modo que solo se ejecuta cuando lo invoca una suite.
-- [ ] 2.3 Reescribir `MedicionesMemoria` (clave `jassId` + `id`) y crear `ReservoriosMemoria` en `src/infraestructura/memoria.ts`, más `src/pruebas/unitarias/contrato-memoria.test.ts`, que ejecuta la batería de 2.2. Verificar que `npm test` pasa la batería. Escenario negativo: hacer temporalmente que `guardar` lance un `Error` genérico, comprobar que la batería falla y revertir.
-- [ ] 2.4 Crear los adaptadores de sistema `RelojSistema` y `GeneradorIdsAleatorio` (`crypto.randomUUID()`) en `src/infraestructura/sistema.ts`, y los dobles de prueba `RelojFijo` (avanzable) y `GeneradorIdsSecuencial` en `src/pruebas/dobles.ts`. Verificar con pruebas unitarias que el generador produce UUID válidos y distintos, y que el reloj fijo devuelve el instante configurado.
+- [x] 2.3 Reescribir `MedicionesMemoria` (clave `jassId` + `id`) y crear `ReservoriosMemoria` en `src/infraestructura/memoria.ts`, más `src/pruebas/unitarias/contrato-memoria.test.ts`, que ejecuta la batería de 2.2. Verificar que `npm test` pasa la batería. Escenario negativo: hacer temporalmente que `guardar` lance un `Error` genérico, comprobar que la batería falla y revertir.
+- [x] 2.4 Crear los adaptadores de sistema `RelojSistema` y `GeneradorIdsAleatorio` (`crypto.randomUUID()`) en `src/infraestructura/sistema.ts`, y los dobles de prueba `RelojFijo` (avanzable) y `GeneradorIdsSecuencial` en `src/pruebas/dobles.ts`. Verificar con pruebas unitarias que el generador produce UUID válidos y distintos, y que el reloj fijo devuelve el instante configurado.
 
 ## 3. Idempotencia en dominio y aplicación (DT05)
 
