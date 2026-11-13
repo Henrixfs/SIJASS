@@ -14,7 +14,7 @@ Se usa la [convención del roadmap](../00-alcance-y-roadmap.md#1-convención-de-
 
 Un criterio solo pasa a *Implementado* con evidencia verificable (CI en verde sobre el commit, informe de prueba, enlace a código). Un estado mixto se declara por componente en la columna de evidencia.
 
-**Sprint:** el roadmap define *etapas* con criterios de salida, no sprints con fechas. `S0` es el cambio [`s0-saneamiento-prototipo`](../../openspec/changes/s0-saneamiento-prototipo/proposal.md) (Etapa 0). Para el resto se indica la etapa del roadmap en que el criterio encaja y que el sprint se asigna al planificarla; las asignaciones marcadas «(propuesta)» no están aprobadas.
+**Sprint:** el roadmap define *etapas* con criterios de salida, no sprints con fechas. `S0` es el cambio [`s0-saneamiento-prototipo`](../../openspec/changes/archive/2026-11-13-s0-saneamiento-prototipo/proposal.md) (Etapa 0). Para el resto se indica la etapa del roadmap en que el criterio encaja y que el sprint se asigna al planificarla; las asignaciones marcadas «(propuesta)» no están aprobadas.
 
 ## 2. Matriz
 
