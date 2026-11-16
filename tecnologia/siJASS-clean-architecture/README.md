@@ -48,7 +48,7 @@ tecnologia/siJASS-clean-architecture/
 
 ## Ejecución
 
-Desde esta carpeta, con Node.js 20 o superior.
+Desde esta carpeta, con Node.js 22 o superior.
 
 **Pruebas unitarias** (no requieren base de datos):
 
@@ -93,7 +93,7 @@ Esto respalda el dominio de medición, la idempotencia y la persistencia del pro
 
 | Deuda | Estado |
 |---|---|
-| DT01 — falta `@types/node` | Resuelta por `s0-saneamiento-prototipo`: `@types/node@^20` declarado |
+| DT01 — falta `@types/node` | Resuelta por `s0-saneamiento-prototipo`: `@types/node@^20` declarado (hoy `^22`, desde `retirar-node-20`) |
 | DT02 — sin `package-lock.json` | Resuelta por `s0-saneamiento-prototipo`: lockfile versionado; `npm ci` funciona |
 | DT03 — `Medicion` con campos del diseño por IA | Resuelta por `s1a-dominio-medicion`: modelo manual sin `cloroMgL`, `confianza`, `confirmada` ni `modeloId` |
 | DT04 — sin JASS, método, unidad, autor ni hora de toma | Resuelta por `s1a-dominio-medicion`: todos los campos y sus invariantes, con clave `(jassId, id)` |

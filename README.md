@@ -178,7 +178,7 @@ La documentación se actualizó antes que el código: el prototipo **no satisfac
 
 ## Verificación local
 
-Requiere Node.js 20 o superior. Desde la raíz del repositorio:
+Requiere Node.js 22 o superior. Desde la raíz del repositorio:
 
 ```bash
 node scripts/verificar-docs.mjs
