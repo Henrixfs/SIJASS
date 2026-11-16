@@ -29,7 +29,7 @@ El prototipo SHALL ejecutar sus pruebas unitarias con `npm test` y SHALL reporta
 
 #### Scenario: Todas las pruebas existentes pasan
 - **WHEN** se ejecuta `npm test` tras `npm ci`
-- **THEN** pasan las cinco pruebas existentes del prototipo y el comando termina con código 0
+- **THEN** pasan todas las pruebas unitarias versionadas del prototipo, se ejecuta al menos una prueba y el comando termina con código 0
 
 #### Scenario: Una prueba falla
 - **WHEN** una aserción de una prueba deja de cumplirse
