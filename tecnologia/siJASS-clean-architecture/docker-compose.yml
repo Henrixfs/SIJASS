@@ -1,0 +1,28 @@
+# PostgreSQL desechable para el desarrollo local del prototipo (design.md D11).
+# Las credenciales NO son secretos: solo existen dentro de este contenedor efímero.
+# Replica el servicio `postgres` del job `integracion` de CI.
+#
+#   docker compose up -d --wait     # arranca y espera a que esté sano
+#   docker compose down -v          # apaga y borra el volumen
+#
+# El puerto del anfitrión es 5432 por defecto. Si ya tienes otro PostgreSQL en esa
+# puerta, define SIJASS_PG_PUERTO (por ejemplo 5433) y usa el mismo puerto en DATABASE_URL.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sijass
+      POSTGRES_PASSWORD: sijass
+      POSTGRES_DB: sijass
+    ports:
+      - "127.0.0.1:${SIJASS_PG_PUERTO:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sijass -d sijass"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - sijass_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sijass_pgdata:

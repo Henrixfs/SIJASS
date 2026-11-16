@@ -54,6 +54,6 @@ flowchart LR
 
 | Componente | Elemento del prototipo | Estado |
 |---|---|---|
-| MedicionesAuditoria (dominio) | `src/dominio/medicion.ts`, `src/aplicacion/registrar-medicion.ts` | Prototipo con modelo heredado (ver DT03 y DT04) |
-| SincronizacionServidor (idempotencia) | `OperacionesMemoria` en `src/infraestructura/memoria.ts` | Prototipo no transaccional (DT05) |
+| MedicionesAuditoria (dominio) | `src/dominio/medicion.ts`, `src/aplicacion/registrar-medicion.ts`, `src/infraestructura/postgres/mediciones-postgres.ts` | Prototipo parcial: modelo manual y persistencia PostgreSQL ([CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)); sin auditoría ni correcciones (RF08) |
+| SincronizacionServidor (idempotencia) | `OperacionesMemoria` y `UnidadDeTrabajoMemoria` en `src/infraestructura/memoria.ts`; `OperacionesPostgres` y `UnidadDeTrabajoPostgres` en `src/infraestructura/postgres/` | Prototipo parcial: reserva y escritura transaccionales ([CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)); `SincronizarOperacion` aún no separado y sin lotes |
 | Resto de componentes | — | Diseño propuesto |

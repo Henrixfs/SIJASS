@@ -8,10 +8,10 @@
 
 | HU | Prioridad | RF | RNF | DA | ADR | Componentes | Pruebas | Estado |
 |---|---|---|---|---|---|---|---|---|
-| HU01 Registro manual | Must | RF06, RF07 | RNF03, RNF06 | DA02, DA04 | ADR-003, ADR-006 | CapturaMedicionManual, ValidacionDatos, MedicionesAuditoria | PT01, PT02, PT03, PT09, PT23 | Prototipo parcial (modelo heredado) |
+| HU01 Registro manual | Must | RF06, RF07 | RNF03, RNF06 | DA02, DA04 | ADR-003, ADR-006 | CapturaMedicionManual, ValidacionDatos, MedicionesAuditoria | PT01, PT02, PT03, PT09, PT23 | Prototipo parcial (modelo manual y validaciones; PT01–PT03 automatizadas en [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952); sin evidencia fotográfica, PT09 ni PT23) |
 | HU02 Corrección auditada | Must | RF08 | RNF03 | DA04 | ADR-005, ADR-006 | MedicionesAuditoria, auditoria | PT10 | Diseño propuesto |
 | HU03 Procedimientos aprobados | Should | RF09, RF14 | RNF09 | DA10 | ADR-010 | CatalogoDocumentos | PT08 | Diseño propuesto |
-| HU04 Medición sin conexión | Must | RF10 | RNF01, RNF02, RNF04, RNF08 | DA01, DA03, DA09 | ADR-002, ADR-005 | RegistroOffline, Sincronizador, SincronizacionServidor | PT04, PT05, PT07, PT11, PT12, PT20, PT22 | Prototipo parcial (idempotencia en memoria) |
+| HU04 Medición sin conexión | Must | RF10 | RNF01, RNF02, RNF04, RNF08 | DA01, DA03, DA09 | ADR-002, ADR-005 | RegistroOffline, Sincronizador, SincronizacionServidor | PT04, PT05, PT07, PT11, PT12, PT20, PT22 | Prototipo parcial (idempotencia transaccional en memoria y PostgreSQL; PT04, PT11 y PT12 automatizadas en [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952); sin cola local, sincronización por lotes ni PWA) |
 | HU05 Padrón de asociados | Must | RF03 | RNF05, RNF10 | DA06 | ADR-008 | AsociadosCuotasPagos | PT13, PT24 | Diseño propuesto |
 | HU06 Cuotas y pagos en línea | Must | RF04 | RNF04, RNF05 | DA09 | ADR-004, ADR-013 | AsociadosCuotasPagos | PT14 | Diseño propuesto |
 | HU07 Morosidad | Must | RF05 | RNF03 | DA04 | ADR-004 | AsociadosCuotasPagos, Reportes | PT14 | Diseño propuesto |
