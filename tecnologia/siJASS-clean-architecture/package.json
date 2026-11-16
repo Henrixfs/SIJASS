@@ -12,7 +12,7 @@
     "migrar:revertir": "node-pg-migrate down -m migraciones"
   },
   "devDependencies": {
-    "@types/node": "^20.19.43",
+    "@types/node": "^22",
     "@types/pg": "^8.23.1",
     "eslint": "^9.39.5",
     "node-pg-migrate": "^9.0.0",
@@ -20,7 +20,7 @@
     "typescript-eslint": "^8.72.1"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "pg": "^8.23.1"
