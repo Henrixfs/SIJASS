@@ -168,7 +168,8 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - HU01 y HU04 en `docs/05-trazabilidad-y-validacion/matriz-trazabilidad.md`.
 
   Verificar que `grep -rnE "confianza|modeloId|cloroMgL|OperacionesMemoria" docs` solo encuentra menciones históricas (tabla de cambios de RF y descripción de DT03 y DT05), y que `verificar-docs.mjs` termina con código 0.
-- [ ] 6.6 Subir los cambios documentales al pull request. Verificar que los cuatro jobs vuelven a terminar en verde y anotar la URL. Si cambia el commit de referencia, actualizar las citas de 6.1–6.4 en el mismo pull request.
+- [x] 6.6 Subir los cambios documentales al pull request. Verificar que los cuatro jobs vuelven a terminar en verde y anotar la URL. Si cambia el commit de referencia, actualizar las citas de 6.1–6.4 en el mismo pull request.
+  - Evidencia: commit `4f5d01d` en el [PR #5](https://github.com/Henrixfs/SIJASS/pull/5): `prototipo` (Node.js 20 y 22), `documentacion` e `integracion` en verde en la ejecución [43901294324](https://github.com/Henrixfs/SIJASS/actions/runs/43901294324) (`pull_request`) y [43901280846](https://github.com/Henrixfs/SIJASS/actions/runs/43901280846) (`push`). El commit de código citado en la documentación (`e79b29a`) no cambió: `4f5d01d` solo modifica documentación y `tasks.md`, así que las citas de 6.1–6.4 siguen vigentes.
 
 ## 7. Integración final
 
