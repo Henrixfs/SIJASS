@@ -25,16 +25,17 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 4. Verificación en CI (solo con autorización para subir la rama)
 
-- [ ] 4.1 Subir la rama `chore/retirar-node-20` y abrir el pull request contra `main`. Verificar:
+- [x] 4.1 Subir la rama `chore/retirar-node-20` y abrir el pull request contra `main`. Verificar:
   - terminan en verde `Prototipo (Node 22)`, `Prototipo (Node 24)`, `Prototipo (Node 26)`, `Documentación` e `Integración (PostgreSQL)`;
   - no existe ningún job `Prototipo (Node 20)`;
   - se anota la URL de la ejecución como evidencia.
 
   Si `Prototipo (Node 26)` falla, se detiene el trabajo, se informa la causa y se decide según *Risks* de `design.md`; no se oculta el fallo ni se marca la tarea.
+  - Evidencia: [PR #7](https://github.com/Henrixfs/SIJASS/pull/7), commit `cf9973d`, ejecución [43920160971](https://github.com/Henrixfs/SIJASS/actions/runs/43920160971): `Prototipo (Node 22)`, `Prototipo (Node 24)`, `Prototipo (Node 26)` (v26.13.1), `Documentación` e `Integración (PostgreSQL)` en verde, cada `Prototipo` con 73 pruebas aprobadas y 0 omitidas; no existe ningún job de Node 20. El riesgo de Node.js 26 de `design.md` no se materializó.
 
 ## 5. Documentación con evidencia (solo tras 4.1)
 
-- [ ] 5.1 En `docs/07-evaluacion-final/matriz-cumplimiento.md`, actualizar las filas C12 y C14 con la matriz `[22, 24, 26]`, `engines >=22` y `@types/node ^22`, enlazando la ejecución de 4.1, y actualizar la versión y fecha del documento. No cambiar ningún estado a *Implementado*. Verificar:
+- [x] 5.1 En `docs/07-evaluacion-final/matriz-cumplimiento.md`, actualizar las filas C12 y C14 con la matriz `[22, 24, 26]`, `engines >=22` y `@types/node ^22`, enlazando la ejecución de 4.1, y actualizar la versión y fecha del documento. No cambiar ningún estado a *Implementado*. Verificar:
   - `node scripts/verificar-docs.mjs` termina con código 0;
   - `grep -E "^\| C[0-9]{2} \|" docs/07-evaluacion-final/matriz-cumplimiento.md | grep "| Implementado"` no devuelve resultados.
 - [ ] 5.2 Subir el commit documental al mismo pull request. Verificar que los jobs vuelven a terminar en verde y anotar la URL.
