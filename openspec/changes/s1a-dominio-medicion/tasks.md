@@ -80,7 +80,7 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
 
 ## 4. PostgreSQL
 
-- [ ] 4.1 Añadir `pg` (dependencia) y `node-pg-migrate` y `@types/pg` (desarrollo), además de:
+- [x] 4.1 Añadir `pg` (dependencia) y `node-pg-migrate` y `@types/pg` (desarrollo), además de:
   - los scripts `migrar` (`node-pg-migrate up -m migraciones`) y `migrar:revertir` (`node-pg-migrate down -m migraciones`);
   - `docker-compose.yml`: servicio `postgres:16` publicado en `127.0.0.1:5432`, credenciales desechables, comprobación de salud y volumen con nombre.
 
@@ -88,30 +88,30 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - `npm ci` en copia limpia termina con código 0 sin modificar `package-lock.json`;
   - `docker compose up -d --wait` deja el servicio sano;
   - `npm run migrar` conecta con la `DATABASE_URL` local.
-- [ ] 4.2 Crear `migraciones/0001_esquema-mediciones.sql` con las secciones `-- Up Migration` y `-- Down Migration`, según D9: tablas, restricciones con nombre explícito, índice y las dos filas de `metodo_medicion`. Verificar:
+- [x] 4.2 Crear `migraciones/0001_esquema-mediciones.sql` con las secciones `-- Up Migration` y `-- Down Migration`, según D9: tablas, restricciones con nombre explícito, índice y las dos filas de `metodo_medicion`. Verificar:
   - `npm run migrar && npm run migrar:revertir && npm run migrar` terminan con código 0;
   - `pgmigrations` registra `0001_esquema-mediciones`; si `node-pg-migrate` no admite el prefijo `0001`, usar su prefijo por marca de tiempo y anotarlo en `design.md` (D8);
   - tras la reversión no queda ninguna de las cinco tablas.
-- [ ] 4.3 Crear `scripts/exigir-database-url.mjs`, el script `test:integration` de D10 y `src/pruebas/integracion/entorno.ts`. El entorno crea el pool desde `DATABASE_URL` y lanza un error claro si falta; además siembra JASS y reservorios con UUID aleatorios. Verificar:
+- [x] 4.3 Crear `scripts/exigir-database-url.mjs`, el script `test:integration` de D10 y `src/pruebas/integracion/entorno.ts`. El entorno crea el pool desde `DATABASE_URL` y lanza un error claro si falta; además siembra JASS y reservorios con UUID aleatorios. Verificar:
   - sin `DATABASE_URL`, `npm run test:integration` termina con código distinto de 0 e imprime que falta `DATABASE_URL`;
   - ejecutar directamente `node --test dist/pruebas/integracion/*.test.js` sin la variable también falla;
   - con la variable, el comando se ejecuta.
-- [ ] 4.4 Crear `src/pruebas/integracion/esquema.test.ts`. Comprueba por SQL directo cada escenario de «Restricciones de integridad en la base», con su SQLSTATE: `23514` para las verificaciones, `23503` para las claves foráneas y `23505` para las duplicidades, incluidos `'NaN'` e `'Infinity'`. También comprueba, mediante `pg_catalog`, que las claves primarias de `medicion` y `operacion_idempotente` empiezan por `jass_id` y que existe el índice `(jass_id, reservorio_id, tomada_en)`, y que el catálogo de la base es igual a `METODOS_MEDICION`. Verificar:
+- [x] 4.4 Crear `src/pruebas/integracion/esquema.test.ts`. Comprueba por SQL directo cada escenario de «Restricciones de integridad en la base», con su SQLSTATE: `23514` para las verificaciones, `23503` para las claves foráneas y `23505` para las duplicidades, incluidos `'NaN'` e `'Infinity'`. También comprueba, mediante `pg_catalog`, que las claves primarias de `medicion` y `operacion_idempotente` empiezan por `jass_id` y que existe el índice `(jass_id, reservorio_id, tomada_en)`, y que el catálogo de la base es igual a `METODOS_MEDICION`. Verificar:
   - `npm run test:integration` lo pasa;
   - escenario negativo: agregar temporalmente un método solo a la constante del dominio hace fallar la prueba de coherencia; revertir.
-- [ ] 4.5 Implementar en `src/infraestructura/postgres/` los adaptadores de D7 y D8:
+- [x] 4.5 Implementar en `src/infraestructura/postgres/` los adaptadores de D7 y D8:
   - `MedicionesPostgres`: `23505` sobre `medicion_pkey` se convierte en `ErrorMedicionDuplicada`; conversión local de `numeric` y `timestamptz`; orden del listado;
   - `ReservoriosPostgres`;
   - `OperacionesPostgres`: `INSERT … ON CONFLICT DO NOTHING RETURNING`, lectura de la fila existente y `UPDATE` del resultado;
   - `UnidadDeTrabajoPostgres`: `BEGIN`/`COMMIT`/`ROLLBACK` en `READ COMMITTED`, liberación del cliente en `finally` y fábrica decoradora.
 
   Verificar que `npm run build` y `npm run lint` terminan con código 0.
-- [ ] 4.6 Crear `src/pruebas/integracion/contrato-postgres.test.ts`, que ejecuta **sin modificar** las baterías de `src/pruebas/contrato/` contra los adaptadores PostgreSQL. Verificar:
+- [x] 4.6 Crear `src/pruebas/integracion/contrato-postgres.test.ts`, que ejecuta **sin modificar** las baterías de `src/pruebas/contrato/` contra los adaptadores PostgreSQL. Verificar:
   - `npm run test:integration` las pasa;
   - `npm test` sigue pasando con la memoria;
   - las dos suites importan los mismos módulos de batería;
   - si hubo que corregir la batería durante el grupo, ambas implementaciones la pasan después del cambio.
-- [ ] 4.7 Ejecutar contra PostgreSQL la reversión y la concurrencia de la batería con 10 repeticiones, un pool de al menos 10 conexiones y el decorador de retardo de D10. Las aserciones van sobre las filas de `medicion` y `operacion_idempotente`. Verificar que tres ejecuciones locales consecutivas y completas de `npm run test:integration` pasan sin fallos intermitentes.
+- [x] 4.7 Ejecutar contra PostgreSQL la reversión y la concurrencia de la batería con 10 repeticiones, un pool de al menos 10 conexiones y el decorador de retardo de D10. Las aserciones van sobre las filas de `medicion` y `operacion_idempotente`. Verificar que tres ejecuciones locales consecutivas y completas de `npm run test:integration` pasan sin fallos intermitentes.
 - [ ] 4.8 Ejecutar los escenarios negativos de persistencia y revertir cada uno:
   - quitar `valor < 'Infinity'` de la migración hace fallar la prueba de `'NaN'`/`'Infinity'`;
   - que `MedicionesPostgres` deje pasar el error genérico de `pg` ante un duplicado hace fallar la batería (DT06);
