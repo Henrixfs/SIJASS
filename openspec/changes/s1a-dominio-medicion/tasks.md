@@ -112,7 +112,7 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - las dos suites importan los mismos módulos de batería;
   - si hubo que corregir la batería durante el grupo, ambas implementaciones la pasan después del cambio.
 - [x] 4.7 Ejecutar contra PostgreSQL la reversión y la concurrencia de la batería con 10 repeticiones, un pool de al menos 10 conexiones y el decorador de retardo de D10. Las aserciones van sobre las filas de `medicion` y `operacion_idempotente`. Verificar que tres ejecuciones locales consecutivas y completas de `npm run test:integration` pasan sin fallos intermitentes.
-- [ ] 4.8 Ejecutar los escenarios negativos de persistencia y revertir cada uno:
+- [x] 4.8 Ejecutar los escenarios negativos de persistencia y revertir cada uno:
   - quitar `valor < 'Infinity'` de la migración hace fallar la prueba de `'NaN'`/`'Infinity'`;
   - que `MedicionesPostgres` deje pasar el error genérico de `pg` ante un duplicado hace fallar la batería (DT06);
   - quitar `ON CONFLICT DO NOTHING` hace fallar la prueba de concurrencia.
@@ -121,7 +121,7 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
 
 ## 5. CI
 
-- [ ] 5.1 Añadir el job `integracion` a `.github/workflows/ci.yml` según D11: Node.js 22, `services.postgres` con `postgres:16` y `pg_isready`, `DATABASE_URL` en `env`, y los pasos `npm ci`, `migrar`, `migrar:revertir`, `migrar` y `test:integration`; sin `needs`. Verificar:
+- [x] 5.1 Añadir el job `integracion` a `.github/workflows/ci.yml` según D11: Node.js 22, `services.postgres` con `postgres:16` y `pg_isready`, `DATABASE_URL` en `env`, y los pasos `npm ci`, `migrar`, `migrar:revertir`, `migrar` y `test:integration`; sin `needs`. Verificar:
   - la sintaxis con `actionlint` si está disponible, o con una revisión del YAML;
   - que los jobs `prototipo` y `documentacion` no cambian (`git diff` limitado al nuevo job);
   - que la secuencia de comandos pasa localmente contra `docker compose`.

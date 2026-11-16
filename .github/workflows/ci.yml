@@ -39,3 +39,42 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/verificar-docs.mjs
+
+  # PostgreSQL real: migraciones, su reversión, su reaplicación y las pruebas de
+  # integración. Sin `needs`: un fallo de persistencia se ve por separado y no depende de
+  # que el job `prototipo` pase (s1a-dominio-medicion, design.md D11).
+  integracion:
+    name: Integración (PostgreSQL)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tecnologia/siJASS-clean-architecture
+    services:
+      postgres:
+        image: postgres:16
+        # Credenciales desechables: solo existen dentro del contenedor efímero del job.
+        env:
+          POSTGRES_USER: sijass
+          POSTGRES_PASSWORD: sijass
+          POSTGRES_DB: sijass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sijass -d sijass"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://sijass:sijass@localhost:5432/sijass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tecnologia/siJASS-clean-architecture/package-lock.json
+      - run: npm ci
+      - run: npm run migrar
+      - run: npm run migrar:revertir
+      - run: npm run migrar
+      - run: npm run test:integration
