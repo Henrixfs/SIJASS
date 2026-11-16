@@ -3,6 +3,7 @@ import { strict as assert } from 'node:assert';
 import { ErrorValidacion, type MotivoRechazo } from '../../dominio/errores.js';
 import {
   crearMedicion,
+  normalizarIdentificadores,
   TOLERANCIA_TOMA_MS_POR_DEFECTO,
   type ComandoRegistrarMedicion,
   type DatosServidorMedicion,
@@ -181,6 +182,37 @@ test('evidencia opcional: presente se conserva, ausente se omite, malformada se 
     () => crearMedicion(comandoCon({ evidenciaId: 'foto.jpg' }), datos),
     rechazaCon('identificador-invalido'),
   );
+});
+
+test('UUID en mayúsculas: la medición se guarda con reservorioId y evidenciaId en minúsculas', () => {
+  // UUID con letras hexadecimales: con solo dígitos, toUpperCase() no cambiaría nada.
+  const reservorio = 'aaaabbbb-cccc-4ddd-8eee-ffff00001111';
+  const evidencia = 'abcdef01-2345-4678-9abc-def012345678';
+  assert.notEqual(reservorio.toUpperCase(), reservorio);
+  const medicion = crearMedicion(
+    comandoCon({ reservorioId: reservorio.toUpperCase(), evidenciaId: evidencia.toUpperCase() }),
+    datos,
+  );
+  assert.equal(medicion.reservorioId, reservorio);
+  assert.equal(medicion.evidenciaId, evidencia);
+  assert.deepStrictEqual(medicion, crearMedicion(comandoCon({ reservorioId: reservorio, evidenciaId: evidencia }), datos));
+});
+
+test('normalizarIdentificadores pasa a minúsculas solo los UUID válidos y conserva el resto', () => {
+  const normalizado = normalizarIdentificadores(
+    comandoCon({
+      operationId: 'fedcba98-7654-4321-afed-cba987654321'.toUpperCase(),
+      reservorioId: 'aaaabbbb-cccc-4ddd-8eee-ffff00001111'.toUpperCase(),
+      evidenciaId: 'FOTO-NO-UUID',
+      metodo: 'COLORIMETRO',
+      extra: 'ABC',
+    }),
+  ) as unknown as Record<string, unknown>;
+  assert.equal(normalizado.operationId, 'fedcba98-7654-4321-afed-cba987654321');
+  assert.equal(normalizado.reservorioId, 'aaaabbbb-cccc-4ddd-8eee-ffff00001111');
+  assert.equal(normalizado.evidenciaId, 'FOTO-NO-UUID', 'un valor malformado se conserva para que lo rechace su regla');
+  assert.equal(normalizado.metodo, 'COLORIMETRO', 'los campos que no son UUID no se tocan');
+  assert.equal(normalizado.extra, 'ABC');
 });
 
 test('tolerancia: exactamente +5 min se acepta y +5 min + 1 ms se rechaza', () => {

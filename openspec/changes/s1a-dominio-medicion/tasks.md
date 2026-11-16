@@ -51,7 +51,7 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
 
 ## 3. Idempotencia en dominio y aplicación (DT05)
 
-- [ ] 3.1 Implementar `contenidoCanonico(tipo, comando)` en `src/dominio/contenido-canonico.ts` según D5, y el cálculo SHA-256 en hexadecimal en la capa de aplicación con `node:crypto`. Verificar con `src/pruebas/unitarias/contenido-canonico.test.ts`:
+- [x] 3.1 Implementar `contenidoCanonico(tipo, comando)` en `src/dominio/contenido-canonico.ts` según D5, y el cálculo SHA-256 en hexadecimal en la capa de aplicación con `node:crypto`. Verificar con `src/pruebas/unitarias/contenido-canonico.test.ts`:
   - un vector fijo con su hash esperado;
   - el mismo hash con otro orden de claves;
   - el `operationId` no influye;
@@ -59,9 +59,9 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - `undefined` se omite;
   - la función es total con `NaN` y `-0`;
   - un campo `tipo` dentro del comando no altera el tipo.
-- [ ] 3.2 Implementar `OperacionesMemoria` (`reservar`, `registrarResultado`) y `UnidadDeTrabajoMemoria` (mutex, copia del estado publicada solo al confirmar, fábrica decoradora opcional de repositorios) según D6. Verificar con pruebas unitarias que un trabajo resuelto publica sus escrituras, que un trabajo que lanza no deja ninguna, y que dos trabajos simultáneos se ejecutan en serie.
-- [ ] 3.3 Implementar `RegistrarMedicion` en `src/aplicacion/registrar-medicion.ts`, con `ejecutar(comando, actor, origen)` siguiendo los pasos 1–5 de D6 y `toleranciaMs` por defecto de 5 minutos. Verificar que `npm run build` y `npm run lint` terminan con código 0.
-- [ ] 3.4 Crear `src/pruebas/contrato/registro-idempotente.ts`, una batería parametrizada por una fábrica de unidad de trabajo y por un número de repeticiones, con todos los escenarios de la spec `registro-idempotente`:
+- [x] 3.2 Implementar `OperacionesMemoria` (`reservar`, `registrarResultado`) y `UnidadDeTrabajoMemoria` (mutex, copia del estado publicada solo al confirmar, fábrica decoradora opcional de repositorios) según D6. Verificar con pruebas unitarias que un trabajo resuelto publica sus escrituras, que un trabajo que lanza no deja ninguna, y que dos trabajos simultáneos se ejecutan en serie.
+- [x] 3.3 Implementar `RegistrarMedicion` en `src/aplicacion/registrar-medicion.ts`, con `ejecutar(comando, actor, origen)` siguiendo los pasos 1–5 de D6 y `toleranciaMs` por defecto de 5 minutos. Verificar que `npm run build` y `npm run lint` terminan con código 0.
+- [x] 3.4 Crear `src/pruebas/contrato/registro-idempotente.ts`, una batería parametrizada por una fábrica de unidad de trabajo y por un número de repeticiones, con todos los escenarios de la spec `registro-idempotente`:
   - `accepted` y `duplicate` con el resultado original (PT04);
   - tres reintentos con exactamente una medición y una reserva (RNF04);
   - `conflict` sin sobrescritura, también con contenido inválido, y `duplicate` tras el conflicto (PT12);
@@ -72,7 +72,7 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - fallo de infraestructura propagado como error.
 
   Ejecutarla con la memoria en `src/pruebas/unitarias/contrato-memoria.test.ts`. Verificar que `npm test` la pasa.
-- [ ] 3.5 Añadir a la batería de 3.4 los casos de reversión y concurrencia, cada uno en `repeticiones` rondas:
+- [x] 3.5 Añadir a la batería de 3.4 los casos de reversión y concurrencia, cada uno en `repeticiones` rondas:
   - reversión (PT11): fallo inyectado en `guardar` y en `registrarResultado`; sin reserva ni medición; el reintento da `accepted`;
   - concurrencia: 10 envíos idénticos dan 1 `accepted` y 9 `duplicate` con el mismo `medicionId` y una sola medición; 2 envíos con valores distintos dan 1 `accepted` y 1 `conflict`.
 

@@ -57,7 +57,8 @@ Ver `proposal.md` para la motivación y `specs/` para los requisitos.
 
 **D1 — Modelo inmutable y jerarquía de errores de dominio.** `Medicion` es un objeto congelado con los campos del diseño interno §4. `crearMedicion` aplica solo reglas puras y normaliza antes de congelar:
 - `valor`: `-0` pasa a `0`;
-- `tomadaEn` y `registradaEn`: instante en UTC con milisegundos (`toISOString()`).
+- `tomadaEn` y `registradaEn`: instante en UTC con milisegundos (`toISOString()`);
+- `operationId`, `reservorioId` y `evidenciaId`: se aceptan en mayúsculas o minúsculas y se normalizan a minúsculas, **antes de calcular el hash (D5) y antes de guardar**. Solo se normaliza un valor que ya es un UUID válido; uno malformado se conserva tal cual y lo rechaza su regla. *Por qué:* PostgreSQL devuelve el tipo `uuid` siempre en minúsculas, de modo que sin esta regla la memoria y PostgreSQL devolverían valores distintos. Además, el mismo UUID escrito con otra capitalización da `duplicate` y no `conflict`, y la clave de idempotencia (JASS, `operationId`) no distingue entre mayúsculas y minúsculas. *Alternativa descartada:* aceptar solo minúsculas, que rechazaría UUID legítimos generados por otros clientes. (Decisión del 2026-11-13, tomada durante la implementación del grupo 2.)
 
 Los errores se organizan así:
 - `ErrorDominio` (base, con `codigo`);
@@ -128,7 +129,7 @@ El catálogo es **provisional** (roadmap §7).
 *Por qué:*
 - ADR-005 y el diseño §5.1 exigen un hash del contenido.
 - El servidor no puede confiar en un hash del cliente.
-- Hashear el comando tal como se recibe, sin normalizar su semántica, impide que un cambio futuro de reglas de normalización convierta reenvíos legítimos en conflictos.
+- Hashear el comando tal como se recibe, sin normalizar su semántica, impide que un cambio futuro de reglas de normalización convierta reenvíos legítimos en conflictos. La única excepción es la capitalización de los UUID (D1), que se normaliza antes del hash.
 
 *Alternativas:*
 - Hashear la entidad `Medicion` normalizada: incluye `registradaEn` y el `id`, que cambian en cada reintento.

@@ -70,6 +70,23 @@ export function esUuid(valor: unknown): valor is string {
   return typeof valor === 'string' && FORMATO_UUID.test(valor);
 }
 
+/** Campos del comando que contienen UUID y se normalizan a minúsculas (design.md D1). */
+const CAMPOS_UUID = ['operationId', 'reservorioId', 'evidenciaId'] as const;
+
+/**
+ * Devuelve una copia del comando con `operationId`, `reservorioId` y `evidenciaId` en
+ * minúsculas cuando ya son UUID válidos; los demás campos (incluidos los no permitidos)
+ * se conservan tal cual. Se aplica antes de calcular el hash y antes de guardar.
+ */
+export function normalizarIdentificadores(comando: ComandoRegistrarMedicion): ComandoRegistrarMedicion {
+  const copia: Record<string, unknown> = { ...(comando as unknown as Record<string, unknown>) };
+  for (const campo of CAMPOS_UUID) {
+    const valor = copia[campo];
+    if (esUuid(valor)) copia[campo] = valor.toLowerCase();
+  }
+  return copia as unknown as ComandoRegistrarMedicion;
+}
+
 /**
  * Valida el comando con reglas puras y construye una medición congelada. Las reglas se
  * comprueban en un orden fijo (design.md D1) y se informa la primera incumplida:
@@ -77,7 +94,7 @@ export function esUuid(valor: unknown): valor is string {
  * reservorio a la JASS la comprueba la capa de aplicación, porque requiere un puerto.
  */
 export function crearMedicion(comando: ComandoRegistrarMedicion, datos: DatosServidorMedicion): Medicion {
-  const entrada = comando as unknown as Readonly<Record<string, unknown>>;
+  const entrada = normalizarIdentificadores(comando) as unknown as Readonly<Record<string, unknown>>;
 
   for (const clave of Object.keys(entrada)) {
     if (!(CAMPOS_COMANDO_REGISTRAR as readonly string[]).includes(clave)) {

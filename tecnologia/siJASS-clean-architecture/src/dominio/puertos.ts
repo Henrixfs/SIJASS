@@ -93,6 +93,13 @@ export interface RepositoriosTransaccion {
 }
 
 /**
+ * Costura de pruebas (design.md D6): envuelve los repositorios de cada transacción, por
+ * ejemplo para inyectar un fallo o un retardo. Ambas implementaciones de
+ * `UnidadDeTrabajo` la aceptan de forma opcional; en producción no se usa.
+ */
+export type DecoradorRepositorios = (repos: RepositoriosTransaccion) => RepositoriosTransaccion;
+
+/**
  * Ejecuta `trabajo` en una transacción: confirma todas sus escrituras si la promesa se
  * resuelve y las revierte todas si lanza, propagando el error.
  */
