@@ -1,6 +1,6 @@
 # Diseño interno de módulos — SIJASS
 
-**Estado:** diseño propuesto para el MVP. El prototipo TypeScript actual **no** implementa este diseño; ver [deuda técnica](../../00-alcance-y-roadmap.md#6-deuda-técnica-conocida).
+**Estado:** diseño propuesto para el MVP. El prototipo TypeScript implementa **parte** de este diseño (el modelo de §4 sin revisiones y el flujo de §5.3 sin auditoría); ver las limitaciones en la nota de desfase de §4 y en la [deuda técnica](../../00-alcance-y-roadmap.md#6-deuda-técnica-conocida).
 
 ## 1. Módulos del monolito
 
@@ -60,7 +60,7 @@ RevisionMedicion {
 - **Reglas:** valor finito y no negativo; unidad y método del catálogo; `tomadaEn` no posterior a la recepción más una tolerancia configurada; reservorio perteneciente a la JASS del actor. La fotografía nunca sustituye la lectura.
 - **Validaciones determinísticas (RF15):** advertencias por valor fuera del rango configurado, toma muy antigua o en el futuro, o posible duplicado (mismo reservorio y hora). Las advertencias no bloquean ni modifican el valor salvo regla explícita.
 - **Evidencia:** tipo MIME y tamaño validados, compresión en el cliente, eliminación de metadatos EXIF de ubicación, acceso mediante URL temporal restringida a la JASS, retención definida por política.
-- **Desfase con el prototipo:** `src/dominio/medicion.ts` usa `cloroMgL`, `confianza`, `confirmada` y `modeloId` y carece de `jassId`, método y autor; es código heredado del diseño anterior.
+- **Desfase con el prototipo** (tras `s1a-dominio-medicion`): `src/dominio/medicion.ts` ya implementa este modelo (JASS, método, unidad, autor, hora de toma y de recepción, estado y revisión 1) y el flujo idempotente de §5.3 sobre una unidad de trabajo. **Falta:** `RevisionMedicion` y las correcciones (RF08), las advertencias determinísticas (RF15), el evento de auditoría en la misma transacción, el registro de los rechazos (RNF05) y la tabla de evidencia. `SincronizarOperacion` aún no está separado de `RegistrarMedicion` (hay un solo tipo de operación y ninguna sincronización por lotes), y el catálogo de métodos es provisional.
 
 ## 5. Sincronización de mediciones
 

@@ -1,6 +1,6 @@
 # Plan de pruebas y validación — SIJASS
 
-**Estado:** plan de calidad para la arquitectura objetivo. Ninguna prueba del MVP ha sido ejecutada; el prototipo contiene cinco pruebas unitarias sobre el modelo anterior.
+**Estado:** plan de calidad para la arquitectura objetivo. Ninguna prueba del MVP ha sido ejecutada; el prototipo contiene 73 pruebas unitarias y 52 de integración contra PostgreSQL que cubren PT01–PT04, PT11 y PT12.
 
 ## 1. Situación verificada del prototipo
 
@@ -9,35 +9,42 @@
 | **2026-10-28, antes de `s0-saneamiento-prototipo`:** `npm install` y `npm test` en una copia limpia de `tecnologia/siJASS-clean-architecture/` (Node.js 22.22.0, npm 10.9.4) | **Falla la compilación**: `TS2307: Cannot find module 'node:test'` y `'node:assert'` por falta de `@types/node` (DT01) |
 | **2026-10-28:** la misma copia con `@types/node` añadido localmente, **sin versionar el cambio** | Las 5 pruebas pasan (5/5) |
 | **2026-11-04, tras `s0-saneamiento-prototipo`:** `npm ci`, `npm run lint`, `npm run build` y `npm test` en copia limpia (Node.js 24 local; Node.js 20 y 22 en [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941), commit `9725d15`, PR #3 fusionado a `main`; el CI de `main` también pasó: [ejecución](https://github.com/Henrixfs/SIJASS/actions/runs/41888275471)) | Todos terminan con código 0; 5/5 pruebas pasan; DT01 y DT02 resueltas |
+| **2026-11-16, tras `s1a-dominio-medicion`:** `npm ci`, `npm run lint`, `npm test` y `npm run test:integration` contra PostgreSQL 16 (commit `e79b29a`, [PR #5](https://github.com/Henrixfs/SIJASS/pull/5)). En GitHub Actions ([ejecución 43899642952](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)): `prototipo` en Node.js 20 y 22, `documentacion` e `integracion`. En local: Node.js 24 y PostgreSQL 16 en Docker, tres ejecuciones consecutivas de `test:integration` | Todos terminan con código 0; `npm test` pasa 73 pruebas y `test:integration` pasa 52 (migración aplicada, revertida y vuelta a aplicar); DT03–DT06 resueltas |
 
-Esta verificación solo demuestra que el dominio del prototipo se comporta como sus pruebas esperan; no valida PWA, API, base de datos, sincronización ni RAG.
+Esta verificación solo demuestra que el dominio y la persistencia del prototipo se comportan como sus pruebas esperan; no valida PWA, API, autenticación, sincronización ni RAG.
 
 ### Correspondencia de las pruebas existentes
 
-| Prueba en `dominio.test.ts` | Caso del plan | Observación |
-|---|---|---|
-| `medición válida` | PT03 (parcial) | Modelo heredado |
-| `rechaza cloro negativo` | PT01 (parcial) | Vigente conceptualmente |
-| `rechaza confianza incorrecta` | — | Valida el campo `confianza`, que se retirará del modelo |
-| `caso de uso persiste medición` | PT03 (parcial) | Sin JASS ni autor |
-| `operación idempotente` | PT04 (parcial) | En memoria, sin transacción ni hash |
+El archivo `dominio.test.ts` (cinco pruebas sobre el modelo heredado) se retiró en `s1a-dominio-medicion`. Las pruebas actuales se organizan por nivel:
+
+| PT | Prueba | Nivel | Se ejecuta con |
+|---|---|---|---|
+| PT01 | Valores no finitos, negativos y no numéricos: [`medicion.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/medicion.test.ts) | Unitaria | `npm test` |
+| PT02 | Fechas, unidad y método: [`medicion.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/medicion.test.ts) e [`instante.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/instante.test.ts) | Unitaria | `npm test` |
+| PT03 | Registrar y recuperar con autor y JASS: batería [`repositorio-mediciones.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/repositorio-mediciones.ts) | Contrato | `npm test` (memoria) y `npm run test:integration` (PostgreSQL) |
+| PT04 | Duplicado y tres reintentos (RNF04): batería [`registro-idempotente.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts) | Contrato | ambos |
+| PT11 | Fallo entre la reserva y la escritura, repetido en 10 rondas: [`registro-idempotente.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts) | Contrato | ambos (en PostgreSQL, vía [`contrato-postgres.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/contrato-postgres.test.ts)) |
+| PT12 | Conflicto sin sobrescritura: [`registro-idempotente.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts) | Contrato | ambos |
+| — | Restricciones del esquema por SQL directo y coherencia del catálogo: [`esquema.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/esquema.test.ts) | Integración | `npm run test:integration` |
+
+PT13 (denegación entre JASS por usuarios) sigue **pendiente**: el prototipo prueba que las lecturas de mediciones están aisladas por JASS, pero aún no tiene usuarios, sesión ni autorización.
 
 ## 2. Matriz de pruebas
 
 | ID | Nivel | Caso | Resultado esperado | Requisitos | Estado |
 |---|---|---|---|---|---|
-| PT01 | Unitario | Valor de medición no finito o negativo | Rechazo con error de dominio | RF07, RNF03 | Prototipo (modelo heredado) |
-| PT02 | Unitario | Fecha inválida, unidad o método fuera de catálogo | Rechazo con error de dominio | RF07, RNF03 | Pendiente |
-| PT03 | Unitario | Registrar y recuperar una medición dentro de la JASS | Lectura correcta con autor y JASS | RF06 | Prototipo parcial (sin JASS) |
-| PT04 | Integración | Reenviar el mismo `operationId` con el mismo contenido | `duplicate` y un único efecto | RF10, RNF04 | Prototipo parcial (no transaccional) |
+| PT01 | Unitario | Valor de medición no finito o negativo | Rechazo con error de dominio | RF07, RNF03 | Prototipo (automatizada en CI: [medicion.test.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/medicion.test.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
+| PT02 | Unitario | Fecha inválida, unidad o método fuera de catálogo | Rechazo con error de dominio | RF07, RNF03 | Prototipo (automatizada en CI: [medicion.test.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/medicion.test.ts), [instante.test.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/instante.test.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
+| PT03 | Unitario | Registrar y recuperar una medición dentro de la JASS | Lectura correcta con autor y JASS | RF06 | Prototipo (automatizada en CI: [repositorio-mediciones.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/repositorio-mediciones.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
+| PT04 | Integración | Reenviar el mismo `operationId` con el mismo contenido | `duplicate` y un único efecto | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
 | PT05 | E2E | 100 registros sin conexión, cierre, reinicio y reconexión | 0 pérdidas observadas; todos sincronizados | RF10, RNF01 | Pendiente |
 | PT06 | Seguridad | Tesorero intenta corregir una medición | `403`, sin cambios, evento auditado | RF01, RNF05 | Pendiente |
 | PT07 | Compatibilidad | PWA en la matriz de dispositivos y navegadores del piloto | Instalación, almacenamiento local y sincronización funcionales | RNF08 | Pendiente |
 | PT08 | Documental | Documento en borrador, sustituido o privado de otra JASS | No se lista ni se recupera | RF09, RF14, RNF09 | Pendiente |
 | PT09 | Dominio | Registro con fotografía adjunta | Se guarda el valor manual; ningún valor se estima a partir de la imagen | RF06 | Pendiente |
 | PT10 | Integración | Corregir una medición; corregir sobre una revisión desactualizada | Conserva original, nuevo valor, motivo, actor y fecha; la segunda devuelve `conflict` | RF08, RF11 | Pendiente |
-| PT11 | Integración | Falla entre la reserva del `operationId` y la escritura de la medición | Reversión completa; ni `accepted` falso ni pérdida silenciosa | RF10, RNF04 | Pendiente |
-| PT12 | Integración | Mismo `operationId` con contenido distinto | `conflict` sin sobrescritura | RF10, RNF04 | Pendiente |
+| PT11 | Integración | Falla entre la reserva del `operationId` y la escritura de la medición | Reversión completa; ni `accepted` falso ni pérdida silenciosa | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
+| PT12 | Integración | Mismo `operationId` con contenido distinto | `conflict` sin sobrescritura | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
 | PT13 | Seguridad | Usuario de la JASS A accede a datos de la JASS B (mediciones, asociados, reservorios, reportes) | Denegación sin filtrar datos | RF01–RF03, RF11, RNF05 | Pendiente |
 | PT14 | Integración | Pago parcial, doble envío con la misma `Idempotency-Key` y reversa | Saldos exactos; un solo pago; reversa auditada | RF04, RF05, RNF04 | Pendiente |
 | PT15 | RAG | Pregunta sin fuentes suficientes | Abstención explícita | RF13, RNF09 | Pendiente |

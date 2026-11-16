@@ -132,7 +132,7 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
 
 ## 6. Documentación con evidencia (solo tras 5.2)
 
-- [ ] 6.1 Actualizar `tecnologia/siJASS-clean-architecture/README.md`:
+- [x] 6.1 Actualizar `tecnologia/siJASS-clean-architecture/README.md`:
   - estado, estructura y qué demuestra;
   - comandos (`npm test`, `docker compose up -d --wait`, `DATABASE_URL` en bash y en PowerShell, `npm run migrar`, `npm run test:integration`);
   - resultado verificado con fecha y URL de 5.2;
@@ -140,27 +140,27 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
   - limitaciones vigentes: sin RF08, RF15, auditoría, usuarios, HTTP ni tabla de evidencia, y catálogo provisional.
 
   Verificar que `node scripts/verificar-docs.mjs` (desde la raíz) termina con código 0 y que los comandos documentados funcionan tal como están escritos.
-- [ ] 6.2 Actualizar `docs/00-alcance-y-roadmap.md`:
+- [x] 6.2 Actualizar `docs/00-alcance-y-roadmap.md`:
   - restaurar el título `# 00. Alcance, hoja de ruta y estado del proyecto — SIJASS`, corrupto desde `f2017e6`;
   - §1, situación del prototipo;
   - §5, Etapa 1 «Parcial» (`s1a` hecho; `s1b` pendiente) con enlace a CI;
   - §6, DT03–DT06 «Resuelta por `s1a-dominio-medicion`» con commit y URL de CI.
 
   Verificar que `head -1` muestra el título correcto y que `verificar-docs.mjs` termina con código 0.
-- [ ] 6.3 Actualizar `docs/05-trazabilidad-y-validacion/plan-pruebas.md`:
+- [x] 6.3 Actualizar `docs/05-trazabilidad-y-validacion/plan-pruebas.md`:
   - §1: nueva fila con el resultado de `npm test` y `test:integration`;
   - correspondencia de pruebas reemplazada por la de D10;
   - PT01–PT04, PT11 y PT12 pasan a «Prototipo (automatizada en CI)» con enlace;
   - PT13 sigue «Pendiente».
 
   Verificar con `verificar-docs.mjs` y comprobar que ningún PT afirma un estado sin enlace.
-- [ ] 6.4 Actualizar `docs/07-evaluacion-final/matriz-cumplimiento.md`:
+- [x] 6.4 Actualizar `docs/07-evaluacion-final/matriz-cumplimiento.md`:
   - filas C02, C04, C05, C09, C12 y C14, con evidencia enlazada y lo pendiente visible: auditoría, RF08 y RF15 en C02 y C05; estrategia de crecimiento en C09; CD en C12;
   - nueva sección «Aporte de S1a»;
   - versión y fecha.
 
   Verificar con `verificar-docs.mjs` y comprobar con `grep` que ninguna fila figura como *Implementado*.
-- [ ] 6.5 Alinear las descripciones del prototipo:
+- [x] 6.5 Alinear las descripciones del prototipo:
   - nota de desfase del diseño interno §4: sin `RevisionMedicion`, auditoría ni tabla de evidencia, y `SincronizarOperacion` aún no separado;
   - `docs/04-modelo-c4/Nivel4-Diagrama-de-Codigo.md` §1 (diagrama, tabla y limitaciones);
   - `docs/02-arquitectura-software/componentes-arquitectonicos.md` §4;
