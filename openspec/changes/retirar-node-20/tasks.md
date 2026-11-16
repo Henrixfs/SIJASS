@@ -44,7 +44,7 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 ## 6. Integración final
 
 - [x] 6.1 Ejecutar `openspec validate retirar-node-20 --strict`. Verificar que termina con código 0 y sin avisos.
-- [ ] 6.2 En una copia limpia del commit final, ejecutar `npm ci`, `npm run lint`, `npm test` y, desde la raíz, `node scripts/verificar-docs.mjs`. Verificar que todo termina con código 0 y que los resultados coinciden con el CI de 5.2.
+- [x] 6.2 En una copia limpia del commit final, ejecutar `npm ci`, `npm run lint`, `npm test` y, desde la raíz, `node scripts/verificar-docs.mjs`. Verificar que todo termina con código 0 y que los resultados coinciden con el CI de 5.2.
 
 ## Workflow follow-up
 
