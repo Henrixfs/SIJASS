@@ -173,9 +173,9 @@ Todas las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo qu
 
 ## 7. Integración final
 
-- [ ] 7.1 En una copia limpia del commit final (`git worktree` o `git clone`), ejecutar `npm ci`, `npm run lint`, `npm test`, `docker compose up -d --wait`, `npm run migrar`, `npm run migrar:revertir`, `npm run migrar`, `npm run test:integration` y, desde la raíz, `node scripts/verificar-docs.mjs`. Verificar que todo termina con código 0 y que los resultados coinciden con el CI de 6.6.
-- [ ] 7.2 Ejecutar `openspec validate s1a-dominio-medicion --strict`. Verificar que no reporta errores. El aviso informativo de que el delta de `prototype-quality-gate` requiere la spec archivada es esperado.
-- [ ] 7.3 Ejecutar `docker compose down -v` y `git status`. Verificar que no quedan archivos sin seguimiento ni cambios relevantes (`.env`, `dist/` y `node_modules/` ignorados) y que no se versionó ningún `.env`.
+- [x] 7.1 En una copia limpia del commit final (`git worktree` o `git clone`), ejecutar `npm ci`, `npm run lint`, `npm test`, `docker compose up -d --wait`, `npm run migrar`, `npm run migrar:revertir`, `npm run migrar`, `npm run test:integration` y, desde la raíz, `node scripts/verificar-docs.mjs`. Verificar que todo termina con código 0 y que los resultados coinciden con el CI de 6.6.
+- [x] 7.2 Ejecutar `openspec validate s1a-dominio-medicion --strict`. Verificar que no reporta errores. El aviso informativo de que el delta de `prototype-quality-gate` requiere la spec archivada es esperado.
+- [x] 7.3 Ejecutar `docker compose down -v` y `git status`. Verificar que no quedan archivos sin seguimiento ni cambios relevantes (`.env`, `dist/` y `node_modules/` ignorados) y que no se versionó ningún `.env`.
 
 ## Workflow follow-up
 
