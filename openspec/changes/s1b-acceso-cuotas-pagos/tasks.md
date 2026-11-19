@@ -34,8 +34,8 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 5. Interfaz web (D10)
 
-- [ ] 5.1 Crear `tecnologia/sijass-web/` (React + TypeScript + Vite) con inicio de sesión, pantallas del personal y portal del asociado, `package-lock.json` y scripts `lint`, `build` y `test`. Verificar que `npm ci`, `npm run lint`, `npm run build` y `npm test` terminan con código 0.
-- [ ] 5.2 Pruebas de la interfaz (formato de soles, guardia de rutas por perfil, manejo de `401` con refresco y de `403`).
+- [x] 5.1 Crear `tecnologia/sijass-web/` (React + TypeScript + Vite) con inicio de sesión, pantallas del personal y portal del asociado, `package-lock.json` y scripts `lint`, `build` y `test`. Verificar que `npm ci`, `npm run lint`, `npm run build` y `npm test` terminan con código 0.
+- [x] 5.2 Pruebas de la interfaz (formato de soles, guardia de rutas por perfil, manejo de `401` con refresco y de `403`).
 
 ## 6. E2E en navegador
 
