@@ -6,6 +6,7 @@ import type { INestApplication } from '@nestjs/common';
 import type pg from 'pg';
 import { crearAplicacion } from '../../api/aplicacion.js';
 import type { DecoradorRepositoriosAcceso } from '../../dominio/puertos-acceso.js';
+import { UnidadDeTrabajoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-postgres.js';
 import { UnidadDeTrabajoAccesoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
 import { CLAVE, crearEntorno, sembrarEscenario, type Entorno, type Escenario } from '../entorno-acceso.js';
 
@@ -34,7 +35,7 @@ export interface Api {
 }
 
 export async function iniciarApi(pool: pg.Pool, decorar?: DecoradorRepositoriosAcceso): Promise<Api> {
-  const entorno = crearEntorno(new UnidadDeTrabajoAccesoPostgres(pool, decorar));
+  const entorno = crearEntorno(new UnidadDeTrabajoAccesoPostgres(pool, decorar), { mediciones: new UnidadDeTrabajoPostgres(pool) });
   const errores: string[] = [];
   const app = await crearAplicacion({ casos: entorno.casos, registrar: (m) => errores.push(m) });
   await app.listen(0, '127.0.0.1');
@@ -83,7 +84,7 @@ export interface Mundo {
   readonly api: Api;
   readonly esc: Escenario;
   /** Token de acceso de cada cuenta del escenario. */
-  readonly token: Record<'consejoA' | 'tesoreroA' | 'operadorA' | 'tesoreroB' | 'asociadoA1' | 'asociadoA2' | 'asociadoB1', string>;
+  readonly token: Record<'consejoA' | 'tesoreroA' | 'operadorA' | 'tesoreroB' | 'consejoB' | 'operadorB' | 'asociadoA1' | 'asociadoA2' | 'asociadoB1', string>;
 }
 
 /** API + escenario sembrado + un token de acceso por cuenta. */
@@ -95,6 +96,8 @@ export async function crearMundo(pool: pg.Pool, decorar?: DecoradorRepositoriosA
     tesoreroA: (await api.iniciarSesion(esc.tesoreroA.correo)).tokenAcceso,
     operadorA: (await api.iniciarSesion(esc.operadorA.correo)).tokenAcceso,
     tesoreroB: (await api.iniciarSesion(esc.tesoreroB.correo)).tokenAcceso,
+    consejoB: (await api.iniciarSesion(esc.consejoB.correo)).tokenAcceso,
+    operadorB: (await api.iniciarSesion(esc.operadorB.correo)).tokenAcceso,
     asociadoA1: (await api.iniciarSesion(esc.asociadoA1.cuenta.correo)).tokenAcceso,
     asociadoA2: (await api.iniciarSesion(esc.asociadoA2.cuenta.correo)).tokenAcceso,
     asociadoB1: (await api.iniciarSesion(esc.asociadoB1.cuenta.correo)).tokenAcceso,

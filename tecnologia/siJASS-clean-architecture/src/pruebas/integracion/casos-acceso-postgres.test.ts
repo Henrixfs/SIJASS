@@ -6,6 +6,7 @@ import { after, describe } from 'node:test';
 import { UnidadDeTrabajoAccesoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
 import { suiteAcceso } from '../contrato/casos-acceso.js';
 import { suitePadron } from '../contrato/casos-padron.js';
+import { suiteReservorios } from '../contrato/casos-reservorios.js';
 import { crearPool } from './entorno.js';
 
 describe('acceso y padrón (PostgreSQL)', () => {
@@ -17,4 +18,5 @@ describe('acceso y padrón (PostgreSQL)', () => {
 
   describe('acceso', () => suiteAcceso(fabrica));
   describe('padrón, cuotas, pagos y portal', () => suitePadron(fabrica));
+  describe('reservorios (s1c)', () => suiteReservorios(fabrica));
 });

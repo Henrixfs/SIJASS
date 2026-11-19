@@ -258,3 +258,8 @@ td.acciones {
     flex-wrap: wrap;
   }
 }
+
+.selector {
+  max-width: 24rem;
+  margin: 0.75rem 0;
+}

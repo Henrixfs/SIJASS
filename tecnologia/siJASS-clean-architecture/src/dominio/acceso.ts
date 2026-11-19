@@ -60,9 +60,14 @@ export type Permiso =
   | 'pagos.leer'
   | 'pagos.registrar'
   | 'acceso-asociado.crear'
-  | 'portal.consultar';
+  | 'portal.consultar'
+  | 'reservorios.leer'
+  | 'reservorios.crear'
+  | 'mediciones.registrar'
+  | 'mediciones.leer';
 
 const PERSONAL_CON_PADRON: readonly Rol[] = ['tesorero', 'consejo'];
+const TODO_EL_PERSONAL: readonly Rol[] = ['consejo', 'tesorero', 'operador'];
 
 // El `operador` no tiene permiso alguno sobre padrón, cuotas ni pagos (matriz de actores).
 const REGLAS: Readonly<Record<Permiso, { readonly perfil: Perfil; readonly roles?: readonly Rol[] }>> = {
@@ -72,6 +77,12 @@ const REGLAS: Readonly<Record<Permiso, { readonly perfil: Perfil; readonly roles
   'pagos.registrar': { perfil: 'personal', roles: PERSONAL_CON_PADRON },
   'acceso-asociado.crear': { perfil: 'personal', roles: PERSONAL_CON_PADRON },
   'portal.consultar': { perfil: 'asociado' },
+  // s1c: el consejo da de alta los reservorios; solo el operador registra mediciones; el
+  // historial lo leen operador, tesorero y consejo. El asociado no accede a ninguno.
+  'reservorios.leer': { perfil: 'personal', roles: TODO_EL_PERSONAL },
+  'reservorios.crear': { perfil: 'personal', roles: ['consejo'] },
+  'mediciones.registrar': { perfil: 'personal', roles: ['operador'] },
+  'mediciones.leer': { perfil: 'personal', roles: TODO_EL_PERSONAL },
 };
 
 export function tienePermiso(actor: ContextoAcceso, permiso: Permiso): boolean {
