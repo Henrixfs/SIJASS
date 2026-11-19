@@ -4,24 +4,24 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 1. Esquema (D4)
 
-- [ ] 1.1 Crear `migraciones/0002_acceso-padron-pagos.sql` con `usuario`, `asociado`, `membresia`, `sesion`, `cuota`, `pago`, `reversa_pago` y `evento_auditoria` (restricciones, claves compuestas y disparador de solo inserción). Verificar:
+- [x] 1.1 Crear `migraciones/0002_acceso-padron-pagos.sql` con `usuario`, `asociado`, `membresia`, `sesion`, `cuota`, `pago`, `reversa_pago` y `evento_auditoria` (restricciones, claves compuestas y disparador de solo inserción). Verificar:
   - `npm run migrar`, `npm run migrar:revertir` y `npm run migrar` terminan con código 0 y la reversión deja solo las tablas de `0001`;
   - una prueba de integración por SQL directo rechaza: segunda membresía activa de un usuario, membresía de asociado que apunta a un asociado de otra JASS, cuota con importe 0 o periodo mal formado, cuota duplicada por (asociado, periodo), pago con importe 0, clave de idempotencia repetida en la misma JASS (y aceptada en otra), `UPDATE` y `DELETE` sobre `evento_auditoria`.
 
 ## 2. Dominio y aplicación (D2, D5, D6, D7, D8)
 
-- [ ] 2.1 Contraseñas (`scrypt`), tokens de acceso (HS256) y de refresco, con pruebas unitarias: derivación con sal distinta para igual contraseña, verificación correcta y errónea, formato inválido, token alterado, vencido, firmado con otra clave y con algoritmo `none`. Verificar que `npm test` pasa.
-- [ ] 2.2 Modelo y reglas de padrón: `Asociado`, `Cuota`, `Pago`, `ReversaPago`, importes en céntimos, periodos, saldo y estado de cuota (D5), con pruebas unitarias de los escenarios de `cuotas-y-pagos` (saldo con cuota exigible y futura, pago revertido, estados `pendiente`/`parcial`/`pagada`, importes inválidos, periodo mal formado, periodo actual en UTC-5 en la frontera de mes).
-- [ ] 2.3 Puertos y casos de uso: `AutenticarUsuario`, `RenovarSesion`, `CerrarSesion`, `RegistrarAsociado`, `DarDeBajaAsociado`, `CrearAccesoAsociado`, `GenerarCuotas`, `RegistrarPago`, `ReversarPago`, `ConsultarEstadoDeCuenta`, `ConsultarPortal`, con autorización por perfil y rol y escritura de auditoría dentro de la unidad de trabajo. Verificar con pruebas unitarias sobre las implementaciones en memoria:
+- [x] 2.1 Contraseñas (`scrypt`), tokens de acceso (HS256) y de refresco, con pruebas unitarias: derivación con sal distinta para igual contraseña, verificación correcta y errónea, formato inválido, token alterado, vencido, firmado con otra clave y con algoritmo `none`. Verificar que `npm test` pasa.
+- [x] 2.2 Modelo y reglas de padrón: `Asociado`, `Cuota`, `Pago`, `ReversaPago`, importes en céntimos, periodos, saldo y estado de cuota (D5), con pruebas unitarias de los escenarios de `cuotas-y-pagos` (saldo con cuota exigible y futura, pago revertido, estados `pendiente`/`parcial`/`pagada`, importes inválidos, periodo mal formado, periodo actual en UTC-5 en la frontera de mes).
+- [x] 2.3 Puertos y casos de uso: `AutenticarUsuario`, `RenovarSesion`, `CerrarSesion`, `RegistrarAsociado`, `DarDeBajaAsociado`, `CrearAccesoAsociado`, `GenerarCuotas`, `RegistrarPago`, `ReversarPago`, `ConsultarEstadoDeCuenta`, `ConsultarPortal`, con autorización por perfil y rol y escritura de auditoría dentro de la unidad de trabajo. Verificar con pruebas unitarias sobre las implementaciones en memoria:
   - cada escenario de `acceso-por-perfiles` que no depende de HTTP (bloqueo a los 5 intentos y a los 15 minutos con reloj controlado, rotación y reutilización de refresco, membresía desactivada);
   - la matriz perfil/rol × caso de uso completa, con todos los casos denegados.
 
 ## 3. Persistencia (D4, D8)
 
-- [ ] 3.1 Implementaciones en memoria de los repositorios nuevos, con copia y restauración al revertir.
-- [ ] 3.2 Implementaciones PostgreSQL y ampliación de `UnidadDeTrabajoPostgres`, con `SELECT … FOR UPDATE` en la cuota (D7).
-- [ ] 3.3 Batería de contrato común para ambos adaptadores (alta y búsqueda por JASS, aislamiento entre JASS, duplicados, baja lógica, cuotas idempotentes, pagos, reversa, saldo, sesiones, auditoría). Verificar que pasa en `npm test` (memoria) y en `npm run test:integration` (PostgreSQL).
-- [ ] 3.4 Pruebas de integración de atomicidad y concurrencia: fallo forzado de `auditoria.registrar` revierte pago y reversa; diez `RegistrarPago` simultáneos con la misma clave producen un único pago; dos pagos distintos simultáneos que juntos superan la cuota producen un solo éxito; 10 rondas sin fallos intermitentes.
+- [x] 3.1 Implementaciones en memoria de los repositorios nuevos, con copia y restauración al revertir.
+- [x] 3.2 Implementaciones PostgreSQL y ampliación de `UnidadDeTrabajoPostgres`, con `SELECT … FOR UPDATE` en la cuota (D7).
+- [x] 3.3 Batería de contrato común para ambos adaptadores (alta y búsqueda por JASS, aislamiento entre JASS, duplicados, baja lógica, cuotas idempotentes, pagos, reversa, saldo, sesiones, auditoría). Verificar que pasa en `npm test` (memoria) y en `npm run test:integration` (PostgreSQL).
+- [x] 3.4 Pruebas de integración de atomicidad y concurrencia: fallo forzado de `auditoria.registrar` revierte pago y reversa; diez `RegistrarPago` simultáneos con la misma clave producen un único pago; dos pagos distintos simultáneos que juntos superan la cuota producen un solo éxito; 10 rondas sin fallos intermitentes.
 
 ## 4. API NestJS (D1, D3, D9)
 
