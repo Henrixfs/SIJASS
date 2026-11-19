@@ -10,12 +10,16 @@ Garantiza que el prototipo de dominio de SIJASS se instale de forma reproducible
 El prototipo SHALL declarar todas las dependencias necesarias para compilar y probar, y SHALL versionar un `package-lock.json` consistente con `package.json`, de modo que `npm ci` funcione en una copia limpia del repositorio.
 
 #### Scenario: Instalación limpia exitosa
-- **WHEN** se clona el repositorio y se ejecuta `npm ci` en la carpeta del prototipo con Node.js 20 o superior
+- **WHEN** se clona el repositorio y se ejecuta `npm ci` en la carpeta del prototipo con Node.js 22 o superior
 - **THEN** la instalación termina con código de salida 0 sin modificar `package.json` ni `package-lock.json`
 
 #### Scenario: Lockfile desincronizado
 - **WHEN** `package.json` declara una dependencia que `package-lock.json` no refleja y se ejecuta `npm ci`
 - **THEN** la instalación falla con código de salida distinto de 0
+
+#### Scenario: Rango de Node.js declarado
+- **WHEN** se inspecciona `package.json` del prototipo
+- **THEN** `engines.node` declara `>=22` y la dependencia `@types/node` pertenece a la línea mayor 22, de modo que el compilador no admite APIs ausentes en la versión mínima declarada
 
 ### Requirement: Compilación en instalación limpia
 El prototipo SHALL compilar sin errores de tipos en una instalación limpia, incluidas las pruebas que usan los módulos integrados de Node.js.
@@ -59,4 +63,8 @@ El repositorio SHALL ejecutar en CI, en cada push y en cada pull request, la sec
 
 #### Scenario: Versión de Node soportada
 - **WHEN** CI ejecuta la verificación
-- **THEN** usa una versión de Node.js dentro del rango declarado como soportado por el prototipo (20 o superior)
+- **THEN** usa una versión de Node.js dentro del rango declarado como soportado por el prototipo (22 o superior)
+
+#### Scenario: Matriz con la versión mínima y las LTS vigentes
+- **WHEN** CI ejecuta el job del prototipo
+- **THEN** la verificación corre con la versión mínima declarada en `engines` (22) y con cada línea LTS posterior vigente (hoy 24 y 26), cada una como ejecución independiente cuyo fallo se informa por separado
