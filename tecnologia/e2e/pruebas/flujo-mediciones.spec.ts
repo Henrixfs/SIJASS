@@ -18,8 +18,8 @@ async function persona(browser: Browser, correo: string) {
 }
 
 async function abrirMediciones(page: Page) {
-  const pestana = page.getByRole('button', { name: 'Mediciones' });
-  if (await pestana.count()) await pestana.click();
+  // Todos los roles de personal tienen la pestaña; `click` espera a que aparezca.
+  await page.getByRole('button', { name: 'Mediciones' }).click();
   await expect(page.getByRole('heading', { name: 'Mediciones de cloro residual' })).toBeVisible();
 }
 
