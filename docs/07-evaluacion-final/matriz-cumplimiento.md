@@ -79,6 +79,20 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 | Criterio C12 | Job `web-e2e` en el workflow | [`ci.yml`](../../.github/workflows/ci.yml) | CD |
 | Criterio C14 | Migración `0002` y paquetes `sijass-web` y `e2e` | Repositorio | Migraciones de reservorios y evidencia |
 
+## 3.3. Aporte de s1c
+
+`s1c-reservorios-mediciones` conecta el dominio de medición (`s1a`) a las sesiones y los roles de `s1b`: el consejo da de alta reservorios, el operador registra mediciones manuales, y operador, tesorero y consejo consultan el historial, con aislamiento entre JASS. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. Evidencia verificado **en local** el 2026-11-19 (278 pruebas unitarias, 245 de integración, 84 de interfaz y 7 E2E); aún sin CI; la de CI se citará aparte.
+
+| Criterio | Aporte de s1c | Evidencia | Pendiente visible |
+|---|---|---|---|
+| Criterio C02 | RF02 (reservorios) y RF06, RF07 y RF11 parcial por HTTP e interfaz | [Especificaciones](../../openspec/changes/s1c-reservorios-mediciones/specs/mediciones-en-linea/spec.md) | RF08, RF15, auditoría de mediciones |
+| Criterio C04 | Cuarto cambio SDD | [Cambio](../../openspec/changes/s1c-reservorios-mediciones/tasks.md) | Archivar tras fusionar |
+| Criterio C05 | PT13 completo para mediciones y reservorios; 278 + 245 + 84 pruebas | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md) | PT09, PT10, PT19 |
+| Criterio C06 | Segundo flujo E2E en navegador | [`flujo-mediciones.spec.ts`](../../tecnologia/e2e/pruebas/flujo-mediciones.spec.ts) | Operación sin conexión |
+| Criterio C07 | Pantalla de mediciones por rol, con aviso de no dictamen | [`Mediciones.tsx`](../../tecnologia/sijass-web/src/paginas/Mediciones.tsx) | Usabilidad con operadores reales |
+| Criterio C09 | Migración `0003` (nombre único por JASS) | [Migración](../../tecnologia/siJASS-clean-architecture/migraciones/0003_reservorios-unicos.sql) | Estrategia de crecimiento |
+| Criterio C14 | Migración `0003` | Repositorio | Evidencia fotográfica |
+
 ## 4. Brechas y decisiones abiertas
 
 Criterios sin diseño documentado o con tensión con una decisión vigente. Ninguna se resuelve en esta matriz; cada una exige una decisión explícita y, cuando corresponda, una ADR nueva.

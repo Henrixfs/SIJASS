@@ -19,15 +19,15 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 4. Interfaz
 
-- [ ] 4.1 Pantalla *Mediciones* y pestañas por rol (D6). Verificar con pruebas de interfaz: pestañas por rol, formulario solo para el operador, conversión de valor (coma/punto) y de hora de Lima a UTC con desplazamiento, `Idempotency-Key` estable en reintentos y distinta si cambia el contenido, aviso de no dictamen, y ausencia de cualquier control de dosis o de estimación por imagen.
+- [x] 4.1 Pantalla *Mediciones* y pestañas por rol (D6). Verificar con pruebas de interfaz: pestañas por rol, formulario solo para el operador, conversión de valor (coma/punto) y de hora de Lima a UTC con desplazamiento, `Idempotency-Key` estable en reintentos y distinta si cambia el contenido, aviso de no dictamen, y ausencia de cualquier control de dosis o de estimación por imagen.
 
 ## 5. E2E
 
-- [ ] 5.1 Flujo en navegador: el operador elige un reservorio, registra una lectura y la ve en el historial; el consejo, en otro navegador, la ve sin formulario; el consejo de otra JASS no ve reservorios ni mediciones. Verificar `npx playwright test` en tres ejecuciones consecutivas.
+- [x] 5.1 Flujo en navegador: el operador elige un reservorio, registra una lectura y la ve en el historial; el consejo, en otro navegador, la ve sin formulario; el consejo de otra JASS no ve reservorios ni mediciones. Verificar `npx playwright test` en tres ejecuciones consecutivas.
 
 ## 6. Documentación con evidencia
 
-- [ ] 6.1 Actualizar `plan-pruebas.md` (PT13 para mediciones y reservorios), `matriz-cumplimiento.md`, roadmap y READMEs, separando evidencia local de evidencia de CI. No pasar ningún criterio a *Implementado*. Verificar `node scripts/verificar-docs.mjs` con código 0.
+- [x] 6.1 Actualizar `plan-pruebas.md` (PT13 para mediciones y reservorios), `matriz-cumplimiento.md`, roadmap y READMEs, separando evidencia local de evidencia de CI. No pasar ningún criterio a *Implementado*. Verificar `node scripts/verificar-docs.mjs` con código 0.
 
 ## 7. Integración final
 

@@ -27,7 +27,24 @@ El archivo `dominio.test.ts` (cinco pruebas sobre el modelo heredado) se retiró
 | PT12 | Conflicto sin sobrescritura: [`registro-idempotente.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts) | Contrato | ambos |
 | — | Restricciones del esquema por SQL directo y coherencia del catálogo: [`esquema.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/esquema.test.ts) | Integración | `npm run test:integration` |
 
-PT13 se cubre ya para asociados, cuotas, pagos y portal (ver abajo); para mediciones y reservorios sigue **pendiente** (`s1c`).
+PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservorios y mediciones (`s1c`, ver abajo).
+
+### Verificación de `s1c-reservorios-mediciones` (2026-11-19, en local)
+
+| Comprobación | Resultado |
+|---|---|
+| `npm run lint`, `npm run build` y `npm test` (API) | Código 0; 278 pruebas unitarias |
+| `npm run test:integration` contra PostgreSQL 16 en Docker (esquema `0003`, baterías de reservorios en memoria y PostgreSQL, API de reservorios y mediciones, matriz de aislamiento) | Código 0; 245 pruebas |
+| Interfaz: `npm run lint`, `npm run build`, `npm test` | Código 0; 84 pruebas, tres ejecuciones |
+| `npx playwright test` (Chrome del sistema) | 7 pruebas aprobadas en tres ejecuciones consecutivas |
+
+Es evidencia **local**; la de GitHub Actions de `s1c` se registra aparte al abrir su pull request.
+
+| PT | Prueba de `s1c` | Nivel |
+|---|---|---|
+| PT13 | [`api-mediciones.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-mediciones.test.ts): 7 cuentas × cada ruta nueva × reservorio propio, ajeno e inexistente; todo `403` idéntico y auditado; las escrituras denegadas no cambian ninguna tabla | Seguridad |
+| PT03 / PT04 | Mismas propiedades de registro e idempotencia (reintento `200`, conflicto `409`, rechazos `422`) ahora por HTTP | Integración |
+| — | [`flujo-mediciones.spec.ts`](../../tecnologia/e2e/pruebas/flujo-mediciones.spec.ts): el operador registra, el consejo y el tesorero consultan, el consejo de otra JASS no ve nada | E2E |
 
 ### Verificación de `s1b-acceso-cuotas-pagos` (2026-11-19, en local)
 
@@ -66,7 +83,7 @@ Esta tabla es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI 
 | PT10 | Integración | Corregir una medición; corregir sobre una revisión desactualizada | Conserva original, nuevo valor, motivo, actor y fecha; la segunda devuelve `conflict` | RF08, RF11 | Pendiente |
 | PT11 | Integración | Falla entre la reserva del `operationId` y la escritura de la medición | Reversión completa; ni `accepted` falso ni pérdida silenciosa | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
 | PT12 | Integración | Mismo `operationId` con contenido distinto | `conflict` sin sobrescritura | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
-| PT13 | Seguridad | Usuario de la JASS A accede a datos de la JASS B (mediciones, asociados, reservorios, reportes) | Denegación sin filtrar datos | RF01–RF03, RF11, RNF05 | Prototipo para asociados, cuotas, pagos y portal (verificado en local, `s1b`: [matriz de aislamiento HTTP](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-aislamiento.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-pagos.spec.ts)); mediciones y reservorios pendientes |
+| PT13 | Seguridad | Usuario de la JASS A accede a datos de la JASS B (mediciones, asociados, reservorios, reportes) | Denegación sin filtrar datos | RF01–RF03, RF11, RNF05 | Prototipo para asociados, cuotas, pagos y portal (verificado en local, `s1b`: [matriz de aislamiento HTTP](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-aislamiento.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-pagos.spec.ts)); mediciones y reservorios por HTTP verificados en local con `s1c` ([matriz de aislamiento de mediciones](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-mediciones.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-mediciones.spec.ts)) |
 | PT14 | Integración | Pago parcial, doble envío con la misma `Idempotency-Key` y reversa | Saldos exactos; un solo pago; reversa auditada | RF04, RF05, RNF04 | Prototipo (verificado en local, `s1b`: [casos de padrón y pagos](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-padron.ts) sobre memoria y PostgreSQL y [concurrencia](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/acceso-concurrencia.test.ts) en 10 rondas) |
 | PT15 | RAG | Pregunta sin fuentes suficientes | Abstención explícita | RF13, RNF09 | Pendiente |
 | PT16 | RAG | Pregunta con fuentes aprobadas | Citas de documento, versión y página verificables | RF13, RF14, RNF09 | Pendiente |
