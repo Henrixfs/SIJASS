@@ -7,6 +7,7 @@ import {
   JassPostgres,
   MembresiasPostgres,
   PagosPostgres,
+  ReservoriosJassPostgres,
   SesionesPostgres,
   UsuariosPostgres,
 } from './acceso-postgres.js';
@@ -15,6 +16,7 @@ import type { Consultable } from './consultable.js';
 export function repositoriosAccesoPostgres(db: Consultable): RepositoriosAcceso {
   return {
     jass: new JassPostgres(db),
+    reservorios: new ReservoriosJassPostgres(db),
     usuarios: new UsuariosPostgres(db),
     membresias: new MembresiasPostgres(db),
     sesiones: new SesionesPostgres(db),

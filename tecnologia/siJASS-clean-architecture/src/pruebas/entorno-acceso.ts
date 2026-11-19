@@ -6,7 +6,8 @@
 import type { DependenciasAcceso } from '../aplicacion/acceso/comun.js';
 import { construirCasos, type Casos } from '../aplicacion/casos.js';
 import type { ContextoAcceso } from '../dominio/acceso.js';
-import type { GeneradorIds, Reloj } from '../dominio/puertos.js';
+import type { GeneradorIds, Reloj, UnidadDeTrabajo } from '../dominio/puertos.js';
+import { UnidadDeTrabajoMemoria } from '../infraestructura/memoria.js';
 import type { UnidadDeTrabajoAcceso } from '../dominio/puertos-acceso.js';
 import { ContrasenasScrypt } from '../infraestructura/seguridad/contrasenas-scrypt.js';
 import { TokensHs256 } from '../infraestructura/seguridad/tokens-hs256.js';
@@ -29,7 +30,7 @@ export interface Entorno {
 /** Dependencias con reloj fijo y contraseñas baratas. `ids` aleatorios por defecto (PostgreSQL). */
 export function crearEntorno(
   unidadDeTrabajo: UnidadDeTrabajoAcceso,
-  opciones: { secuencial?: boolean; reloj?: RelojFijo } = {},
+  opciones: { secuencial?: boolean; reloj?: RelojFijo; mediciones?: UnidadDeTrabajo } = {},
 ): Entorno {
   const reloj = opciones.reloj ?? new RelojFijo(AHORA_PRUEBAS);
   const ids: GeneradorIds = opciones.secuencial ? new GeneradorIdsSecuencial() : new GeneradorIdsAleatorio();
@@ -40,7 +41,7 @@ export function crearEntorno(
     contrasenas: new ContrasenasScrypt({ N: 1024, r: 8, p: 1 }),
     tokens: new TokensHs256(SECRETO_PRUEBAS),
   };
-  return { dependencias, casos: construirCasos(dependencias), reloj };
+  return { dependencias, casos: construirCasos(dependencias, opciones.mediciones ?? new UnidadDeTrabajoMemoria()), reloj };
 }
 
 export interface Cuenta {
@@ -56,6 +57,8 @@ export interface Escenario {
   readonly tesoreroA: Cuenta;
   readonly operadorA: Cuenta;
   readonly tesoreroB: Cuenta;
+  readonly consejoB: Cuenta;
+  readonly operadorB: Cuenta;
   readonly asociadoA1: { id: string; cuenta: Cuenta };
   readonly asociadoA2: { id: string; cuenta: Cuenta };
   readonly asociadoB1: { id: string; cuenta: Cuenta };
@@ -71,8 +74,8 @@ async function actorDe(e: Entorno, correo: string): Promise<Cuenta> {
 const sufijo = () => Math.random().toString(36).slice(2, 10);
 
 /**
- * Dos JASS. En A: consejo, tesorero, operador y dos asociados con cuenta; en B: tesorero y
- * un asociado con cuenta. Sin cuotas ni pagos.
+ * Dos JASS. En A: consejo, tesorero, operador y dos asociados con cuenta; en B: consejo, tesorero,
+ * operador y un asociado con cuenta. Sin cuotas ni pagos.
  */
 export async function sembrarEscenario(e: Entorno): Promise<Escenario> {
   const s = sufijo();
@@ -83,11 +86,14 @@ export async function sembrarEscenario(e: Entorno): Promise<Escenario> {
   await e.casos.crearPersonal.ejecutar({ jassId: a.jassId, correo: correo('tesorero-a'), contrasena: CLAVE, rol: 'tesorero' });
   await e.casos.crearPersonal.ejecutar({ jassId: a.jassId, correo: correo('operador-a'), contrasena: CLAVE, rol: 'operador' });
   await e.casos.crearPersonal.ejecutar({ jassId: b.jassId, correo: correo('tesorero-b'), contrasena: CLAVE, rol: 'tesorero' });
+  await e.casos.crearPersonal.ejecutar({ jassId: b.jassId, correo: correo('operador-b'), contrasena: CLAVE, rol: 'operador' });
 
   const consejoA = await actorDe(e, correo('consejo-a'));
   const tesoreroA = await actorDe(e, correo('tesorero-a'));
   const operadorA = await actorDe(e, correo('operador-a'));
   const tesoreroB = await actorDe(e, correo('tesorero-b'));
+  const consejoB = await actorDe(e, correo('consejo-b'));
+  const operadorB = await actorDe(e, correo('operador-b'));
 
   async function asociado(tesorero: Cuenta, nombre: string, documento: string) {
     const a1 = await e.casos.registrarAsociado.ejecutar(tesorero.actor, { nombre, documento });
@@ -103,6 +109,8 @@ export async function sembrarEscenario(e: Entorno): Promise<Escenario> {
     tesoreroA,
     operadorA,
     tesoreroB,
+    consejoB,
+    operadorB,
     asociadoA1: await asociado(tesoreroA, 'Rosa Quispe', `A1${s}`),
     asociadoA2: await asociado(tesoreroA, 'Luis Huamán', `A2${s}`),
     asociadoB1: await asociado(tesoreroB, 'Ana Ccori', `B1${s}`),

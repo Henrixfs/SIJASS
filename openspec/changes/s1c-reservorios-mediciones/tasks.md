@@ -4,18 +4,18 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 1. Esquema y permisos
 
-- [ ] 1.1 Migración `0003_reservorios-unicos.sql` (D5). Verificar: `npm run migrar`, `npm run migrar:revertir` y `npm run migrar` con código 0; una prueba por SQL directo rechaza nombre repetido (también cambiando mayúsculas) en una JASS, lo admite en otra, y rechaza nombre vacío o de más de 80 caracteres.
-- [ ] 1.2 Permisos `reservorios.leer`, `reservorios.crear`, `mediciones.registrar` y `mediciones.leer` (D2). Verificar con la matriz perfil/rol × permiso de `acceso.test.ts` ampliada: solo los roles de la spec los tienen y el asociado ninguno.
+- [x] 1.1 Migración `0003_reservorios-unicos.sql` (D5). Verificar: `npm run migrar`, `npm run migrar:revertir` y `npm run migrar` con código 0; una prueba por SQL directo rechaza nombre repetido (también cambiando mayúsculas) en una JASS, lo admite en otra, y rechaza nombre vacío o de más de 80 caracteres.
+- [x] 1.2 Permisos `reservorios.leer`, `reservorios.crear`, `mediciones.registrar` y `mediciones.leer` (D2). Verificar con la matriz perfil/rol × permiso de `acceso.test.ts` ampliada: solo los roles de la spec los tienen y el asociado ninguno.
 
 ## 2. Aplicación y persistencia
 
-- [ ] 2.1 Repositorio de reservorios en el módulo de acceso (memoria y PostgreSQL) y casos `CrearReservorio` y `ListarReservorios` con auditoría de alta (D1). Verificar con la batería compartida memoria/PostgreSQL: alta, nombre repetido (`409`), validación, listado ordenado y aislado por JASS, evento `reservorio.creado` y reversión si falla la auditoría.
-- [ ] 2.2 Casos `RegistrarMedicionAutorizada` y `ConsultarHistorial` (D3). Verificar con pruebas de integración sobre PostgreSQL: registro, reintento, conflicto, rechazos del dominio, campos no permitidos, reservorio ajeno o inexistente (mismo error), historial ordenado y limitado a 200.
+- [x] 2.1 Repositorio de reservorios en el módulo de acceso (memoria y PostgreSQL) y casos `CrearReservorio` y `ListarReservorios` con auditoría de alta (D1). Verificar con la batería compartida memoria/PostgreSQL: alta, nombre repetido (`409`), validación, listado ordenado y aislado por JASS, evento `reservorio.creado` y reversión si falla la auditoría.
+- [x] 2.2 Casos `RegistrarMedicionAutorizada` y `ConsultarHistorial` (D3). Verificar con pruebas de integración sobre PostgreSQL: registro, reintento, conflicto, rechazos del dominio, campos no permitidos, reservorio ajeno o inexistente (mismo error), historial ordenado y limitado a 200.
 
 ## 3. API
 
-- [ ] 3.1 Controladores y mapeo de resultados (D4). Verificar por HTTP cada escenario de las specs `reservorios-jass` y `mediciones-en-linea` (`200/201/403/409/422`).
-- [ ] 3.2 Matriz de aislamiento ampliada (D7): cada cuenta (consejo, tesorero y operador de A; operador y consejo de B; asociado) × cada ruta nueva × cada recurso (reservorio de A y de B, inexistente). Verificar que solo las combinaciones permitidas devuelven datos, que todo lo demás es `401/403` con el mismo cuerpo, que cada `403` deja un evento `acceso.denegado` sin datos de la medición, y que las escrituras denegadas no cambian ninguna tabla.
+- [x] 3.1 Controladores y mapeo de resultados (D4). Verificar por HTTP cada escenario de las specs `reservorios-jass` y `mediciones-en-linea` (`200/201/403/409/422`).
+- [x] 3.2 Matriz de aislamiento ampliada (D7): cada cuenta (consejo, tesorero y operador de A; operador y consejo de B; asociado) × cada ruta nueva × cada recurso (reservorio de A y de B, inexistente). Verificar que solo las combinaciones permitidas devuelven datos, que todo lo demás es `401/403` con el mismo cuerpo, que cada `403` deja un evento `acceso.denegado` sin datos de la medición, y que las escrituras denegadas no cambian ninguna tabla.
 
 ## 4. Interfaz
 

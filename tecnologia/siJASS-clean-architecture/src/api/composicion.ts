@@ -1,6 +1,7 @@
 import pg from 'pg';
 import type { DependenciasAcceso } from '../aplicacion/acceso/comun.js';
 import { construirCasos, type Casos } from '../aplicacion/casos.js';
+import { UnidadDeTrabajoPostgres } from '../infraestructura/postgres/unidad-de-trabajo-postgres.js';
 import { UnidadDeTrabajoAccesoPostgres } from '../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
 import { ContrasenasScrypt } from '../infraestructura/seguridad/contrasenas-scrypt.js';
 import { TokensHs256 } from '../infraestructura/seguridad/tokens-hs256.js';
@@ -23,5 +24,5 @@ export function componer(config: Pick<ConfiguracionApi, 'databaseUrl' | 'jwtSecr
     contrasenas: new ContrasenasScrypt(),
     tokens: new TokensHs256(config.jwtSecret),
   };
-  return { pool, dependencias, casos: construirCasos(dependencias) };
+  return { pool, dependencias, casos: construirCasos(dependencias, new UnidadDeTrabajoPostgres(pool)) };
 }
