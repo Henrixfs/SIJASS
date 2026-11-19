@@ -45,6 +45,8 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 - [ ] 7.1 Añadir el job `api-web` a `.github/workflows/ci.yml` (PostgreSQL, migraciones, pruebas HTTP, construcción de la interfaz y E2E con Chromium de Playwright) y asegurar que `prototipo` ejecuta las pruebas nuevas en memoria. Verificar con `act` o sintaxis YAML válida y que no cambian los demás jobs. **Solo con autorización para subir la rama:** abrir el pull request y anotar la URL de la ejecución con todos los jobs en verde.
 
+> **Estado de 7.1:** el job `web-e2e` está añadido y el YAML es válido (los jobs `prototipo`, `documentacion` e `integracion` no cambian), pero **no se ha subido la rama ni abierto el pull request**: hace falta autorización explícita para publicar. La tarea sigue abierta y ningún criterio de la matriz cita CI para `s1b`.
+
 ## 8. Documentación con evidencia
 
 - [x] 8.1 Actualizar `docs/00-alcance-y-roadmap.md` (§1, §4.1, §4.2, §5), `docs/01-analisis-de-sistema/01-actores.md` (matriz y asociados), `diseno-interno-de-modulos.md` (§2, §3), `plan-pruebas.md` y `matriz-cumplimiento.md` con el estado real y los enlaces a evidencia. No pasar ningún criterio a *Implementado*. Verificar `node scripts/verificar-docs.mjs` con código 0.
@@ -52,10 +54,19 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 9. Integración final
 
-- [ ] 9.1 Ejecutar `openspec validate s1b-acceso-cuotas-pagos --strict` con código 0.
-- [ ] 9.2 En una copia limpia del commit final, ejecutar `npm ci`, lint, build, `npm test`, `npm run test:integration`, la construcción de la interfaz y el E2E, y comparar con el CI.
+- [x] 9.1 Ejecutar `openspec validate s1b-acceso-cuotas-pagos --strict` con código 0.
+- [x] 9.2 En una copia limpia del commit final, ejecutar `npm ci`, lint, build, `npm test`, `npm run test:integration`, la construcción de la interfaz y el E2E, y comparar con el CI.
 
 ## Workflow follow-up
 
 - Fusionar y archivar con `/opsx:archive s1b-acceso-cuotas-pagos`.
 - Planificar `s1c-reservorios-mediciones-ui`.
+
+## Evidencia local (2026-11-19, copia limpia del commit `git archive HEAD`)
+
+- `tecnologia/siJASS-clean-architecture/`: `npm ci`, `npm run lint`, `npm run build` con código 0; `npm test` 256/256; `npm run test:integration` 215/215 contra PostgreSQL 16 (Docker, puerto 5433).
+- `tecnologia/sijass-web/`: `npm ci`, `npm run lint`, `npm run build` con código 0; `npm test` 56/56 en tres ejecuciones.
+- `tecnologia/e2e/`: `npx playwright test` 5/5 con Chrome del sistema en tres ejecuciones consecutivas (más tres en el árbol de trabajo).
+- `node scripts/verificar-docs.mjs` y `openspec validate --all --strict` con código 0.
+- Hallazgos corregidos durante la verificación: un defecto real del cliente (la renovación de sesión quedaba memorizada como `false` cuando no había refresco) y una comprobación de interfaz con una carrera de temporización.
+
