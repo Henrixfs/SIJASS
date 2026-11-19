@@ -39,7 +39,7 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 6. E2E en navegador
 
-- [ ] 6.1 Pruebas Playwright (`channel: 'chrome'` en local) sobre la API real con PostgreSQL y la interfaz construida: el tesorero registra un pago y el asociado, en otro contexto de navegador, ve 1500 → 1000; la reversa lo restaura; el asociado no ve datos de otro asociado ni puede abrir rutas del personal; un tesorero de otra JASS no ve el padrón ajeno. Verificar que terminan con código 0 en tres ejecuciones seguidas.
+- [x] 6.1 Pruebas Playwright (`channel: 'chrome'` en local) sobre la API real con PostgreSQL y la interfaz construida: el tesorero registra un pago y el asociado, en otro contexto de navegador, ve 1500 → 1000; la reversa lo restaura; el asociado no ve datos de otro asociado ni puede abrir rutas del personal; un tesorero de otra JASS no ve el padrón ajeno. Verificar que terminan con código 0 en tres ejecuciones seguidas.
 
 ## 7. CI (D11)
 
