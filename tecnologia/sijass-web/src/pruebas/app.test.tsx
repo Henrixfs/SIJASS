@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
 import { App } from '../App';
@@ -43,7 +43,7 @@ describe('interfaz — ingreso y guardia por perfil', () => {
   test('sin sesión muestra el ingreso, también al pedir una pantalla del personal', async () => {
     montar(() => undefined, '/personal');
     expect(await screen.findByRole('heading', { name: 'Ingresar a SIJASS' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/ingresar');
+    await waitFor(() => expect(window.location.pathname).toBe('/ingresar')); // la guardia corrige la barra de direcciones tras renderizar
   });
 
   test('credenciales incorrectas muestran un mensaje claro y no entran', async () => {
@@ -64,7 +64,7 @@ describe('interfaz — ingreso y guardia por perfil', () => {
     expect(await screen.findByRole('heading', { name: 'Asociados' })).toBeInTheDocument();
     const fila = await screen.findByTestId('fila-70000001');
     expect(within(fila).getByText('S/ 15.00')).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/personal');
+    await waitFor(() => expect(window.location.pathname).toBe('/personal')); // la guardia corrige la barra de direcciones tras renderizar
   });
 
   test('el asociado entra al portal y, si abre una ruta del personal, lo redirige sin mostrar nada del personal', async () => {
@@ -76,7 +76,7 @@ describe('interfaz — ingreso y guardia por perfil', () => {
     const { usuario, llamadas } = montar(respuestas, '/personal/asociados/11111111-1111-4111-8111-111111111111');
     await ingresar(usuario);
     expect(await screen.findByTestId('saldo')).toHaveTextContent('S/ 15.00');
-    expect(window.location.pathname).toBe('/portal');
+    await waitFor(() => expect(window.location.pathname).toBe('/portal')); // la guardia corrige la barra de direcciones tras renderizar
     expect(screen.queryByRole('heading', { name: 'Asociados' })).not.toBeInTheDocument();
     expect(llamadas.some((l) => l.ruta.startsWith('/v1/asociados'))).toBe(false);
   });
