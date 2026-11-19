@@ -1,0 +1,19 @@
+{
+  "name": "sijass-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas end to end de SIJASS en navegador real (API + PostgreSQL + interfaz)",
+  "scripts": {
+    "construir": "npm --prefix ../siJASS-clean-architecture run build && npm --prefix ../sijass-web run build",
+    "test": "playwright test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "pg": "^8.23.1"
+  }
+}

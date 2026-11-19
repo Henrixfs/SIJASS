@@ -78,3 +78,62 @@ jobs:
       - run: npm run migrar:revertir
       - run: npm run migrar
       - run: npm run test:integration
+
+  # Interfaz web y pruebas de extremo a extremo en navegador real: API NestJS + PostgreSQL +
+  # interfaz construida (s1b-acceso-cuotas-pagos, design.md D11). Sin `needs`: se ve por separado.
+  web-e2e:
+    name: Interfaz y E2E (navegador)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        # Credenciales desechables: solo existen dentro del contenedor efímero del job.
+        env:
+          POSTGRES_USER: sijass
+          POSTGRES_PASSWORD: sijass
+          POSTGRES_DB: sijass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sijass -d sijass"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ADMIN_DATABASE_URL: postgres://sijass:sijass@localhost:5432/sijass
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            tecnologia/siJASS-clean-architecture/package-lock.json
+            tecnologia/sijass-web/package-lock.json
+            tecnologia/e2e/package-lock.json
+      - name: API (instalar y compilar)
+        working-directory: tecnologia/siJASS-clean-architecture
+        run: |
+          npm ci
+          npm run build
+      - name: Interfaz (instalar, lint, pruebas y compilar)
+        working-directory: tecnologia/sijass-web
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+      - name: E2E (instalar y ejecutar)
+        working-directory: tecnologia/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - name: Conservar la traza si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trazas-e2e
+          path: tecnologia/e2e/test-results/
+          if-no-files-found: ignore
