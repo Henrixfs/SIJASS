@@ -117,10 +117,11 @@ test('el personal no entra al portal y un consejo de otra JASS no ve el padrón 
   await otra.contexto.close();
 });
 
-test('un operador sin permiso sobre el padrón ve un aviso, no datos', async ({ browser }) => {
+test('un operador no tiene padrón: entra a Mediciones y no ve datos de asociados', async ({ browser }) => {
   const operador = await persona(browser, OPERADOR);
-  await expect(operador.page.getByTestId('sin-permiso')).toBeVisible();
+  await expect(operador.page.getByRole('heading', { name: 'Mediciones de cloro residual' })).toBeVisible();
   await expect(operador.page.getByTestId('tabla-asociados')).toHaveCount(0);
+  expect(await operador.page.textContent('body')).not.toContain('Rosa Quispe');
   await operador.contexto.close();
 });
 
