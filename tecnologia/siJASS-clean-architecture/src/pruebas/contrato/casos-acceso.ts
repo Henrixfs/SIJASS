@@ -42,10 +42,9 @@ describe('acceso — inicio de sesión', () => {
   });
 
   test('credenciales inválidas: mismo error para correo desconocido y contraseña errónea', async () => {
-    const mal = e.casos.autenticar.ejecutar({ correo: esc.operadorA.correo, contrasena: 'otra-clave-123' });
-    const desconocido = e.casos.autenticar.ejecutar({ correo: 'nadie@prueba.pe', contrasena: CLAVE });
-    for (const p of [mal, desconocido]) {
-      await assert.rejects(p, (err: unknown) => {
+    // Cada promesa se crea y se espera en el mismo paso: una rechazada sin atender falla la prueba.
+    for (const comando of [{ correo: esc.operadorA.correo, contrasena: 'otra-clave-123' }, { correo: 'nadie@prueba.pe', contrasena: CLAVE }]) {
+      await assert.rejects(e.casos.autenticar.ejecutar(comando), (err: unknown) => {
         assert.ok(err instanceof ErrorNoAutenticado);
         assert.equal(err.codigo, 'credenciales-invalidas');
         assert.equal(err.message, 'credenciales-invalidas');
