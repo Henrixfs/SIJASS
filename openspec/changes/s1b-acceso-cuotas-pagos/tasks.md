@@ -43,9 +43,7 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 7. CI (D11)
 
-- [ ] 7.1 Añadir el job `api-web` a `.github/workflows/ci.yml` (PostgreSQL, migraciones, pruebas HTTP, construcción de la interfaz y E2E con Chromium de Playwright) y asegurar que `prototipo` ejecuta las pruebas nuevas en memoria. Verificar con `act` o sintaxis YAML válida y que no cambian los demás jobs. **Solo con autorización para subir la rama:** abrir el pull request y anotar la URL de la ejecución con todos los jobs en verde.
-
-> **Estado de 7.1:** el job `web-e2e` está añadido y el YAML es válido (los jobs `prototipo`, `documentacion` e `integracion` no cambian), pero **no se ha subido la rama ni abierto el pull request**: hace falta autorización explícita para publicar. La tarea sigue abierta y ningún criterio de la matriz cita CI para `s1b`.
+- [x] 7.1 Añadir el job `api-web` a `.github/workflows/ci.yml` (PostgreSQL, migraciones, pruebas HTTP, construcción de la interfaz y E2E con Chromium de Playwright) y asegurar que `prototipo` ejecuta las pruebas nuevas en memoria. Verificar con `act` o sintaxis YAML válida y que no cambian los demás jobs. **Solo con autorización para subir la rama:** abrir el pull request y anotar la URL de la ejecución con todos los jobs en verde.
 
 ## 8. Documentación con evidencia
 
@@ -70,3 +68,8 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 - `node scripts/verificar-docs.mjs` y `openspec validate --all --strict` con código 0.
 - Hallazgos corregidos durante la verificación: un defecto real del cliente (la renovación de sesión quedaba memorizada como `false` cuando no había refresco) y una comprobación de interfaz con una carrera de temporización.
 
+## Evidencia de GitHub Actions (aparte de la local)
+
+- Rama `feat/s1b-acceso-cuotas-pagos`, commit `97ba688`: [PR #9](https://github.com/Henrixfs/SIJASS/pull/9) (base `chore/archivar-retirar-node-20`, PR #8).
+- Ejecución del pull request [44635444554](https://github.com/Henrixfs/SIJASS/actions/runs/44635444554) y del push [44635408106](https://github.com/Henrixfs/SIJASS/actions/runs/44635408106): `Prototipo (Node 22)`, `Prototipo (Node 24)`, `Prototipo (Node 26)`, `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde, a la primera.
+- PR #8 (commit `f2d5465`, ejecución [44635435022](https://github.com/Henrixfs/SIJASS/actions/runs/44635435022)): sus cinco jobs en verde.

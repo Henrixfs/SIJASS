@@ -40,7 +40,7 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (ver abajo); para medici
 | `npm run lint`, `npm test` y `npm run build` en `tecnologia/sijass-web/` | Código 0; 56 pruebas de interfaz |
 | `npx playwright test` en `tecnologia/e2e/` (Chrome del sistema, API real, PostgreSQL y la interfaz construida) | 5 pruebas aprobadas en tres ejecuciones consecutivas |
 
-Esta verificación es **local**: no hay evidencia de CI hasta subir la rama y abrir el pull request. No valida despliegue, rendimiento, PWA, sincronización ni RAG.
+Esta tabla es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI en GitHub Actions: [PR #9](https://github.com/Henrixfs/SIJASS/pull/9), commit `97ba688`, [ejecución 44635444554](https://github.com/Henrixfs/SIJASS/actions/runs/44635444554) con `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde. No valida despliegue, rendimiento, PWA, sincronización ni RAG.
 
 | PT | Prueba de `s1b` | Nivel |
 |---|---|---|

@@ -1,6 +1,6 @@
 # Prototipo TypeScript de dominio — SIJASS
 
-**Estado:** prototipo. Demuestra, con pruebas reproducibles, (1) el registro **manual** e **idempotente** de mediciones de cloro residual con persistencia en PostgreSQL y (2), desde `s1b-acceso-cuotas-pagos`, el acceso por perfiles (personal de la JASS y asociado), el padrón, las cuotas, los pagos con reversa y el portal del asociado detrás de una API NestJS, bajo Clean Architecture. **No** es una aplicación SIJASS operable: no está desplegada, no tiene OpenAPI, PWA, sincronización ni asistente RAG, y `s1b` tiene evidencia **local**, todavía no de CI.
+**Estado:** prototipo. Demuestra, con pruebas reproducibles, (1) el registro **manual** e **idempotente** de mediciones de cloro residual con persistencia en PostgreSQL y (2), desde `s1b-acceso-cuotas-pagos`, el acceso por perfiles (personal de la JASS y asociado), el padrón, las cuotas, los pagos con reversa y el portal del asociado detrás de una API NestJS, bajo Clean Architecture. **No** es una aplicación SIJASS operable: no está desplegada, no tiene OpenAPI, PWA, sincronización ni asistente RAG, y la evidencia de `s1b` es la de CI del [PR #9](https://github.com/Henrixfs/SIJASS/pull/9) ([ejecución](https://github.com/Henrixfs/SIJASS/actions/runs/44635444554)) más la local.
 
 ## Estructura
 
