@@ -47,12 +47,15 @@ El sistema SHALL responder `fuera-de-alcance` a toda consulta que pida calcular,
 - **WHEN** el pedido de dosis usa mayúsculas, acentos o sinónimos como «dosificar», «cuántos gramos» o «calcular la dosis»
 - **THEN** el estado sigue siendo `fuera-de-alcance`
 
-### Requirement: Corpus identificado y validado
-El sistema SHALL cargar el corpus desde un `manifiesto.json` y validarlo al arrancar: cada documento con identificador, título, versión, estado (`aprobado` o `ejemplo`), responsable y páginas numeradas desde 1 sin repetirse ni estar vacías. SHALL rechazar el arranque con un manifiesto inválido. Todo documento de estado `ejemplo` SHALL llevar el prefijo `EJEMPLO` en su título, y toda respuesta y toda lista de documentos SHALL indicar el estado del corpus (`ejemplo` si contiene algún documento de ejemplo, `aprobado` si todos lo están).
+### Requirement: Corpus validado al cargar
+El sistema SHALL cargar el corpus desde un `manifiesto.json` y validarlo al arrancar: cada documento con identificador, título, versión, estado (`aprobado` o `ejemplo`), responsable y páginas numeradas desde 1, sin repetirse ni estar vacías. SHALL rechazar el arranque con un manifiesto inválido.
 
 #### Scenario: Manifiesto inválido
 - **WHEN** el manifiesto omite la versión, repite una página, deja una página vacía o declara un estado desconocido
 - **THEN** la carga falla con un error que nombra el documento y el problema
+
+### Requirement: Corpus de ejemplo identificado
+Todo documento de estado `ejemplo` SHALL llevar el prefijo `EJEMPLO` en su título, y toda respuesta y toda lista de documentos SHALL indicar el estado del corpus: `ejemplo` si contiene algún documento de ejemplo y `aprobado` si todos lo están.
 
 #### Scenario: Ejemplo sin rótulo
 - **WHEN** un documento de estado `ejemplo` no tiene el prefijo `EJEMPLO` en su título
