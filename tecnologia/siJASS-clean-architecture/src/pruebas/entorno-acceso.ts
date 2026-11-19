@@ -3,19 +3,8 @@
  * casos de uso ya construidos y una siembra de JASS, personal y asociados. Sirve igual para
  * la memoria (pruebas unitarias) y para PostgreSQL (integración y API).
  */
-import { AutorizarSolicitud, AutenticarUsuario, CerrarSesion, RegistrarAccesoDenegado, RenovarSesion } from '../aplicacion/acceso/sesiones.js';
-import { CrearJassConConsejo, CrearPersonal } from '../aplicacion/acceso/administracion.js';
 import type { DependenciasAcceso } from '../aplicacion/acceso/comun.js';
-import {
-  ConsultarEstadoDeCuenta,
-  ConsultarPortal,
-  CrearAccesoAsociado,
-  DarDeBajaAsociado,
-  GenerarCuotas,
-  ListarAsociados,
-  RegistrarAsociado,
-} from '../aplicacion/padron/padron.js';
-import { ConsultarPago, RegistrarPago, ReversarPago } from '../aplicacion/padron/pagos.js';
+import { construirCasos, type Casos } from '../aplicacion/casos.js';
 import type { ContextoAcceso } from '../dominio/acceso.js';
 import type { GeneradorIds, Reloj } from '../dominio/puertos.js';
 import type { UnidadDeTrabajoAcceso } from '../dominio/puertos-acceso.js';
@@ -24,52 +13,12 @@ import { TokensHs256 } from '../infraestructura/seguridad/tokens-hs256.js';
 import { GeneradorIdsAleatorio } from '../infraestructura/sistema.js';
 import { GeneradorIdsSecuencial, RelojFijo } from './dobles.js';
 
+export { construirCasos, type Casos };
+
 export const SECRETO_PRUEBAS = 'secreto-solo-para-pruebas-0123456789abcdef';
 export const CLAVE = 'Clave-de-prueba-123';
 /** 2026-11-19 10:00 en Lima: el periodo vigente es 2026-11. */
 export const AHORA_PRUEBAS = '2026-11-19T15:00:00.000Z';
-
-export interface Casos {
-  readonly autenticar: AutenticarUsuario;
-  readonly renovar: RenovarSesion;
-  readonly cerrarSesion: CerrarSesion;
-  readonly autorizar: AutorizarSolicitud;
-  readonly registrarDenegado: RegistrarAccesoDenegado;
-  readonly crearJass: CrearJassConConsejo;
-  readonly crearPersonal: CrearPersonal;
-  readonly registrarAsociado: RegistrarAsociado;
-  readonly darDeBaja: DarDeBajaAsociado;
-  readonly listarAsociados: ListarAsociados;
-  readonly estadoDeCuenta: ConsultarEstadoDeCuenta;
-  readonly portal: ConsultarPortal;
-  readonly crearAcceso: CrearAccesoAsociado;
-  readonly generarCuotas: GenerarCuotas;
-  readonly registrarPago: RegistrarPago;
-  readonly reversarPago: ReversarPago;
-  readonly consultarPago: ConsultarPago;
-}
-
-export function construirCasos(d: DependenciasAcceso): Casos {
-  return {
-    autenticar: new AutenticarUsuario(d),
-    renovar: new RenovarSesion(d),
-    cerrarSesion: new CerrarSesion(d),
-    autorizar: new AutorizarSolicitud(d),
-    registrarDenegado: new RegistrarAccesoDenegado(d),
-    crearJass: new CrearJassConConsejo(d),
-    crearPersonal: new CrearPersonal(d),
-    registrarAsociado: new RegistrarAsociado(d),
-    darDeBaja: new DarDeBajaAsociado(d),
-    listarAsociados: new ListarAsociados(d),
-    estadoDeCuenta: new ConsultarEstadoDeCuenta(d),
-    portal: new ConsultarPortal(d),
-    crearAcceso: new CrearAccesoAsociado(d),
-    generarCuotas: new GenerarCuotas(d),
-    registrarPago: new RegistrarPago(d),
-    reversarPago: new ReversarPago(d),
-    consultarPago: new ConsultarPago(d),
-  };
-}
 
 export interface Entorno {
   readonly dependencias: DependenciasAcceso;

@@ -25,12 +25,12 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 4. API NestJS (D1, D3, D9)
 
-- [ ] 4.1 Añadir NestJS (`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`), configurar decoradores en `tsconfig.json`, módulo, guardia de autenticación y autorización (D3), filtro de errores con `{ codigo, mensaje }`, auditoría de `403` y arranque con `JWT_SECRET` obligatorio. Verificar que `npm run lint`, `npm run build` y `npm test` terminan con código 0 y que la API no arranca sin `JWT_SECRET` ni con uno de menos de 32 bytes.
-- [ ] 4.2 Controladores de `auth`, `yo`, `asociados`, `cuotas`, `pagos` y `portal` según D9. Verificar con pruebas HTTP sobre la aplicación real y PostgreSQL cada escenario de `cuotas-y-pagos` y de `acceso-por-perfiles` que tiene código HTTP (`401`, `403`, `409`, `422`, `429`, `200`/`201`).
-- [ ] 4.3 Pruebas HTTP de aislamiento (`portal-asociado`): matriz con 2 JASS × 2 asociados × tesorero × operador, donde cada cuenta intenta cada ruta con cada recurso. Verificar que solo las combinaciones permitidas devuelven datos, que todo lo demás es `403` sin datos del recurso, que el portal ignora identificadores enviados, y que cada `403` genera `acceso.denegado`.
-- [ ] 4.4 Prueba HTTP del flujo principal: el tesorero registra un pago y el asociado lee su saldo actualizado; la reversa lo restaura. Verificar saldos 1500 → 1000 → 1500.
-- [ ] 4.5 Pruebas de seguridad de la bitácora y de las respuestas: ningún evento contiene contraseñas ni tokens tras inicios de sesión fallidos; credenciales inválidas indistinguibles; cuerpos de error sin trazas ni SQL.
-- [ ] 4.6 Órdenes `crear-jass` y `sembrar-demo` (D12). Verificar que `crear-jass` falla sin `SIJASS_CLAVE_INICIAL`, que crea la JASS y el `consejo` con la contraseña derivada, y que `sembrar-demo` se niega sin `SIJASS_PERMITIR_DEMO=1`.
+- [x] 4.1 Añadir NestJS (`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`), configurar decoradores en `tsconfig.json`, módulo, guardia de autenticación y autorización (D3), filtro de errores con `{ codigo, mensaje }`, auditoría de `403` y arranque con `JWT_SECRET` obligatorio. Verificar que `npm run lint`, `npm run build` y `npm test` terminan con código 0 y que la API no arranca sin `JWT_SECRET` ni con uno de menos de 32 bytes.
+- [x] 4.2 Controladores de `auth`, `yo`, `asociados`, `cuotas`, `pagos` y `portal` según D9. Verificar con pruebas HTTP sobre la aplicación real y PostgreSQL cada escenario de `cuotas-y-pagos` y de `acceso-por-perfiles` que tiene código HTTP (`401`, `403`, `409`, `422`, `429`, `200`/`201`).
+- [x] 4.3 Pruebas HTTP de aislamiento (`portal-asociado`): matriz con 2 JASS × 2 asociados × tesorero × operador, donde cada cuenta intenta cada ruta con cada recurso. Verificar que solo las combinaciones permitidas devuelven datos, que todo lo demás es `403` sin datos del recurso, que el portal ignora identificadores enviados, y que cada `403` genera `acceso.denegado`.
+- [x] 4.4 Prueba HTTP del flujo principal: el tesorero registra un pago y el asociado lee su saldo actualizado; la reversa lo restaura. Verificar saldos 1500 → 1000 → 1500.
+- [x] 4.5 Pruebas de seguridad de la bitácora y de las respuestas: ningún evento contiene contraseñas ni tokens tras inicios de sesión fallidos; credenciales inválidas indistinguibles; cuerpos de error sin trazas ni SQL.
+- [x] 4.6 Órdenes `crear-jass` y `sembrar-demo` (D12). Verificar que `crear-jass` falla sin `SIJASS_CLAVE_INICIAL`, que crea la JASS y el `consejo` con la contraseña derivada, y que `sembrar-demo` se niega sin `SIJASS_PERMITIR_DEMO=1`.
 
 ## 5. Interfaz web (D10)
 
