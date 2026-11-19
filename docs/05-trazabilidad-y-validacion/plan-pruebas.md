@@ -38,7 +38,7 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservori
 | Interfaz: `npm run lint`, `npm run build`, `npm test` | Código 0; 84 pruebas, tres ejecuciones |
 | `npx playwright test` (Chrome del sistema) | 7 pruebas aprobadas en tres ejecuciones consecutivas |
 
-Es evidencia **local**; la de GitHub Actions de `s1c` se registra aparte al abrir su pull request.
+Es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI en GitHub Actions: [PR #10](https://github.com/Henrixfs/SIJASS/pull/10), commit `6cb320a`, [ejecución 44640749517](https://github.com/Henrixfs/SIJASS/actions/runs/44640749517) con `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde.
 
 | PT | Prueba de `s1c` | Nivel |
 |---|---|---|

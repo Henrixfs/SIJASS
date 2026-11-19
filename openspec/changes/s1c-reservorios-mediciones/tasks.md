@@ -32,10 +32,16 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 ## 7. Integración final
 
 - [ ] 7.1 `openspec validate s1c-reservorios-mediciones --strict` con código 0.
-- [ ] 7.2 En una copia limpia del commit final: `npm ci`, lint, build, `npm test`, `npm run test:integration`, interfaz y E2E.
-- [ ] 7.3 Subir la rama, abrir el PR contra `feat/s1b-acceso-cuotas-pagos` y anotar la URL del CI con todos los jobs en verde.
+- [x] 7.2 En una copia limpia del commit final: `npm ci`, lint, build, `npm test`, `npm run test:integration`, interfaz y E2E.
+- [x] 7.3 Subir la rama, abrir el PR contra `feat/s1b-acceso-cuotas-pagos` y anotar la URL del CI con todos los jobs en verde.
 
 ## Workflow follow-up
 
 - Fusionar y archivar con `/opsx:archive s1c-reservorios-mediciones`.
 - Planificar `s1d-asistente-tecnico`.
+
+## Evidencia de GitHub Actions (aparte de la local)
+
+- Rama `feat/s1c-reservorios-mediciones`, commit `6cb320a`: [PR #10](https://github.com/Henrixfs/SIJASS/pull/10) (base `feat/s1b-acceso-cuotas-pagos`).
+- Ejecución del pull request [44640749517](https://github.com/Henrixfs/SIJASS/actions/runs/44640749517) y del push [44640740906](https://github.com/Henrixfs/SIJASS/actions/runs/44640740906): los seis jobs en verde.
+- **Fallos intermitentes encontrados y corregidos.** La primera ejecución del push ([44639926627](https://github.com/Henrixfs/SIJASS/actions/runs/44639926627)) falló en `Prototipo (Node 26)` y en `Interfaz y E2E (navegador)`. Causas, ambas defectos de las pruebas y no del producto: (1) una prueba de `s1b` creaba dos promesas rechazadas antes de esperarlas, lo que Node.js 26 trata como rechazo no atendido (corregido en `cabdbe2`); (2) el E2E contaba la pestaña *Mediciones* sin esperar a que apareciera (corregido en `6cb320a`). Tras las correcciones, los jobs pasaron en las dos ejecuciones.

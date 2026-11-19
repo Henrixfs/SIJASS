@@ -81,7 +81,7 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 
 ## 3.3. Aporte de s1c
 
-`s1c-reservorios-mediciones` conecta el dominio de medición (`s1a`) a las sesiones y los roles de `s1b`: el consejo da de alta reservorios, el operador registra mediciones manuales, y operador, tesorero y consejo consultan el historial, con aislamiento entre JASS. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. Evidencia verificado **en local** el 2026-11-19 (278 pruebas unitarias, 245 de integración, 84 de interfaz y 7 E2E); aún sin CI; la de CI se citará aparte.
+`s1c-reservorios-mediciones` conecta el dominio de medición (`s1a`) a las sesiones y los roles de `s1b`: el consejo da de alta reservorios, el operador registra mediciones manuales, y operador, tesorero y consejo consultan el historial, con aislamiento entre JASS. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. Evidencia verificado en local el 2026-11-19 (278 pruebas unitarias, 245 de integración, 84 de interfaz y 7 E2E) y en CI ([ejecución](https://github.com/Henrixfs/SIJASS/actions/runs/44640749517)); la de GitHub Actions se cita aparte: CI en GitHub Actions: [PR #10](https://github.com/Henrixfs/SIJASS/pull/10), commit `6cb320a`, [ejecución 44640749517](https://github.com/Henrixfs/SIJASS/actions/runs/44640749517) con `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde.
 
 | Criterio | Aporte de s1c | Evidencia | Pendiente visible |
 |---|---|---|---|
