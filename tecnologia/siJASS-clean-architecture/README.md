@@ -1,19 +1,20 @@
 # Prototipo TypeScript de dominio — SIJASS
 
-**Estado:** prototipo. Demuestra, con pruebas reproducibles en CI, el registro **manual** e **idempotente** de mediciones de cloro residual y su persistencia en PostgreSQL, bajo Clean Architecture. **No** es una aplicación SIJASS operable: no tiene API HTTP, usuarios, interfaz ni sincronización, y no es un componente del MVP.
+**Estado:** prototipo. Demuestra, con pruebas reproducibles, (1) el registro **manual** e **idempotente** de mediciones de cloro residual con persistencia en PostgreSQL y (2), desde `s1b-acceso-cuotas-pagos`, el acceso por perfiles (personal de la JASS y asociado), el padrón, las cuotas, los pagos con reversa y el portal del asociado detrás de una API NestJS, bajo Clean Architecture. **No** es una aplicación SIJASS operable: no está desplegada, no tiene OpenAPI, PWA, sincronización ni asistente RAG, y `s1b` tiene evidencia **local**, todavía no de CI.
 
 ## Estructura
 
 ```text
 tecnologia/siJASS-clean-architecture/
-├── package.json                      # Scripts build, lint, test, test:integration, migrar y migrar:revertir
+├── package.json                      # ESM; scripts build, lint, test, test:integration, api, crear-jass, sembrar-demo, migrar y migrar:revertir
 ├── package-lock.json                 # Instalación reproducible con npm ci
 ├── docker-compose.yml                # PostgreSQL 16 desechable para el desarrollo local
 ├── .env.example                      # DATABASE_URL de ejemplo (credenciales desechables)
 ├── eslint.config.mjs                 # ESLint (reglas recommended) sobre src/
 ├── tsconfig.json                     # ES2022, NodeNext, strict; compila src/ en dist/
 ├── migraciones/
-│   └── 0001_esquema-mediciones.sql   # jass, reservorio, metodo_medicion, medicion, operacion_idempotente (up y down)
+│   ├── 0001_esquema-mediciones.sql   # jass, reservorio, metodo_medicion, medicion, operacion_idempotente (up y down)
+│   └── 0002_acceso-padron-pagos.sql  # usuario, membresia, sesion, asociado, cuota, pago, reversa_pago, evento_auditoria (up y down)
 ├── scripts/
 │   └── exigir-database-url.mjs       # Falla con un mensaje claro si falta DATABASE_URL
 └── src/
@@ -25,10 +26,14 @@ tecnologia/siJASS-clean-architecture/
     │   ├── contenido-canonico.ts     #   Contenido canónico del comando (base del hash)
     │   └── puertos.ts                #   Puertos: repositorios, UnidadDeTrabajo, Reloj y GeneradorIds
     ├── aplicacion/
+    │   ├── acceso/ y padron/         #   Casos de uso de sesión, padrón, cuotas, pagos y portal (s1b)
     │   ├── registrar-medicion.ts     #   RegistrarMedicion: accepted, duplicate, conflict o rejected
     │   └── hash-operacion.ts         #   SHA-256 del contenido canónico
+    ├── api/                          # NestJS 12 (capa de interfaz): guardia, filtro de errores, controladores, composición y órdenes CLI
     ├── infraestructura/
     │   ├── memoria.ts                #   Implementación en memoria (mutex y copia por transacción)
+    │   ├── memoria-acceso.ts         #   Ídem para acceso, padrón, pagos y auditoría (s1b)
+    │   ├── seguridad/                #   Contraseñas scrypt y tokens HS256 (s1b)
     │   ├── sistema.ts                #   RelojSistema y GeneradorIdsAleatorio
     │   └── postgres/                 #   Implementación PostgreSQL (pg, READ COMMITTED)
     └── pruebas/
@@ -37,6 +42,22 @@ tecnologia/siJASS-clean-architecture/
         ├── integracion/              #   npm run test:integration (exige PostgreSQL)
         └── dobles.ts                 #   RelojFijo y GeneradorIdsSecuencial
 ```
+
+## API, órdenes y pruebas de `s1b-acceso-cuotas-pagos`
+
+```bash
+export DATABASE_URL=postgres://sijass:sijass@127.0.0.1:5432/sijass   # ver «Pruebas de integración»
+export JWT_SECRET="<al menos 32 bytes aleatorios>"                   # la API no arranca sin él
+npm run migrar && npm run build
+SIJASS_CLAVE_INICIAL='<contraseña>' npm run crear-jass -- "JASS Ejemplo" consejo@ejemplo.pe
+npm run api                                                          # http://localhost:3000 (PORT, CORS_ORIGIN, WEB_DIR opcionales)
+SIJASS_PERMITIR_DEMO=1 SIJASS_CLAVE_DEMO='<contraseña>' npm run sembrar-demo   # solo desarrollo
+```
+
+- Rutas (`/v1`): `auth/login|refresh|logout`, `yo`, `asociados` (+ `:id/baja`, `:id/acceso`, `:id/estado-de-cuenta`), `cuotas/generar`, `pagos` (+ `:id`, `:id/reversa`, con `Idempotency-Key`) y `portal/saldo|cuotas|pagos`. El contrato OpenAPI llega en `s1e`.
+- Decisiones: contraseñas `scrypt` (N=2^15), JWT HS256 de 15 min sin JASS ni rol, refresco opaco rotativo guardado como SHA-256, JASS/perfil/rol leídos de la membresía **en cada solicitud**, `403` idéntico para recurso ajeno e inexistente y auditado, importes en céntimos, pagos con bloqueo de la cuota.
+- Pruebas (verificadas en local el 2026-11-19): `npm test` pasa 256 pruebas unitarias; `npm run test:integration` pasa 215 (esquema `0002`, baterías compartidas con la memoria, concurrencia en 10 rondas, API HTTP, matriz de aislamiento, seguridad). La interfaz está en [`../sijass-web`](../sijass-web/README.md) y el E2E en [`../e2e`](../e2e/README.md).
+- Limitaciones de `s1b`: una membresía activa por cuenta; sin cambio ni recuperación de contraseña; sin correcciones de mediciones ni reservorios por HTTP (`s1c`); `medicion.registrado_por` aún sin clave foránea a `usuario`; el listado de asociados calcula el saldo de cada uno con consultas por asociado (aceptable para el tamaño de una JASS; se medirá en `s1e`).
 
 ## Qué demuestra
 
@@ -112,7 +133,7 @@ Esto respalda el dominio de medición, la idempotencia y la persistencia del pro
 - El esquema es el de este cambio, no una estrategia de crecimiento, respaldo ni particionado.
 - `npm audit` informa 9 vulnerabilidades moderadas solo en dependencias de desarrollo (8 de `typescript-eslint` y 1 de `node-pg-migrate` a través de `glob`); las dependencias de ejecución tienen 0.
 
-No implementa React, PWA, IndexedDB, NestJS, API HTTP, autorización, sincronización ni RAG. Las deudas se describen en el [alcance y hoja de ruta](../../docs/00-alcance-y-roadmap.md#6-deuda-técnica-conocida).
+No implementa PWA, IndexedDB, sincronización ni RAG; la API y la interfaz de `s1b` cubren solo acceso, padrón, cuotas y pagos. Las deudas se describen en el [alcance y hoja de ruta](../../docs/00-alcance-y-roadmap.md#6-deuda-técnica-conocida).
 
 ## Migración prevista
 

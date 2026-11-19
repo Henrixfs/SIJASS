@@ -11,7 +11,7 @@
 | Consejo directivo (administrador de JASS) | Primario | Configurar la organización y supervisar | Gestionar reservorios, usuarios y roles de su JASS; consultar historiales, auditoría y reportes; administrar documentos privados de su JASS | No puede alterar el historial de auditoría ni acceder a otras JASS |
 | Administrador de plataforma | Secundario | Operar la plataforma de forma centralizada | Dar de alta JASS y su primer usuario del consejo; administrar el corpus documental público; soporte técnico | Sin acceso rutinario a datos operativos; todo acceso de soporte queda auditado |
 | Área Técnica Municipal (ATM) | Interesado externo | Supervisar la prestación del servicio | Recibir reportes que la JASS decida compartir fuera del sistema | Sin cuenta ni acceso directo en el MVP |
-| Asociados | Interesados | Transparencia sobre cuotas y calidad del agua | Ninguna en el MVP | Acceso directo considerado **futuro** |
+| Asociados | Primario (portal) | Transparencia sobre sus cuotas y pagos | Consultar **solo lo propio** (saldo, cuotas y pagos) con una cuenta individual, desde `s1b-acceso-cuotas-pagos` (decisión del 2026-11-19) | Sin acceso a datos de otros asociados ni de otras JASS; no registra pagos; la calidad del agua sigue siendo **futuro** |
 | Servicio de modelo de lenguaje (LLM) | Sistema externo | Redactar respuestas a partir de fragmentos recuperados | Recibe únicamente pregunta y contexto autorizado y minimizado | No es usuario; no escribe datos ni toma decisiones |
 | Servicio de mensajería | Sistema externo | Distribuir notificaciones | Ninguna en el MVP | Integración **futura** (HU11/RF12) |
 
@@ -25,8 +25,8 @@ Leyenda: **C** crear · **L** leer · **A** actualizar o corregir · **—** sin
 | Reservorios | L | L | C, L, A | — |
 | Usuarios y membresías | — | — | C, L, A | C (primer consejo) |
 | Mediciones de cloro | C, L, A (propias) | L | L, A (con motivo) | — |
-| Asociados | — | C, L, A | L | — |
-| Cuotas y pagos | — | C, L, A (reversa) | L | — |
+| Asociados | — | C, L, A | C, L, A | — |
+| Cuotas y pagos | — | C, L, A (reversa) | C, L, A (reversa) *(decisión del 2026-11-19: el administrador también registra y reversa pagos)* | — |
 | Reportes e historial | L (mediciones) | L (cuotas) | L | — |
 | Bitácora de auditoría | — | — | L | L (eventos de plataforma) |
 | Documentos públicos del corpus | L | L | L | C, L, A |

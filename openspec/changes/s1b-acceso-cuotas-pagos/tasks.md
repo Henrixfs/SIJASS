@@ -47,8 +47,8 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 8. Documentación con evidencia
 
-- [ ] 8.1 Actualizar `docs/00-alcance-y-roadmap.md` (§1, §4.1, §4.2, §5), `docs/01-analisis-de-sistema/01-actores.md` (matriz y asociados), `diseno-interno-de-modulos.md` (§2, §3), `plan-pruebas.md` y `matriz-cumplimiento.md` con el estado real y los enlaces a evidencia. No pasar ningún criterio a *Implementado*. Verificar `node scripts/verificar-docs.mjs` con código 0.
-- [ ] 8.2 Actualizar los README (raíz y paquetes) con el estado, el arranque local y las limitaciones.
+- [x] 8.1 Actualizar `docs/00-alcance-y-roadmap.md` (§1, §4.1, §4.2, §5), `docs/01-analisis-de-sistema/01-actores.md` (matriz y asociados), `diseno-interno-de-modulos.md` (§2, §3), `plan-pruebas.md` y `matriz-cumplimiento.md` con el estado real y los enlaces a evidencia. No pasar ningún criterio a *Implementado*. Verificar `node scripts/verificar-docs.mjs` con código 0.
+- [x] 8.2 Actualizar los README (raíz y paquetes) con el estado, el arranque local y las limitaciones.
 
 ## 9. Integración final
 

@@ -1,6 +1,6 @@
 # Diseño interno de módulos — SIJASS
 
-**Estado:** diseño propuesto para el MVP. El prototipo TypeScript implementa **parte** de este diseño (el modelo de §4 sin revisiones y el flujo de §5.3 sin auditoría); ver las limitaciones en la nota de desfase de §4 y en la [deuda técnica](../../00-alcance-y-roadmap.md#6-deuda-técnica-conocida).
+**Estado:** diseño propuesto para el MVP. El prototipo TypeScript implementa **parte** de este diseño: el modelo de §4 sin revisiones, el flujo de §5.3 sin auditoría y, desde `s1b-acceso-cuotas-pagos`, los módulos `identidad`, `padron` y `auditoria` (§2, §3, §7) con una API NestJS parcial (§8: auth, asociados, cuotas, pagos y portal; sin `/v1/sync`, mediciones, documentos ni asistente); ver las limitaciones en la nota de desfase de §4 y en la [deuda técnica](../../00-alcance-y-roadmap.md#6-deuda-técnica-conocida).
 
 ## 1. Módulos del monolito
 
@@ -30,6 +30,7 @@ Un módulo no lee ni escribe tablas de otro; se coordina mediante servicios de a
 - **Casos de uso:** `RegistrarAsociado`, `DarDeBajaAsociado`, `GenerarCuotas`, `RegistrarPago`, `ReversarPago`, `ConsultarMorosidad`.
 - **Invariantes:** importes finitos y positivos expresados en céntimos o decimal exacto; la suma de pagos no revertidos no supera el importe de la cuota salvo política explícita; ningún movimiento de dinero se elimina.
 - **MVP:** pagos **solo en línea** (ADR-013), con clave de idempotencia enviada en el encabezado `Idempotency-Key`.
+- **Implementado en el prototipo (`s1b`):** importes enteros en céntimos de sol; el pago guarda `payload_hash` (misma clave y mismo contenido → el original; otro contenido → `409`); la cuota se bloquea (`SELECT … FOR UPDATE`) para que dos pagos concurrentes no superen su importe; el estado de la cuota se deriva, no se almacena; el saldo cuenta las cuotas con periodo ≤ el vigente en Lima (UTC-5). El **portal del asociado** (`GET /v1/portal/*`) devuelve solo lo propio, tomando el asociado de la membresía.
 
 ## 4. Mediciones de cloro — origen manual
 

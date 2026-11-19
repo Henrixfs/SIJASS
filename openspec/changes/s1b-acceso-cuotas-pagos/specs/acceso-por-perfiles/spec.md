@@ -21,6 +21,13 @@ El sistema SHALL autenticar con correo y contraseña, SHALL guardar la contrase�
 - **WHEN** se inspecciona la tabla de usuarios tras crear dos cuentas con la misma contraseña
 - **THEN** la contraseña no aparece en claro y las dos cuentas tienen sal y derivación distintas
 
+### Requirement: Política mínima de contraseñas
+El sistema SHALL aceptar como contraseña de una cuenta nueva solo textos de 10 a 128 caracteres, y SHALL rechazar con `422` cualquier otro sin crear la cuenta.
+
+#### Scenario: Contraseña demasiado corta o larga
+- **WHEN** el personal crea el acceso de un asociado con una contraseña de menos de 10 o más de 128 caracteres
+- **THEN** la respuesta es `422` y no se crea el usuario ni la membresía
+
 ### Requirement: Limitación de intentos fallidos
 El sistema SHALL bloquear el inicio de sesión de una cuenta durante 15 minutos tras 5 intentos fallidos consecutivos, y SHALL reiniciar el contador con un inicio de sesión correcto.
 
