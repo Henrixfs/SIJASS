@@ -1,0 +1,62 @@
+{
+  "corpus": {
+    "nombre": "Corpus de EJEMPLO de SIJASS (ficticio, no aprobado)"
+  },
+  "documentos": [
+    {
+      "id": "ejemplo-lectura-dpd",
+      "titulo": "EJEMPLO — Guía de lectura de cloro residual con comparador DPD",
+      "version": "0.1-ejemplo",
+      "estado": "ejemplo",
+      "responsable": "Sin aprobar: documento ficticio para probar el asistente",
+      "paginas": [
+        {
+          "numero": 1,
+          "texto": "Esta guía de ejemplo describe cómo tomar la muestra de agua en el reservorio. Enjuague el frasco de muestra con el mismo agua antes de llenarlo. Tome la muestra en el punto de salida del reservorio y evite tocar el interior del frasco. Anote la hora exacta de la toma."
+        },
+        {
+          "numero": 2,
+          "texto": "Para la lectura con el comparador DPD, agregue el reactivo al frasco de muestra siguiendo las instrucciones del fabricante y mezcle suavemente. Compare el color con la escala del comparador inmediatamente. Registre la lectura de cloro residual en miligramos por litro y anote el método utilizado."
+        },
+        {
+          "numero": 3,
+          "texto": "Si el color no se puede comparar por falta de luz o por turbidez de la muestra, repita la toma en otro momento y deje constancia de la observación. No registre valores estimados: registre solo lo que lea en el comparador."
+        }
+      ]
+    },
+    {
+      "id": "ejemplo-registro-reservorios",
+      "titulo": "EJEMPLO — Procedimiento de registro de mediciones en reservorios",
+      "version": "0.1-ejemplo",
+      "estado": "ejemplo",
+      "responsable": "Sin aprobar: documento ficticio para probar el asistente",
+      "paginas": [
+        {
+          "numero": 1,
+          "texto": "El operador registra cada medición de cloro residual en el sistema indicando el reservorio, el método, el valor y la fecha y hora de la toma. Un registro enviado dos veces con la misma clave no se duplica."
+        },
+        {
+          "numero": 2,
+          "texto": "Si una lectura fue registrada por error, informe al consejo para su corrección con motivo. Las correcciones conservan el valor original. El sistema no emite dictámenes sobre la calidad del agua."
+        }
+      ]
+    },
+    {
+      "id": "ejemplo-cloracion-general",
+      "titulo": "EJEMPLO — Procedimiento general de cloración (sin cantidades)",
+      "version": "0.1-ejemplo",
+      "estado": "ejemplo",
+      "responsable": "Sin aprobar: documento ficticio para probar el asistente",
+      "paginas": [
+        {
+          "numero": 1,
+          "texto": "Antes de iniciar cualquier actividad de cloración, verifique que el equipo esté limpio y que el personal use su equipo de protección. Registre la hora de inicio y el reservorio. Esta guía de ejemplo no contiene cantidades ni fórmulas: las indicaciones sobre dosificación deben provenir del protocolo validado de la JASS."
+        },
+        {
+          "numero": 2,
+          "texto": "Al terminar la cloración, espere el tiempo indicado por el protocolo de la JASS y realice la lectura de cloro residual con el comparador. Registre la lectura y comunique cualquier valor fuera de lo esperado al responsable técnico."
+        }
+      ]
+    }
+  ]
+}
