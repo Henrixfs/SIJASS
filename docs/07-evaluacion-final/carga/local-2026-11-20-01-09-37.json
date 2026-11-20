@@ -1,0 +1,127 @@
+{
+  "entorno": "local",
+  "fecha": "2026-11-20T01:09:37.355Z",
+  "version": "6ca3ecb",
+  "metaVu": 2000,
+  "vuMaximos": 2000,
+  "duracionS": 417.46,
+  "maquina": {
+    "so": "Windows_NT 10.0.26200",
+    "cpus": 16,
+    "modeloCpu": "AMD Ryzen 7 5700U with Radeon Graphics         ",
+    "memoriaGb": 14
+  },
+  "rendimiento": {
+    "solicitudesPorSegundo": 148.39,
+    "solicitudesTotales": 61949
+  },
+  "latenciaMs": {
+    "lectura": {
+      "p50": 523.75,
+      "p95": 17546.1,
+      "p99": 27436.21,
+      "max": 32668.34
+    },
+    "login": {
+      "p50": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    }
+  },
+  "errores": {
+    "lecturaTasa": 0,
+    "loginTasa": 0,
+    "solicitudesFallidasTasa": 0,
+    "iniciosDeSesion": 2000
+  },
+  "porEtapa": [
+    {
+      "etapa": 1,
+      "vuObjetivo": 25,
+      "p50Ms": 14.32,
+      "p95Ms": 20.29,
+      "p99Ms": 33.02,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 2,
+      "vuObjetivo": 50,
+      "p50Ms": 13.43,
+      "p95Ms": 20.73,
+      "p99Ms": 28.63,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 3,
+      "vuObjetivo": 100,
+      "p50Ms": 16.65,
+      "p95Ms": 52.37,
+      "p99Ms": 102.75,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 4,
+      "vuObjetivo": 150,
+      "p50Ms": 25.78,
+      "p95Ms": 224.09,
+      "p99Ms": 385.27,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 5,
+      "vuObjetivo": 200,
+      "p50Ms": 112.23,
+      "p95Ms": 299.21,
+      "p99Ms": 375.05,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 6,
+      "vuObjetivo": 300,
+      "p50Ms": 423.62,
+      "p95Ms": 756.47,
+      "p99Ms": 906.08,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 7,
+      "vuObjetivo": 500,
+      "p50Ms": 1171.11,
+      "p95Ms": 1894.41,
+      "p99Ms": 2245.41,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 8,
+      "vuObjetivo": 1000,
+      "p50Ms": 2924.78,
+      "p95Ms": 4737.82,
+      "p99Ms": 5946.35,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 9,
+      "vuObjetivo": 2000,
+      "p50Ms": 13988.22,
+      "p95Ms": 28427.5,
+      "p99Ms": 31870.63,
+      "errorTasa": 0
+    },
+    {
+      "etapa": 10,
+      "vuObjetivo": 2000,
+      "p50Ms": 7120.35,
+      "p95Ms": 27965.36,
+      "p99Ms": 31900.91,
+      "errorTasa": 0
+    }
+  ],
+  "umbrales": {
+    "errores_lectura rate<0.01": true,
+    "errores_login rate<0.01": true,
+    "http_req_duration{tipo:lectura} p(95)<800": false
+  },
+  "observaciones": "Rampa por escalones finos (25, 50, 100, 150, 200, 300, 500, 1000 y 2000 usuarios virtuales; 40 s por escalón, mantenimiento 20 s, descenso 30 s) contra el contenedor local.",
+  "advertencia": "Resultado LOCAL: el generador de carga, la API y la base de datos comparten la misma máquina de desarrollo. NO representa la capacidad del despliegue ni de una JASS real."
+}

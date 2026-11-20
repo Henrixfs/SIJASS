@@ -13,8 +13,8 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 
 ## 3. Contenedor y verificación (D4, D5)
 
-- [ ] 3.1 `Dockerfile`, `.dockerignore`, `docker-compose.despliegue.yml` y `Caddyfile`. Verificar en local: la imagen se construye; con PostgreSQL migrado arranca y `/v1/salud` y `/` responden; corre como usuario no root; no contiene `.env` ni el valor de `JWT_SECRET`; sin `JWT_SECRET` termina con código distinto de 0.
-- [ ] 3.2 `scripts/verificar-despliegue.mjs`. Verificar contra el contenedor local: salud, cabeceras y caché pasan, y DNS, TLS, HSTS y redirección se informan «no aplicable»; contra un servidor de prueba mal configurado termina con código distinto de 0 nombrando la comprobación.
+- [x] 3.1 `Dockerfile`, `.dockerignore`, `docker-compose.despliegue.yml` y `Caddyfile`. Verificar en local: la imagen se construye; con PostgreSQL migrado arranca y `/v1/salud` y `/` responden; corre como usuario no root; no contiene `.env` ni el valor de `JWT_SECRET`; sin `JWT_SECRET` termina con código distinto de 0.
+- [x] 3.2 `scripts/verificar-despliegue.mjs`. Verificar contra el contenedor local: salud, cabeceras y caché pasan, y DNS, TLS, HSTS y redirección se informan «no aplicable»; contra un servidor de prueba mal configurado termina con código distinto de 0 nombrando la comprobación.
 
 ## 4. CI y CD (D6)
 
@@ -22,8 +22,8 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 
 ## 5. Carga k6 (D7–D9)
 
-- [ ] 5.1 `tecnologia/carga/portal.js`, `scripts/sembrar-carga.mjs` y `tecnologia/carga/registrar.mjs`. Verificar: la siembra crea 2.000 cuentas distintas y cada una inicia sesión; una ejecución de humo (10 usuarios, 30 s) pasa los umbrales y produce el resumen con su entorno.
-- [ ] 5.2 Rampa gradual hasta 2.000 usuarios virtuales **en local** contra el contenedor. Registrar capacidad observada, latencia, rendimiento y errores, por etapa, con el hardware y la advertencia de que no representa el despliegue.
+- [x] 5.1 `tecnologia/carga/portal.js`, `scripts/sembrar-carga.mjs` y `tecnologia/carga/registrar.mjs`. Verificar: la siembra crea 2.000 cuentas distintas y cada una inicia sesión; una ejecución de humo (10 usuarios, 30 s) pasa los umbrales y produce el resumen con su entorno.
+- [x] 5.2 Rampa gradual hasta 2.000 usuarios virtuales **en local** contra el contenedor. Registrar capacidad observada, latencia, rendimiento y errores, por etapa, con el hardware y la advertencia de que no representa el despliegue.
 
 ## 6. Documentación con evidencia
 
