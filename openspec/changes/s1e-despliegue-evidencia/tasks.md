@@ -4,12 +4,12 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 
 ## 1. Contrato OpenAPI (D3)
 
-- [ ] 1.1 Escribir `docs/api/openapi.yaml` con todas las rutas `/v1` y añadir la prueba de coherencia (rutas del código ↔ documento y estados observados ↔ declarados). Verificar: `npm test` pasa; quitar una ruta del documento o añadir un controlador de prueba hace fallar la prueba nombrando la ruta (comprobado con ambos sentidos en pruebas del propio comparador).
+- [x] 1.1 Escribir `docs/api/openapi.yaml` con todas las rutas `/v1` y añadir la prueba de coherencia (rutas del código ↔ documento y estados observados ↔ declarados). Verificar: `npm test` pasa; quitar una ruta del documento o añadir un controlador de prueba hace fallar la prueba nombrando la ruta (comprobado con ambos sentidos en pruebas del propio comparador).
 
 ## 2. Salud y caché estática (D1, D2)
 
-- [ ] 2.1 `GET /v1/salud`. Verificar por HTTP sobre PostgreSQL: `200 ok`; con la base inaccesible, `503` sin direcciones, usuario ni texto de error; sin sesión no devuelve datos.
-- [ ] 2.2 Caché estática de la interfaz. Verificar por HTTP con una carpeta de interfaz de prueba: `/assets/*` con `immutable` y `ETag`, `304` con `If-None-Match`, `index.html` y rutas de la SPA con `no-cache`, `/v1/*` con `no-store`, y que un `/assets/` inexistente responde `404` (no `index.html`).
+- [x] 2.1 `GET /v1/salud`. Verificar por HTTP sobre PostgreSQL: `200 ok`; con la base inaccesible, `503` sin direcciones, usuario ni texto de error; sin sesión no devuelve datos.
+- [x] 2.2 Caché estática de la interfaz. Verificar por HTTP con una carpeta de interfaz de prueba: `/assets/*` con `immutable` y `ETag`, `304` con `If-None-Match`, `index.html` y rutas de la SPA con `no-cache`, `/v1/*` con `no-store`, y que un `/assets/` inexistente responde `404` (no `index.html`).
 
 ## 3. Contenedor y verificación (D4, D5)
 

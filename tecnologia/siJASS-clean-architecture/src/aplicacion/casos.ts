@@ -14,6 +14,7 @@ import { ConsultarPago, RegistrarPago, ReversarPago } from './padron/pagos.js';
 import { ConsultarCatalogo, ConsultarHistorial, RegistrarMedicionAutorizada } from './mediciones-autorizadas.js';
 import { RegistrarMedicion } from './registrar-medicion.js';
 import { CrearReservorio, ListarReservorios } from './reservorios.js';
+import { ConsultarSalud } from './salud.js';
 import { ConsultarAsistente, ListarDocumentosAsistente, type RedactorRespuesta } from './asistente.js';
 import type { Corpus } from '../dominio/asistente/corpus.js';
 import type { UnidadDeTrabajo } from '../dominio/puertos.js';
@@ -44,6 +45,7 @@ export interface Casos {
   readonly catalogo: ConsultarCatalogo;
   readonly asistente: ConsultarAsistente;
   readonly documentosAsistente: ListarDocumentosAsistente;
+  readonly salud: ConsultarSalud;
 }
 
 /**
@@ -78,5 +80,6 @@ export function construirCasos(d: DependenciasAcceso, unidadMediciones: UnidadDe
     catalogo: new ConsultarCatalogo(),
     asistente: new ConsultarAsistente(d, corpus, redactor),
     documentosAsistente: new ListarDocumentosAsistente(corpus),
+    salud: new ConsultarSalud(d.unidadDeTrabajo),
   };
 }
