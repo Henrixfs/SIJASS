@@ -34,7 +34,7 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservori
 | Comprobación | Resultado |
 |---|---|
 | `npm run lint`, `npm run build` y `npm test` (API) | Código 0; 393 pruebas unitarias, incluidas la validación del manifiesto, 16 preguntas con evidencia, 8 abstenciones, 25 pedidos de dosis bloqueados y 15 preguntas legítimas no bloqueadas |
-| `npm run test:integration` contra PostgreSQL 16 | Código 0; 253 pruebas, con el asistente por HTTP (permisos, privacidad por búsqueda en todas las columnas de texto, solo lectura y arranque con corpus inválido en proceso real) |
+| `npm run test:integration` contra PostgreSQL 16 | Código 0; 264 pruebas, con el asistente por HTTP (permisos, privacidad por búsqueda en todas las columnas de texto, solo lectura y arranque con corpus inválido en proceso real) |
 | Interfaz: `npm run lint`, `npm run build`, `npm test` | Código 0; 94 pruebas, tres ejecuciones |
 | `npx playwright test` (Chrome del sistema) | 9 pruebas aprobadas en tres ejecuciones consecutivas |
 

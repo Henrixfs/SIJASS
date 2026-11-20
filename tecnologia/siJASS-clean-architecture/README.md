@@ -61,7 +61,7 @@ SIJASS_PERMITIR_DEMO=1 SIJASS_CLAVE_DEMO='<contraseña>' npm run sembrar-demo   
 
 ## Asistente documental (`s1d-asistente-tecnico`)
 
-`POST /v1/asistente/consultas` y `GET /v1/asistente/documentos`. Recuperación léxica y extractiva sobre un corpus validado; responde con citas (documento, versión, página, fragmento literal), se abstiene sin evidencia y rechaza como fuera de alcance todo pedido de dosis o tratamiento. **El corpus incluido (`corpus-ejemplo/`) es ficticio y está rotulado `EJEMPLO`.** Para incorporar el corpus aprobado: un directorio con `manifiesto.json` (ver la especificación) y `ASISTENTE_CORPUS_DIR=<ruta>`; un manifiesto inválido impide arrancar. El proveedor de modelo de lenguaje se enchufa implementando `RedactorRespuesta`; hoy no hay ninguno. Local: 393 unitarias, 253 de integración.
+`POST /v1/asistente/consultas` y `GET /v1/asistente/documentos`. Recuperación léxica y extractiva sobre un corpus validado; responde con citas (documento, versión, página, fragmento literal), se abstiene sin evidencia y rechaza como fuera de alcance todo pedido de dosis o tratamiento. **El corpus incluido (`corpus-ejemplo/`) es ficticio y está rotulado `EJEMPLO`.** Para incorporar el corpus aprobado: un directorio con `manifiesto.json` (ver la especificación) y `ASISTENTE_CORPUS_DIR=<ruta>`; un manifiesto inválido impide arrancar. El proveedor de modelo de lenguaje se enchufa implementando `RedactorRespuesta`; hoy no hay ninguno. Local: 393 unitarias, 264 de integración.
 
 ## Qué demuestra
 
