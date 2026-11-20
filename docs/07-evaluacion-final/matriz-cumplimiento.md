@@ -105,6 +105,49 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 | Criterio C06 | Tercer flujo E2E | [`flujo-asistente.spec.ts`](../../tecnologia/e2e/pruebas/flujo-asistente.spec.ts) | Operación sin conexión |
 | Criterio C07 | Pestaña *Asistente* con aviso de corpus de ejemplo | [`Asistente.tsx`](../../tecnologia/sijass-web/src/paginas/Asistente.tsx) | Usabilidad con operadores reales |
 
+## 3.5. Aporte de s1e
+
+`s1e-despliegue-evidencia` construye y verifica **en local y en CI** todo lo que no depende de servicios externos (contrato OpenAPI, sonda de salud, caché estática, contenedor, verificación del despliegue, escenarios de carga k6) y **prepara y nombra** lo que sí depende (dominio, DNS, HTTPS real, CDN, hosting, CD). **No** cierra ningún criterio y **ninguno pasa a *Implementado***. Las tres evidencias se mantienen **separadas**; la del despliegue está en blanco porque **no existe despliegue**.
+
+| Criterio | Evidencia **local** | Evidencia **CI** (GitHub Actions) | Evidencia del **despliegue** |
+|---|---|---|---|
+| Criterio C08 | [Contrato OpenAPI](../api/openapi.yaml) con 24 rutas y su prueba; capacidad local medida (tabla de abajo) | [PR #12](https://github.com/Henrixfs/SIJASS/pull/12), commit `2a42eeb`, [ejecución 44651717598](https://github.com/Henrixfs/SIJASS/actions/runs/44651717598): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)`, `Interfaz y E2E (navegador)` e `Imagen del contenedor` en verde | **Sin medir** |
+| Criterio C10 | [`verificar-despliegue.mjs`](../../scripts/verificar-despliegue.mjs) y [`Caddyfile`](../../Caddyfile) preparados; DNS, TLS, HSTS y redirección salen **no aplicable** sin dominio | El job `Imagen del contenedor` ejecuta el script (solo las comprobaciones aplicables) | **Sin medir** (sin dominio, DNS ni CDN) |
+| Criterio C11 | Caché estática implementada y probada: `/assets/*` `immutable` con `ETag` y `304`, `index.html` `no-cache`, `/v1/*` `no-store` | Mismas pruebas en el job `Integración (PostgreSQL)` | **Sin medir** (sin CDN ni navegador real) |
+| Criterio C12 | Imagen construida y ejecutada con el compose; usuario no root; sin secretos; sin pruebas compiladas | Job `Imagen del contenedor`: construye, levanta con PostgreSQL y migraciones y verifica; la **publicación en GHCR es manual y no se ejecutó** | **Sin medir** (CD no automatizado: falta destino y credenciales) |
+| Criterio C13 | Escenario k6 y siembra de 2.000 cuentas; humo y rampa **locales** (tabla de abajo) | **No ejecutado** en CI | **Sin medir** |
+
+Todo lo anterior se detalla, junto con lo que falta para el despliegue, en [`docs/08-despliegue/`](../08-despliegue/despliegue-y-bloqueos.md).
+
+### Pruebas de carga del portal (resultado **local**, 2026-11-20)
+
+> **Advertencia.** Estas cifras son **locales**: el generador de carga (k6), la API (contenedor) y PostgreSQL (contenedor) comparten una misma máquina de desarrollo (AMD Ryzen 7 5700U, 8 núcleos y 16 hilos, 14 GB de RAM, Windows 11 con Docker Desktop de 16 CPU y 7 GB para el contenedor). **No representan la capacidad del despliegue ni de una JASS real.** Los registros completos están en [`docs/07-evaluacion-final/carga/`](carga/).
+
+Modelo de carga: cada usuario virtual inicia sesión una vez con su propia cuenta y lee `saldo`, `cuotas` y `pagos` del portal con 1 a 3 s de pensamiento entre iteraciones. Umbral: p95 de lectura < 800 ms y errores < 1 %.
+
+| Usuarios virtuales (escalón de 40 s) | p50 lectura | p95 lectura | p99 lectura | Errores |
+|---|---|---|---|---|
+| 25 | 14 ms | 20 ms | 33 ms | 0 % |
+| 50 | 13 ms | 21 ms | 29 ms | 0 % |
+| 100 | 17 ms | 52 ms | 103 ms | 0 % |
+| 150 | 26 ms | 224 ms | 385 ms | 0 % |
+| 200 | 112 ms | 299 ms | 375 ms | 0 % |
+| **300** | 424 ms | **756 ms** | 906 ms | 0 % |
+| 500 | 1,17 s | 1,89 s | 2,25 s | 0 % |
+| 1.000 | 2,92 s | 4,74 s | 5,95 s | 0 % |
+| 2.000 (subida) | 13,99 s | 28,43 s | 31,87 s | 0 % |
+| 2.000 (mantenimiento 20 s) | 7,12 s | 27,97 s | 31,90 s | 0 % |
+
+Primera rampa (seis escalones de 60 s hasta 2.000, mantenimiento de 120 s): p50 8,36 s, p95 11,75 s, p99 12,86 s, rendimiento medio 158 solicitudes por segundo, 81.521 solicitudes, 2.000 inicios de sesión y **0 errores**; el umbral de latencia **no se cumplió**. La rampa por escalones finos tuvo un rendimiento medio de 148 solicitudes por segundo.
+
+**Lectura honesta de lo observado (local):**
+
+- **Capacidad con el umbral de latencia:** hasta unos **300 usuarios virtuales concurrentes** (alrededor de 150 solicitudes por segundo) en esta máquina; más allá, las solicitudes hacen cola y la latencia crece de forma casi proporcional a la carga. **La meta de 2.000 usuarios virtuales concurrentes NO se alcanzó** con la latencia exigida.
+- **Sin errores:** el sistema no rechazó ni falló ninguna solicitud, incluso a 2.000 usuarios virtuales; degrada la latencia, no la corrección.
+- **Dónde se satura (observación, no diagnóstico por perfilado):** el contenedor de la API estable en torno a 100–160 % de CPU durante las lecturas (un solo proceso Node.js, cercano a un núcleo y medio) y PostgreSQL cerca de 100–120 %; en las ráfagas de inicio de sesión la API llegó a ~520 % (derivación `scrypt`). Cada lectura del portal abre dos transacciones y hace del orden de nueve viajes a la base, y cada una de las tres rutas del portal recalcula el estado de cuenta completo; el grupo de conexiones es de 10.
+- **No se aplicó ninguna optimización.** Candidatos a evaluar **con medición** antes de afirmar mejoras: varias réplicas de la API detrás de un balanceador, una sola consulta para autorizar, lecturas sin transacción explícita, un único punto de lectura del portal, el tamaño del grupo de conexiones y guardar la membresía durante la vigencia del token.
+- La latencia del inicio de sesión no se informó por separado en estas ejecuciones (se corrigió el escenario para hacerlo en las siguientes).
+
 ## 4. Brechas y decisiones abiertas
 
 Criterios sin diseño documentado o con tensión con una decisión vigente. Ninguna se resuelve en esta matriz; cada una exige una decisión explícita y, cuando corresponda, una ADR nueva.

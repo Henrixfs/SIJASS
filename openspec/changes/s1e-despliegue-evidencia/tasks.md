@@ -18,7 +18,7 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 
 ## 4. CI y CD (D6)
 
-- [ ] 4.1 Job `imagen` en `ci.yml` y workflow manual `publicar-imagen.yml`. Verificar: YAML válido; el job `imagen` pasa en GitHub Actions; el workflow de publicación **no se ejecuta** (requiere autorización explícita).
+- [x] 4.1 Job `imagen` en `ci.yml` y workflow manual `publicar-imagen.yml`. Verificar: YAML válido; el job `imagen` pasa en GitHub Actions; el workflow de publicación **no se ejecuta** (requiere autorización explícita).
 
 ## 5. Carga k6 (D7–D9)
 
@@ -27,15 +27,21 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 
 ## 6. Documentación con evidencia
 
-- [ ] 6.1 Actualizar la matriz C01–C16 (columnas de evidencia local, CI y despliegue), el plan de pruebas (PT25), el roadmap, los README y un documento `docs/08-despliegue/` con lo que falta para desplegar (servicio, acceso o dato exacto). `node scripts/verificar-docs.mjs` con código 0.
+- [x] 6.1 Actualizar la matriz C01–C16 (columnas de evidencia local, CI y despliegue), el plan de pruebas (PT25), el roadmap, los README y un documento `docs/08-despliegue/` con lo que falta para desplegar (servicio, acceso o dato exacto). `node scripts/verificar-docs.mjs` con código 0.
 
 ## 7. Integración final
 
-- [ ] 7.1 `openspec validate s1e-despliegue-evidencia --strict` con código 0.
-- [ ] 7.2 Copia limpia del commit final: instalación, lint, build, pruebas, interfaz, E2E y construcción de la imagen.
-- [ ] 7.3 Subir la rama, abrir el PR contra `feat/s1d-asistente-tecnico` y anotar el CI.
+- [x] 7.1 `openspec validate s1e-despliegue-evidencia --strict` con código 0.
+- [x] 7.2 Copia limpia del commit final: instalación, lint, build, pruebas, interfaz, E2E y construcción de la imagen.
+- [x] 7.3 Subir la rama, abrir el PR contra `feat/s1d-asistente-tecnico` y anotar el CI.
 
 ## Workflow follow-up
 
 - Con dominio, DNS, hosting y credenciales: desplegar, ejecutar `verificar-despliegue.mjs` y la rampa k6 contra el servicio real y completar la columna «despliegue».
 - Fusionar y archivar con `/opsx:archive s1e-despliegue-evidencia`.
+
+## Evidencia (separada por entorno)
+
+- **Local (2026-11-20):** `npm test` 400/400; `npm run test:integration` 280/280; `docker build` y compose verificados; `verificar-despliegue.mjs` 6 aprobadas, 0 fallidas, 4 no aplicables; k6: humo y rampas hasta 2.000 usuarios virtuales (resultados en `docs/07-evaluacion-final/carga/`, con la advertencia de que son locales).
+- **GitHub Actions:** [PR #12](https://github.com/Henrixfs/SIJASS/pull/12), commit `2a42eeb`, ejecución del pull request [44651717598](https://github.com/Henrixfs/SIJASS/actions/runs/44651717598) y del push [44651591877](https://github.com/Henrixfs/SIJASS/actions/runs/44651591877): siete jobs en verde, incluido `Imagen del contenedor`. El workflow `publicar-imagen.yml` **no se ejecutó**.
+- **Despliegue:** **sin medir**. Falta dominio, DNS, hosting, CDN, credenciales de despliegue y autorización para cargar el servicio real; ver `docs/08-despliegue/despliegue-y-bloqueos.md`.
