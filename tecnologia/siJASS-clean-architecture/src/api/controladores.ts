@@ -4,6 +4,20 @@ import type { Casos } from '../aplicacion/casos.js';
 import type { ContextoAcceso } from '../dominio/acceso.js';
 import { ActorActual, CASOS, cuerpo, Publico } from './comun.js';
 
+/** Sonda pública para despliegues: no devuelve datos de negocio ni de configuración. */
+@Controller('v1/salud')
+export class SaludController {
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  @Publico()
+  @Get()
+  async salud(@Res({ passthrough: true }) respuesta: Response) {
+    const estado = await this.casos.salud.ejecutar();
+    respuesta.status(estado.estado === 'ok' ? 200 : 503);
+    return estado;
+  }
+}
+
 @Controller('v1/auth')
 export class AuthController {
   constructor(@Inject(CASOS) private readonly casos: Casos) {}
@@ -202,4 +216,4 @@ export class AsistenteController {
   }
 }
 
-export const CONTROLADORES = [AuthController, YoController, AsociadosController, CuotasController, PagosController, PortalController, ReservoriosController, MedicionesController, AsistenteController];
+export const CONTROLADORES = [SaludController, AuthController, YoController, AsociadosController, CuotasController, PagosController, PortalController, ReservoriosController, MedicionesController, AsistenteController];

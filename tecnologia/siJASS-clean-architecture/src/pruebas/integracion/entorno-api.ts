@@ -35,10 +35,10 @@ export interface Api {
   cerrar(): Promise<void>;
 }
 
-export async function iniciarApi(pool: pg.Pool, decorar?: DecoradorRepositoriosAcceso, corpus?: Corpus): Promise<Api> {
+export async function iniciarApi(pool: pg.Pool, decorar?: DecoradorRepositoriosAcceso, corpus?: Corpus, directorioWeb?: string): Promise<Api> {
   const entorno = crearEntorno(new UnidadDeTrabajoAccesoPostgres(pool, decorar), { mediciones: new UnidadDeTrabajoPostgres(pool), corpus });
   const errores: string[] = [];
-  const app = await crearAplicacion({ casos: entorno.casos, registrar: (m) => errores.push(m) });
+  const app = await crearAplicacion({ casos: entorno.casos, registrar: (m) => errores.push(m), directorioWeb });
   await app.listen(0, '127.0.0.1');
   const direccion = app.getHttpServer().address() as { port: number };
   const url = `http://127.0.0.1:${direccion.port}`;

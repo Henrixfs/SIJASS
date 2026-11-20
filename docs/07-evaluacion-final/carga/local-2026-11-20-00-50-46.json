@@ -1,0 +1,45 @@
+{
+  "entorno": "local",
+  "fecha": "2026-11-20T00:50:46.970Z",
+  "version": "6ca3ecb",
+  "metaVu": 2000,
+  "vuMaximos": 2000,
+  "duracionS": 516.89,
+  "maquina": {
+    "so": "Windows_NT 10.0.26200",
+    "cpus": 16,
+    "modeloCpu": "AMD Ryzen 7 5700U with Radeon Graphics         ",
+    "memoriaGb": 14
+  },
+  "rendimiento": {
+    "solicitudesPorSegundo": 157.71,
+    "solicitudesTotales": 81521
+  },
+  "latenciaMs": {
+    "lectura": {
+      "p50": 8363.44,
+      "p95": 11749,
+      "p99": 12864.9,
+      "max": 13516.91
+    },
+    "login": {
+      "p50": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    }
+  },
+  "errores": {
+    "lecturaTasa": 0,
+    "loginTasa": 0,
+    "solicitudesFallidasTasa": 0,
+    "iniciosDeSesion": 2000
+  },
+  "umbrales": {
+    "errores_lectura rate<0.01": true,
+    "errores_login rate<0.01": true,
+    "http_req_duration{tipo:lectura} p(95)<800": false
+  },
+  "observaciones": "Primera rampa gradual hasta 2000 usuarios virtuales (6 etapas de 60 s, mantenimiento 120 s, descenso 30 s) contra el contenedor local; umbral p95 de lectura < 800 ms.",
+  "advertencia": "Resultado LOCAL: el generador de carga, la API y la base de datos comparten la misma máquina de desarrollo. NO representa la capacidad del despliegue ni de una JASS real."
+}

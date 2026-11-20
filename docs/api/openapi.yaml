@@ -1,0 +1,448 @@
+openapi: 3.1.0
+info:
+  title: API de SIJASS
+  version: 0.1.0-prototipo
+  description: |
+    Contrato HTTP del prototipo de SIJASS (ADR-011). **Estado: prototipo**; no es una API publicada.
+
+    - Todas las rutas van bajo `/v1`. Los importes viajan como **céntimos enteros**.
+    - La JASS, el perfil y el rol **nunca** se envían: salen de la membresía activa de la cuenta autenticada.
+    - Un recurso inexistente y uno de otra JASS devuelven el mismo `403` sin datos.
+    - `Idempotency-Key` (UUID) es obligatorio en `POST /pagos` y `POST /mediciones`.
+    - Una prueba automática (`contrato-openapi.test.ts`) verifica que este documento y los controladores
+      declaran las mismas rutas y que los estados observados están declarados.
+servers:
+  - url: http://localhost:3000
+    description: Desarrollo local
+security:
+  - bearer: []
+tags:
+  - name: Sistema
+  - name: Acceso
+  - name: Padrón y pagos
+  - name: Portal del asociado
+  - name: Reservorios y mediciones
+  - name: Asistente
+
+paths:
+  /v1/salud:
+    get:
+      tags: [Sistema]
+      operationId: consultarSalud
+      summary: Sonda de salud (pública)
+      security: []
+      responses:
+        '200': { description: Proceso y base de datos disponibles, content: { application/json: { schema: { $ref: '#/components/schemas/Salud' } } } }
+        '503': { description: La base de datos no responde, content: { application/json: { schema: { $ref: '#/components/schemas/Salud' } } } }
+
+  /v1/auth/login:
+    post:
+      tags: [Acceso]
+      operationId: iniciarSesion
+      summary: Inicio de sesión con correo y contraseña
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Credenciales' } } } }
+      responses:
+        '200': { description: Sesión iniciada, content: { application/json: { schema: { $ref: '#/components/schemas/Sesion' } } } }
+        '400': { $ref: '#/components/responses/E400' }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '429': { $ref: '#/components/responses/E429' }
+  /v1/auth/refresh:
+    post:
+      tags: [Acceso]
+      operationId: renovarSesion
+      summary: Renueva la sesión; el token de refresco rota
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Refresco' } } } }
+      responses:
+        '200': { description: Nueva sesión, content: { application/json: { schema: { $ref: '#/components/schemas/Sesion' } } } }
+        '400': { $ref: '#/components/responses/E400' }
+        '401': { $ref: '#/components/responses/E401' }
+  /v1/auth/logout:
+    post:
+      tags: [Acceso]
+      operationId: cerrarSesion
+      summary: Cierra la sesión (idempotente)
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Refresco' } } } }
+      responses:
+        '204': { description: Sesión cerrada }
+        '400': { $ref: '#/components/responses/E400' }
+  /v1/yo:
+    get:
+      tags: [Acceso]
+      operationId: consultarPerfil
+      summary: Perfil y rol de quien consulta (nunca la JASS)
+      responses:
+        '200': { description: Perfil, content: { application/json: { schema: { $ref: '#/components/schemas/Perfil' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+
+  /v1/asociados:
+    get:
+      tags: [Padrón y pagos]
+      operationId: listarAsociados
+      summary: Padrón de la JASS con el saldo de cada asociado (tesorero, consejo)
+      responses:
+        '200': { description: Asociados, content: { application/json: { schema: { type: object, properties: { asociados: { type: array, items: { $ref: '#/components/schemas/ResumenAsociado' } } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+    post:
+      tags: [Padrón y pagos]
+      operationId: registrarAsociado
+      summary: Alta de asociado (tesorero, consejo)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevoAsociado' } } } }
+      responses:
+        '201': { description: Asociado creado, content: { application/json: { schema: { $ref: '#/components/schemas/Asociado' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/asociados/{id}/baja:
+    post:
+      tags: [Padrón y pagos]
+      operationId: darDeBajaAsociado
+      summary: Baja lógica (se conservan cuotas y pagos)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '204': { description: Dado de baja }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/asociados/{id}/acceso:
+    post:
+      tags: [Padrón y pagos]
+      operationId: crearAccesoAsociado
+      summary: Crea la cuenta de acceso del asociado (perfil asociado)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevoAcceso' } } } }
+      responses:
+        '201': { description: Cuenta creada, content: { application/json: { schema: { type: object, properties: { usuarioId: { type: string, format: uuid } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/asociados/{id}/estado-de-cuenta:
+    get:
+      tags: [Padrón y pagos]
+      operationId: consultarEstadoDeCuenta
+      summary: Estado de cuenta de un asociado de la JASS
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Estado de cuenta, content: { application/json: { schema: { $ref: '#/components/schemas/EstadoDeCuenta' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+
+  /v1/cuotas/generar:
+    post:
+      tags: [Padrón y pagos]
+      operationId: generarCuotas
+      summary: Genera una cuota por asociado activo para un periodo (idempotente)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/GenerarCuotas' } } } }
+      responses:
+        '200': { description: Cuotas creadas y ya existentes, content: { application/json: { schema: { type: object, properties: { creadas: { type: integer }, existentes: { type: integer } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '422': { $ref: '#/components/responses/E422' }
+
+  /v1/pagos:
+    post:
+      tags: [Padrón y pagos]
+      operationId: registrarPago
+      summary: Registra un pago en línea (tesorero, consejo)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevoPago' } } } }
+      responses:
+        '200': { description: Reintento con la misma clave y el mismo contenido; devuelve el pago original, content: { application/json: { schema: { $ref: '#/components/schemas/Pago' } } } }
+        '201': { description: Pago registrado, content: { application/json: { schema: { $ref: '#/components/schemas/Pago' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/pagos/{id}:
+    get:
+      tags: [Padrón y pagos]
+      operationId: consultarPago
+      summary: Detalle de un pago con su reversa, si la hay
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Pago, content: { application/json: { schema: { $ref: '#/components/schemas/PagoConReversa' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/pagos/{id}/reversa:
+    post:
+      tags: [Padrón y pagos]
+      operationId: reversarPago
+      summary: Reversa compensatoria con motivo; el pago no se borra
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [motivo], properties: { motivo: { type: string, maxLength: 300 } } } } } }
+      responses:
+        '200': { description: Pago revertido, content: { application/json: { schema: { type: object, properties: { pagoId: { type: string, format: uuid } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+
+  /v1/portal/saldo:
+    get:
+      tags: [Portal del asociado]
+      operationId: portalSaldo
+      summary: Saldo del propio asociado (sin identificadores en la ruta)
+      responses:
+        '200': { description: Saldo, content: { application/json: { schema: { $ref: '#/components/schemas/SaldoPortal' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/portal/cuotas:
+    get:
+      tags: [Portal del asociado]
+      operationId: portalCuotas
+      summary: Cuotas del propio asociado
+      responses:
+        '200': { description: Cuotas, content: { application/json: { schema: { type: object, properties: { cuotas: { type: array, items: { $ref: '#/components/schemas/VistaCuota' } } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/portal/pagos:
+    get:
+      tags: [Portal del asociado]
+      operationId: portalPagos
+      summary: Pagos del propio asociado
+      responses:
+        '200': { description: Pagos, content: { application/json: { schema: { type: object, properties: { pagos: { type: array, items: { $ref: '#/components/schemas/VistaPago' } } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+
+  /v1/reservorios:
+    get:
+      tags: [Reservorios y mediciones]
+      operationId: listarReservorios
+      summary: Reservorios de la JASS (todo el personal)
+      responses:
+        '200': { description: Reservorios, content: { application/json: { schema: { type: object, properties: { reservorios: { type: array, items: { $ref: '#/components/schemas/Reservorio' } } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+    post:
+      tags: [Reservorios y mediciones]
+      operationId: crearReservorio
+      summary: Alta de reservorio (consejo)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [nombre], properties: { nombre: { type: string, maxLength: 80 } } } } } }
+      responses:
+        '201': { description: Reservorio creado, content: { application/json: { schema: { $ref: '#/components/schemas/Reservorio' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/reservorios/{id}/mediciones:
+    get:
+      tags: [Reservorios y mediciones]
+      operationId: historialMediciones
+      summary: Historial del reservorio, de la toma más reciente a la más antigua (máximo 200)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Mediciones, content: { application/json: { schema: { type: object, properties: { mediciones: { type: array, items: { $ref: '#/components/schemas/Medicion' } } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/mediciones/catalogo:
+    get:
+      tags: [Reservorios y mediciones]
+      operationId: catalogoMetodos
+      summary: Métodos de medición (catálogo provisional) y unidad
+      responses:
+        '200': { description: Catálogo, content: { application/json: { schema: { $ref: '#/components/schemas/Catalogo' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/mediciones:
+    post:
+      tags: [Reservorios y mediciones]
+      operationId: registrarMedicion
+      summary: Registra una medición manual (operador); la lectura no se estima ni se dictamina
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevaMedicion' } } } }
+      responses:
+        '200': { description: Reintento de una operación ya aceptada, content: { application/json: { schema: { $ref: '#/components/schemas/MedicionRegistrada' } } } }
+        '201': { description: Medición registrada, content: { application/json: { schema: { $ref: '#/components/schemas/MedicionRegistrada' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+
+  /v1/asistente/documentos:
+    get:
+      tags: [Asistente]
+      operationId: documentosAsistente
+      summary: Documentos del corpus del asistente y su estado
+      responses:
+        '200': { description: Documentos, content: { application/json: { schema: { $ref: '#/components/schemas/DocumentosAsistente' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/asistente/consultas:
+    post:
+      tags: [Asistente]
+      operationId: consultarAsistente
+      summary: Consulta documental con citas, abstención o fuera de alcance (no calcula dosis)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [pregunta], properties: { pregunta: { type: string, minLength: 1, maxLength: 500 } } } } } }
+      responses:
+        '200': { description: Respuesta del asistente, content: { application/json: { schema: { $ref: '#/components/schemas/RespuestaAsistente' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '422': { $ref: '#/components/responses/E422' }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token de acceso de 15 minutos }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid }, description: Clave de idempotencia única por JASS }
+  responses:
+    E400: { description: Solicitud mal formada (por ejemplo, JSON inválido), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E401: { description: Sin sesión, token inválido o vencido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E403: { description: Sin permiso, o recurso inexistente o de otra JASS (indistinguibles), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E409: { description: Conflicto con el estado actual (duplicado, clave reutilizada, ya revertido), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E422: { description: Dato inválido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E429: { description: Cuenta bloqueada temporalmente tras intentos fallidos, headers: { Retry-After: { schema: { type: integer } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Error:
+      type: object
+      required: [codigo, mensaje]
+      properties: { codigo: { type: string }, mensaje: { type: string } }
+    Salud:
+      type: object
+      required: [estado, base]
+      properties: { estado: { enum: [ok, degradado] }, base: { enum: [ok, error] } }
+    Credenciales:
+      type: object
+      required: [correo, contrasena]
+      properties: { correo: { type: string, format: email }, contrasena: { type: string } }
+    Refresco:
+      type: object
+      required: [tokenRefresco]
+      properties: { tokenRefresco: { type: string } }
+    Sesion:
+      type: object
+      required: [tokenAcceso, tokenRefresco, venceEnSegundos, perfil, rol]
+      properties:
+        tokenAcceso: { type: string }
+        tokenRefresco: { type: string }
+        venceEnSegundos: { type: integer, example: 900 }
+        perfil: { enum: [personal, asociado] }
+        rol: { enum: [consejo, tesorero, operador, null] }
+    Perfil:
+      type: object
+      properties: { perfil: { enum: [personal, asociado] }, rol: { enum: [consejo, tesorero, operador, null] } }
+    NuevoAsociado:
+      type: object
+      required: [nombre, documento]
+      properties: { nombre: { type: string, maxLength: 120 }, documento: { type: string, pattern: '^[A-Za-z0-9-]{4,20}$' } }
+    Asociado:
+      type: object
+      properties: { id: { type: string, format: uuid }, jassId: { type: string, format: uuid }, nombre: { type: string }, documento: { type: string }, estado: { enum: [activo, baja] } }
+    ResumenAsociado:
+      type: object
+      properties: { id: { type: string, format: uuid }, nombre: { type: string }, documento: { type: string }, estado: { enum: [activo, baja] }, saldoCentimos: { type: integer } }
+    NuevoAcceso:
+      type: object
+      required: [correo, contrasena]
+      properties: { correo: { type: string, format: email }, contrasena: { type: string, minLength: 10, maxLength: 128 } }
+    GenerarCuotas:
+      type: object
+      required: [periodo, importeCentimos]
+      properties: { periodo: { type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$' }, importeCentimos: { type: integer, minimum: 1, maximum: 1000000000 } }
+    NuevoPago:
+      type: object
+      required: [cuotaId, importeCentimos, comprobante]
+      properties: { cuotaId: { type: string, format: uuid }, importeCentimos: { type: integer, minimum: 1, maximum: 1000000000 }, comprobante: { type: string, maxLength: 60 } }
+    Pago:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cuotaId: { type: string, format: uuid }
+        importeCentimos: { type: integer }
+        pagadoEn: { type: string, format: date-time }
+        comprobante: { type: string }
+        estado: { enum: [vigente, revertido] }
+    PagoConReversa:
+      allOf:
+        - { $ref: '#/components/schemas/Pago' }
+        - type: object
+          properties: { reversa: { type: [object, 'null'], properties: { motivo: { type: string }, creadaEn: { type: string, format: date-time } } } }
+    VistaCuota:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        periodo: { type: string }
+        importeCentimos: { type: integer }
+        pagadoCentimos: { type: integer }
+        pendienteCentimos: { type: integer }
+        estado: { enum: [pendiente, parcial, pagada] }
+    VistaPago:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cuotaId: { type: string, format: uuid }
+        periodo: { type: string }
+        importeCentimos: { type: integer }
+        pagadoEn: { type: string, format: date-time }
+        comprobante: { type: string }
+        estado: { enum: [vigente, revertido] }
+    EstadoDeCuenta:
+      type: object
+      properties:
+        asociado: { type: object }
+        saldoCentimos: { type: integer, description: Positivo cuando el asociado debe }
+        periodoActual: { type: string }
+        cuotas: { type: array, items: { $ref: '#/components/schemas/VistaCuota' } }
+        pagos: { type: array, items: { $ref: '#/components/schemas/VistaPago' } }
+    SaldoPortal:
+      type: object
+      properties: { asociado: { type: object, properties: { nombre: { type: string }, estado: { enum: [activo, baja] } } }, saldoCentimos: { type: integer }, periodoActual: { type: string } }
+    Reservorio:
+      type: object
+      properties: { id: { type: string, format: uuid }, jassId: { type: string, format: uuid }, nombre: { type: string } }
+    Catalogo:
+      type: object
+      properties: { metodos: { type: array, items: { type: object, properties: { codigo: { type: string }, descripcion: { type: string } } } }, unidad: { const: mg/L } }
+    NuevaMedicion:
+      type: object
+      description: No admite jassId, registradoPor, registradaEn, estado ni revision (`campo-no-permitido`).
+      required: [reservorioId, metodo, valor, unidad, tomadaEn]
+      properties:
+        reservorioId: { type: string, format: uuid }
+        metodo: { enum: [comparador-dpd, colorimetro] }
+        valor: { type: number, minimum: 0 }
+        unidad: { const: mg/L }
+        tomadaEn: { type: string, format: date-time, description: ISO 8601 con zona horaria }
+    MedicionRegistrada:
+      type: object
+      properties: { medicionId: { type: string, format: uuid }, revision: { type: integer }, registradaEn: { type: string, format: date-time } }
+    Medicion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        reservorioId: { type: string, format: uuid }
+        metodo: { type: string }
+        valor: { type: number }
+        unidad: { type: string }
+        tomadaEn: { type: string, format: date-time }
+        registradaEn: { type: string, format: date-time }
+        registradoPor: { type: string, format: uuid }
+        estado: { enum: [vigente, anulada] }
+        revision: { type: integer }
+    DocumentosAsistente:
+      type: object
+      properties:
+        corpus: { enum: [ejemplo, aprobado] }
+        nombre: { type: string }
+        documentos: { type: array, items: { type: object, properties: { id: { type: string }, titulo: { type: string }, version: { type: string }, estado: { enum: [ejemplo, aprobado] }, paginas: { type: integer } } } }
+    RespuestaAsistente:
+      type: object
+      required: [estado, corpus, mensaje, citas]
+      properties:
+        estado: { enum: [respondida, sin-evidencia, fuera-de-alcance] }
+        corpus: { enum: [ejemplo, aprobado] }
+        mensaje: { type: string }
+        respuesta: { type: string, description: Solo en `respondida`; concatenación de los fragmentos citados }
+        citas:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            properties: { documentoId: { type: string }, documento: { type: string }, version: { type: string }, pagina: { type: integer }, fragmento: { type: string } }

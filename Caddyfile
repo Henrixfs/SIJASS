@@ -1,0 +1,15 @@
+# HTTPS automático (certificado Let's Encrypt y redirección HTTP→HTTPS) delante de la API.
+# Requiere: un dominio cuyo DNS apunte a este servidor y los puertos 80 y 443 abiertos.
+# ESTADO: preparado y NO verificado con un dominio real (s1e, design.md D5).
+{$SIJASS_DOMINIO} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	# La API ya fija X-Content-Type-Options, X-Frame-Options, Referrer-Policy y la caché
+	# (no-store en /v1, immutable en /assets/, no-cache en index.html): Caddy no las pisa.
+	reverse_proxy api:3000
+}
