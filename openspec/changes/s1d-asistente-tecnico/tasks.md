@@ -27,7 +27,7 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 
 - [x] 5.1 `openspec validate s1d-asistente-tecnico --strict` con código 0.
 - [x] 5.2 Copia limpia del commit final: instalación, lint, build, pruebas de API, integración, interfaz y E2E.
-- [ ] 5.3 Subir la rama, abrir el PR contra `feat/s1c-reservorios-mediciones` y anotar el CI.
+- [x] 5.3 Subir la rama, abrir el PR contra `feat/s1c-reservorios-mediciones` y anotar el CI.
 
 ## Workflow follow-up
 
@@ -40,3 +40,8 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 - Interfaz: lint y build con código 0; `npm test` 94/94.
 - E2E: `npx playwright test` 9/9 con Chrome del sistema, en tres ejecuciones consecutivas.
 - Los resultados usan el corpus de **EJEMPLO**: demuestran el comportamiento, no la calidad con documentos reales.
+
+## Evidencia de GitHub Actions (aparte de la local)
+
+- Rama `feat/s1d-asistente-tecnico`, commit `f2e8123`: [PR #11](https://github.com/Henrixfs/SIJASS/pull/11) (base `feat/s1c-reservorios-mediciones`).
+- Ejecución del pull request [44644551404](https://github.com/Henrixfs/SIJASS/actions/runs/44644551404) y del push [44644548366](https://github.com/Henrixfs/SIJASS/actions/runs/44644548366): los seis jobs en verde.

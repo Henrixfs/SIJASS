@@ -95,7 +95,7 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 
 ## 3.4. Aporte de s1d
 
-`s1d-asistente-tecnico` construye lo que no depende de insumos externos del asistente documental: contrato, recuperación con citas verificables, abstención, límite de dosis, interfaz y pruebas, con un corpus de **EJEMPLO** ficticio. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. Evidencia verificado **en local** el 2026-11-19 (393 pruebas unitarias, 264 de integración, 94 de interfaz y 9 E2E); aún sin CI.
+`s1d-asistente-tecnico` construye lo que no depende de insumos externos del asistente documental: contrato, recuperación con citas verificables, abstención, límite de dosis, interfaz y pruebas, con un corpus de **EJEMPLO** ficticio. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. Evidencia verificado en local el 2026-11-19 (393 pruebas unitarias, 264 de integración, 94 de interfaz y 9 E2E) y en CI ([ejecución](https://github.com/Henrixfs/SIJASS/actions/runs/44644551404)). Evidencia de GitHub Actions (aparte): [PR #11](https://github.com/Henrixfs/SIJASS/pull/11), commit `f2e8123`, [ejecución 44644551404](https://github.com/Henrixfs/SIJASS/actions/runs/44644551404): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde.
 
 | Criterio | Aporte de s1d | Evidencia | Pendiente visible |
 |---|---|---|---|

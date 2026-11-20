@@ -38,7 +38,7 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservori
 | Interfaz: `npm run lint`, `npm run build`, `npm test` | Código 0; 94 pruebas, tres ejecuciones |
 | `npx playwright test` (Chrome del sistema) | 9 pruebas aprobadas en tres ejecuciones consecutivas |
 
-Es evidencia **local**. Los resultados usan un corpus de **EJEMPLO**: demuestran el comportamiento (citas comprobables, abstención, límites), **no** la calidad de las respuestas con documentos reales, que requiere el corpus aprobado y un conjunto de evaluación.
+Es evidencia **local**; la de **GitHub Actions** se cita aparte: [PR #11](https://github.com/Henrixfs/SIJASS/pull/11), commit `f2e8123`, [ejecución 44644551404](https://github.com/Henrixfs/SIJASS/actions/runs/44644551404): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde. Los resultados usan un corpus de **EJEMPLO**: demuestran el comportamiento (citas comprobables, abstención, límites), **no** la calidad de las respuestas con documentos reales, que requiere el corpus aprobado y un conjunto de evaluación.
 
 ### Verificación de `s1c-reservorios-mediciones` (2026-11-19, en local)
 
