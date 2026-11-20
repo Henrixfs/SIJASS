@@ -16,12 +16,12 @@ Rutas relativas a `tecnologia/siJASS-clean-architecture/` salvo que se indique o
 
 ## 3. Interfaz y E2E (D9)
 
-- [ ] 3.1 Pestaña *Asistente*. Verificar con pruebas de interfaz: respuesta con citas, abstención, fuera de alcance, banner de corpus de ejemplo, texto escapado (una cita con `<img onerror>` se muestra como texto) y ausencia de controles de dosis.
-- [ ] 3.2 E2E en navegador: el operador pregunta por la lectura con el comparador DPD y ve citas con documento, versión y página y el aviso de ejemplo; una pregunta ajena muestra la abstención; una de dosis, el mensaje de fuera de alcance. Verificar `npx playwright test` en tres ejecuciones consecutivas.
+- [x] 3.1 Pestaña *Asistente*. Verificar con pruebas de interfaz: respuesta con citas, abstención, fuera de alcance, banner de corpus de ejemplo, texto escapado (una cita con `<img onerror>` se muestra como texto) y ausencia de controles de dosis.
+- [x] 3.2 E2E en navegador: el operador pregunta por la lectura con el comparador DPD y ve citas con documento, versión y página y el aviso de ejemplo; una pregunta ajena muestra la abstención; una de dosis, el mensaje de fuera de alcance. Verificar `npx playwright test` en tres ejecuciones consecutivas.
 
 ## 4. Documentación con evidencia
 
-- [ ] 4.1 Actualizar `estrategia-ia-sin-dataset.md` (estado real), `plan-pruebas.md` (PT15–PT17 en su parte determinista), `matriz-cumplimiento.md`, roadmap y READMEs, separando evidencia local de la de CI y marcando el corpus como de ejemplo. Documentar cómo incorporar el corpus aprobado y el proveedor. `node scripts/verificar-docs.mjs` con código 0.
+- [x] 4.1 Actualizar `estrategia-ia-sin-dataset.md` (estado real), `plan-pruebas.md` (PT15–PT17 en su parte determinista), `matriz-cumplimiento.md`, roadmap y READMEs, separando evidencia local de la de CI y marcando el corpus como de ejemplo. Documentar cómo incorporar el corpus aprobado y el proveedor. `node scripts/verificar-docs.mjs` con código 0.
 
 ## 5. Integración final
 

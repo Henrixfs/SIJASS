@@ -93,6 +93,18 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 | Criterio C09 | Migración `0003` (nombre único por JASS) | [Migración](../../tecnologia/siJASS-clean-architecture/migraciones/0003_reservorios-unicos.sql) | Estrategia de crecimiento |
 | Criterio C14 | Migración `0003` | Repositorio | Evidencia fotográfica |
 
+## 3.4. Aporte de s1d
+
+`s1d-asistente-tecnico` construye lo que no depende de insumos externos del asistente documental: contrato, recuperación con citas verificables, abstención, límite de dosis, interfaz y pruebas, con un corpus de **EJEMPLO** ficticio. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. Evidencia verificado **en local** el 2026-11-19 (393 pruebas unitarias, 253 de integración, 94 de interfaz y 9 E2E); aún sin CI.
+
+| Criterio | Aporte de s1d | Evidencia | Pendiente visible |
+|---|---|---|---|
+| Criterio C02 | RF13 y RF14 en su parte determinista | [Especificación](../../openspec/changes/s1d-asistente-tecnico/specs/asistente-documental/spec.md) | Corpus aprobado, proveedor, FastAPI |
+| Criterio C04 | Quinto cambio SDD | [Cambio](../../openspec/changes/s1d-asistente-tecnico/tasks.md) | Archivar tras fusionar |
+| Criterio C05 | PT15, PT16 y PT17 con corpus de ejemplo | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md) | Evaluación con el corpus aprobado |
+| Criterio C06 | Tercer flujo E2E | [`flujo-asistente.spec.ts`](../../tecnologia/e2e/pruebas/flujo-asistente.spec.ts) | Operación sin conexión |
+| Criterio C07 | Pestaña *Asistente* con aviso de corpus de ejemplo | [`Asistente.tsx`](../../tecnologia/sijass-web/src/paginas/Asistente.tsx) | Usabilidad con operadores reales |
+
 ## 4. Brechas y decisiones abiertas
 
 Criterios sin diseño documentado o con tensión con una decisión vigente. Ninguna se resuelve en esta matriz; cada una exige una decisión explícita y, cuando corresponda, una ADR nueva.
