@@ -64,7 +64,8 @@ export type Permiso =
   | 'reservorios.leer'
   | 'reservorios.crear'
   | 'mediciones.registrar'
-  | 'mediciones.leer';
+  | 'mediciones.leer'
+  | 'asistente.consultar';
 
 const PERSONAL_CON_PADRON: readonly Rol[] = ['tesorero', 'consejo'];
 const TODO_EL_PERSONAL: readonly Rol[] = ['consejo', 'tesorero', 'operador'];
@@ -83,6 +84,8 @@ const REGLAS: Readonly<Record<Permiso, { readonly perfil: Perfil; readonly roles
   'reservorios.crear': { perfil: 'personal', roles: ['consejo'] },
   'mediciones.registrar': { perfil: 'personal', roles: ['operador'] },
   'mediciones.leer': { perfil: 'personal', roles: TODO_EL_PERSONAL },
+  // s1d: consultan el asistente documental operador, tesorero y consejo; el asociado no.
+  'asistente.consultar': { perfil: 'personal', roles: TODO_EL_PERSONAL },
 };
 
 export function tienePermiso(actor: ContextoAcceso, permiso: Permiso): boolean {

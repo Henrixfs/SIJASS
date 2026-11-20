@@ -185,4 +185,21 @@ export class MedicionesController {
   }
 }
 
-export const CONTROLADORES = [AuthController, YoController, AsociadosController, CuotasController, PagosController, PortalController, ReservoriosController, MedicionesController];
+@Controller('v1/asistente')
+export class AsistenteController {
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  @Get('documentos')
+  documentos(@ActorActual() actor: ContextoAcceso) {
+    return this.casos.documentosAsistente.ejecutar(actor);
+  }
+
+  /** `200` con el estado `respondida`, `sin-evidencia` o `fuera-de-alcance`; `422` si la pregunta no es válida. */
+  @Post('consultas')
+  @HttpCode(200)
+  consultar(@ActorActual() actor: ContextoAcceso, @Body() body: unknown) {
+    return this.casos.asistente.ejecutar(actor, cuerpo(body).pregunta);
+  }
+}
+
+export const CONTROLADORES = [AuthController, YoController, AsociadosController, CuotasController, PagosController, PortalController, ReservoriosController, MedicionesController, AsistenteController];

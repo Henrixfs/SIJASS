@@ -14,6 +14,8 @@ import { ConsultarPago, RegistrarPago, ReversarPago } from './padron/pagos.js';
 import { ConsultarCatalogo, ConsultarHistorial, RegistrarMedicionAutorizada } from './mediciones-autorizadas.js';
 import { RegistrarMedicion } from './registrar-medicion.js';
 import { CrearReservorio, ListarReservorios } from './reservorios.js';
+import { ConsultarAsistente, ListarDocumentosAsistente, type RedactorRespuesta } from './asistente.js';
+import type { Corpus } from '../dominio/asistente/corpus.js';
 import type { UnidadDeTrabajo } from '../dominio/puertos.js';
 
 /** Todos los casos de uso de acceso, padrón y pagos, ya construidos con sus dependencias. */
@@ -40,13 +42,17 @@ export interface Casos {
   readonly registrarMedicion: RegistrarMedicionAutorizada;
   readonly historial: ConsultarHistorial;
   readonly catalogo: ConsultarCatalogo;
+  readonly asistente: ConsultarAsistente;
+  readonly documentosAsistente: ListarDocumentosAsistente;
 }
 
 /**
+ * @param corpus corpus validado del asistente documental (s1d); `redactor` es el punto de
+ *   incorporación opcional del proveedor de modelo de lenguaje.
  * @param unidadMediciones unidad de trabajo del módulo de mediciones (distinta de la de acceso:
  *   un módulo no escribe las tablas de otro, diseño interno §1).
  */
-export function construirCasos(d: DependenciasAcceso, unidadMediciones: UnidadDeTrabajo): Casos {
+export function construirCasos(d: DependenciasAcceso, unidadMediciones: UnidadDeTrabajo, corpus: Corpus, redactor?: RedactorRespuesta): Casos {
   return {
     autenticar: new AutenticarUsuario(d),
     renovar: new RenovarSesion(d),
@@ -70,5 +76,7 @@ export function construirCasos(d: DependenciasAcceso, unidadMediciones: UnidadDe
     registrarMedicion: new RegistrarMedicionAutorizada(new RegistrarMedicion({ unidadDeTrabajo: unidadMediciones, reloj: d.reloj, ids: d.ids })),
     historial: new ConsultarHistorial(unidadMediciones),
     catalogo: new ConsultarCatalogo(),
+    asistente: new ConsultarAsistente(d, corpus, redactor),
+    documentosAsistente: new ListarDocumentosAsistente(corpus),
   };
 }

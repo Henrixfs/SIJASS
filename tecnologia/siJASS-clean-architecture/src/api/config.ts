@@ -10,6 +10,8 @@ export interface ConfiguracionApi {
   readonly origenesPermitidos: readonly string[];
   /** Directorio de la interfaz construida para servirla desde la API; `undefined` = no se sirve. */
   readonly directorioWeb: string | undefined;
+  /** Directorio con `manifiesto.json` del corpus del asistente; sin él se usa el corpus de EJEMPLO. */
+  readonly corpusDir: string | undefined;
 }
 
 export function leerConfiguracion(env: NodeJS.ProcessEnv = process.env): ConfiguracionApi {
@@ -26,5 +28,6 @@ export function leerConfiguracion(env: NodeJS.ProcessEnv = process.env): Configu
     .map((o) => o.trim())
     .filter((o) => o !== '');
   const directorioWeb = (env.WEB_DIR ?? '').trim() || undefined;
-  return { jwtSecret, databaseUrl, puerto, origenesPermitidos, directorioWeb };
+  const corpusDir = (env.ASISTENTE_CORPUS_DIR ?? '').trim() || undefined;
+  return { jwtSecret, databaseUrl, puerto, origenesPermitidos, directorioWeb, corpusDir };
 }

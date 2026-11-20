@@ -263,3 +263,36 @@ td.acciones {
   max-width: 24rem;
   margin: 0.75rem 0;
 }
+
+textarea {
+  font: inherit;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+  color: var(--texto);
+  resize: vertical;
+}
+.respuesta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.25rem 1rem 1rem;
+  margin: 0.75rem 0;
+}
+.respuesta ol {
+  padding-left: 1.2rem;
+}
+.respuesta blockquote {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.4rem 0.8rem;
+  border-left: 4px solid var(--primario);
+  background: var(--fondo);
+}
+.cita-origen {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.documentos {
+  margin: 1rem 0;
+}
