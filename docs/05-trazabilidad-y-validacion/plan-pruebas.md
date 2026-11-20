@@ -37,7 +37,7 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservori
 | Local | `npm run test:integration` contra PostgreSQL 16 | Código 0; 280 pruebas (contrato OpenAPI por HTTP, salud, caché estática y verificación de despliegue incluidos) |
 | Local | `docker build` y la pila del compose (PostgreSQL, migraciones, API) | Imagen de 362 MB; `/v1/salud` y `/` responden; usuario no root; sin `.env`, sin pruebas compiladas y sin `JWT_SECRET` no arranca; `verificar-despliegue.mjs`: 6 aprobadas, 0 fallidas, 4 no aplicables |
 | Local | k6: humo y rampa hasta 2.000 usuarios virtuales | Ver la [matriz](../07-evaluacion-final/matriz-cumplimiento.md#35-aporte-de-s1e); **local, no representa el despliegue** |
-| CI | Los siete jobs, incluido `Imagen del contenedor` | En verde: [PR #12](https://github.com/Henrixfs/SIJASS/pull/12), commit `2a42eeb`, [ejecución 44651717598](https://github.com/Henrixfs/SIJASS/actions/runs/44651717598): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)`, `Interfaz y E2E (navegador)` e `Imagen del contenedor` en verde |
+| CI | Los siete jobs, incluido `Imagen del contenedor` | En verde: [PR #12](https://github.com/Henrixfs/SIJASS/pull/12), commit `2a42eeb` (hoy `d85db0e`, tras un rebase), [ejecución 44651717598](https://github.com/Henrixfs/SIJASS/actions/runs/44651717598): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)`, `Interfaz y E2E (navegador)` e `Imagen del contenedor` en verde |
 | Despliegue | Todo | **Sin medir**: no existe despliegue |
 
 ### Verificación de `s1d-asistente-tecnico` (2026-11-19, en local)
