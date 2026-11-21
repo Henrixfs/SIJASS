@@ -168,8 +168,8 @@ flowchart TB
 | Artefacto | Estado |
 |---|---|
 | Requisitos, decisiones y diagramas | Diseño propuesto; pendiente de validación con usuarios reales |
-| Entidad `Medicion`, caso de uso y repositorios en memoria | Prototipo con el modelo de datos anterior |
-| Pruebas del prototipo | 5 pruebas unitarias sobre el modelo heredado; `npm ci`, lint, build y pruebas pasan en CI con Node.js 20 y 22 ([ejecución del PR #3](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941), fusionado a `main` en el PR #3, con [CI en verde sobre `main`](https://github.com/Henrixfs/SIJASS/actions/runs/41888275471)). Antes del cambio `s0-saneamiento-prototipo` la compilación fallaba por falta de `@types/node` (DT01) |
+| Dominio de medición manual de cloro, registro idempotente y persistencia en PostgreSQL (adaptadores en memoria y PostgreSQL con una misma batería de contrato) | Prototipo; sin correcciones (RF08), advertencias (RF15), auditoría, usuarios ni API |
+| Pruebas del prototipo | 73 pruebas unitarias y 52 de integración contra PostgreSQL 16. Con `retirar-node-20` (Node.js 22 como mínimo), el CI de `main` pasa `Prototipo` en Node.js 22, 24 y 26, `Documentación` e `Integración (PostgreSQL)`: [ejecución 43921573566](https://github.com/Henrixfs/SIJASS/actions/runs/43921573566) sobre el merge `03e6b9b` del [PR #7](https://github.com/Henrixfs/SIJASS/pull/7). Evidencia previa: [PR #3](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941) (base reproducible) y [PR #5](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952) (dominio y persistencia) |
 | PWA, API NestJS, PostgreSQL, sincronización y asistente RAG | No implementados |
 
 La documentación se actualizó antes que el código: el prototipo **no satisface aún** los requisitos del MVP. Ver la [deuda técnica](docs/00-alcance-y-roadmap.md#6-deuda-técnica-conocida) y el [plan de pruebas](docs/05-trazabilidad-y-validacion/plan-pruebas.md).

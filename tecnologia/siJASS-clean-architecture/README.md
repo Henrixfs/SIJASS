@@ -118,7 +118,7 @@ No implementa React, PWA, IndexedDB, NestJS, API HTTP, autorización, sincroniza
 
 1. ~~Corregir DT01 y DT02 e incorporar CI con build, pruebas y lint.~~ Hecho en `s0-saneamiento-prototipo`.
 2. ~~Rediseñar `Medicion` según el [diseño interno](../../docs/03-diseno-de-software/diseno-interno/diseno-interno-de-modulos.md) e integrar la idempotencia y la persistencia en PostgreSQL (PT01–PT04, PT11, PT12).~~ Hecho en `s1a-dominio-medicion`.
-3. `s1b-pagos-membresias-auditoria`: pagos, membresías y auditoría; decidir si RF08 y RF15 entran allí o en un cambio propio; clave foránea `registrado_por → usuario`.
+3. `s1b-acceso-cuotas-pagos`: acceso por perfiles (personal de la JASS y asociado), cuotas, pagos y portal del asociado; clave foránea `registrado_por → usuario`. Después, `s1c` integra reservorios y mediciones con la interfaz y `s1d` el asistente técnico. RF08 y RF15 y la auditoría de rechazos se asignan al planificar esos cambios.
 4. Pruebas de correcciones y pertenencia a JASS entre usuarios (PT09, PT10).
 5. Diseñar el contrato OpenAPI y probar los escenarios entre JASS (PT13, PT25).
 
