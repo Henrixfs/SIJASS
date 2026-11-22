@@ -4,7 +4,7 @@ import { componer } from './composicion.js';
 import { leerConfiguracion } from './config.js';
 
 const config = leerConfiguracion();
-const { pool, casos } = componer(config);
+const { pool, casos } = componer(config); // lanza ErrorCorpus si el manifiesto del asistente no es válido
 const app = await crearAplicacion({ casos, origenesPermitidos: config.origenesPermitidos, directorioWeb: config.directorioWeb });
 
 const cerrar = async (): Promise<void> => {

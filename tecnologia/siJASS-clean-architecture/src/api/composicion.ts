@@ -1,6 +1,8 @@
 import pg from 'pg';
 import type { DependenciasAcceso } from '../aplicacion/acceso/comun.js';
 import { construirCasos, type Casos } from '../aplicacion/casos.js';
+import { cargarCorpus, DIRECTORIO_CORPUS_EJEMPLO } from '../infraestructura/corpus-archivo.js';
+import { fileURLToPath } from 'node:url';
 import { UnidadDeTrabajoPostgres } from '../infraestructura/postgres/unidad-de-trabajo-postgres.js';
 import { UnidadDeTrabajoAccesoPostgres } from '../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
 import { ContrasenasScrypt } from '../infraestructura/seguridad/contrasenas-scrypt.js';
@@ -15,7 +17,7 @@ export interface Composicion {
 }
 
 /** Composición de producción: PostgreSQL, `scrypt` con parámetros de producción y reloj real. */
-export function componer(config: Pick<ConfiguracionApi, 'databaseUrl' | 'jwtSecret'>, tamanoPool = 10): Composicion {
+export function componer(config: Pick<ConfiguracionApi, 'databaseUrl' | 'jwtSecret'> & { corpusDir?: string }, tamanoPool = 10): Composicion {
   const pool = new pg.Pool({ connectionString: config.databaseUrl, max: tamanoPool });
   const dependencias: DependenciasAcceso = {
     unidadDeTrabajo: new UnidadDeTrabajoAccesoPostgres(pool),
@@ -24,5 +26,5 @@ export function componer(config: Pick<ConfiguracionApi, 'databaseUrl' | 'jwtSecr
     contrasenas: new ContrasenasScrypt(),
     tokens: new TokensHs256(config.jwtSecret),
   };
-  return { pool, dependencias, casos: construirCasos(dependencias, new UnidadDeTrabajoPostgres(pool)) };
+  return { pool, dependencias, casos: construirCasos(dependencias, new UnidadDeTrabajoPostgres(pool), cargarCorpus(config.corpusDir ?? fileURLToPath(DIRECTORIO_CORPUS_EJEMPLO))) };
 }

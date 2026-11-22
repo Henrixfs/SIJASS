@@ -4,6 +4,7 @@ import type { EstadoDeCuenta, ResumenAsociado } from '../api/tipos';
 import { useCarga } from '../hooks';
 import { mensajeDeError, useApp } from '../contexto';
 import { formatearSoles, parsearSoles } from '../lib/dinero';
+import { Asistente } from './Asistente';
 import { Mediciones } from './Mediciones';
 import { nuevoUuid } from '../lib/uuid';
 
@@ -30,7 +31,7 @@ export function Personal({ ruta }: { ruta: string }) {
   const coincidencia = /^\/personal\/asociados\/([0-9a-f-]{36})$/.exec(ruta);
   // Tesorero y consejo gestionan el padrón y los pagos; el operador solo mediciones (matriz de actores).
   const puedePadron = sesion?.rol === 'tesorero' || sesion?.rol === 'consejo';
-  const [seccion, setSeccion] = useState<'asociados' | 'cuotas' | 'mediciones'>(puedePadron ? 'asociados' : 'mediciones');
+  const [seccion, setSeccion] = useState<'asociados' | 'cuotas' | 'mediciones' | 'asistente'>(puedePadron ? 'asociados' : 'mediciones');
   void api;
 
   return (
@@ -63,8 +64,11 @@ export function Personal({ ruta }: { ruta: string }) {
               <button type="button" aria-pressed={seccion === 'mediciones'} onClick={() => setSeccion('mediciones')}>
                 Mediciones
               </button>
+              <button type="button" aria-pressed={seccion === 'asistente'} onClick={() => setSeccion('asistente')}>
+                Asistente
+              </button>
             </nav>
-            {seccion === 'asociados' && puedePadron ? <Asociados /> : seccion === 'cuotas' && puedePadron ? <GenerarCuotas /> : <Mediciones />}
+            {seccion === 'asociados' && puedePadron ? <Asociados /> : seccion === 'cuotas' && puedePadron ? <GenerarCuotas /> : seccion === 'asistente' ? <Asistente /> : <Mediciones />}
           </>
         )}
       </main>

@@ -1,6 +1,6 @@
 # Estrategia de inteligencia artificial sin dataset propio — SIJASS
 
-**Estado:** diseño propuesto (ADR-003, ADR-007, ADR-012, ADR-014, ADR-015). Ningún componente de IA está implementado.
+**Estado:** diseño propuesto (ADR-003, ADR-007, ADR-012, ADR-014, ADR-015). Desde `s1d-asistente-tecnico` existe un **prototipo** del asistente documental con un corpus de **EJEMPLO** ficticio, sin modelo de lenguaje ni servicio FastAPI (ver §11); el corpus aprobado, el proveedor y el cálculo de dosis siguen **bloqueados por insumos externos**.
 
 ## 1. Decisión
 
@@ -114,6 +114,25 @@ Con un conjunto de preguntas revisado (respondibles y no respondibles) se medir�
 ## 10. Comunicación académica
 
 El RAG se presenta como **capacidad proyectada** mientras no exista implementación y pruebas. No se describe como modelo propio entrenado ni se le atribuye capacidad de validación sanitaria. Véanse las [decisiones arquitectónicas](../01-analisis-de-sistema/07-decisiones-arquitectonicas.md) y la [matriz de trazabilidad](../05-trazabilidad-y-validacion/matriz-trazabilidad.md).
+
+## 11. Estado de implementación (`s1d-asistente-tecnico`, 2026-11-19)
+
+Lo que existe, **solo en local** (la evidencia de CI se cita en la matriz de cumplimiento):
+
+- **Recuperación léxica y extractiva** dentro del monolito (`tecnologia/siJASS-clean-architecture/src/dominio/asistente/`): puntúa páginas con TF-IDF sencillo, exige evidencia mínima y responde con hasta 3 citas (documento, versión, página, fragmento). Cada fragmento es una subcadena literal de la página citada; no hay texto generado.
+- **Abstención** (`sin-evidencia`) y **fuera de alcance** (`fuera-de-alcance`): toda consulta que pida calcular, estimar o recomendar dosis, cantidades de cloro o tratamiento recibe un mensaje fijo y **no consulta el corpus**.
+- **Corpus validado por manifiesto** (`manifiesto.json`: identificador, título, versión, estado `aprobado` o `ejemplo`, responsable y páginas numeradas). Un manifiesto inválido impide arrancar la API. El corpus que se distribuye (`corpus-ejemplo/`) es **ficticio**, sus títulos llevan el prefijo `EJEMPLO`, no contiene cantidades y la API y la interfaz lo advierten en cada respuesta.
+- **Privacidad:** la pregunta no se almacena; el evento `asistente.consulta` guarda solo estado, número de citas y estado del corpus.
+- **Interfaz:** pestaña *Asistente* para el personal (operador, tesorero y consejo); el asociado no tiene acceso.
+
+Lo que **no** existe y por qué:
+
+| Pendiente | Bloqueo | Cómo se incorpora |
+|---|---|---|
+| Corpus aprobado de procedimientos de cloración | Falta el documento aprobado, su responsable, su versión y su paginación (roadmap §7) | Colocar un directorio con `manifiesto.json` con documentos `aprobado` y configurar `ASISTENTE_CORPUS_DIR`; la validación decide si es admisible y el aviso de ejemplo desaparece solo cuando ya no queda ningún documento de ejemplo |
+| Modelo de lenguaje | Falta decidir el proveedor, su costo, su política de privacidad (Ley N.° 29733) y la credencial | Implementar `RedactorRespuesta` (`src/aplicacion/asistente.ts`), que recibe solo la pregunta y los fragmentos recuperados y no puede añadir citas; hoy se usa `SinRedactor` |
+| Servicio Python/FastAPI, embeddings y pgvector (ADR-007, ADR-015) | Sin corpus real no puede evaluarse si la recuperación léxica basta | Sustituir `Indice` detrás del mismo contrato HTTP tras evaluar con el corpus aprobado y su conjunto de evaluación (PT15–PT17) |
+| Cálculo de dosis | Requiere un protocolo validado y casos de referencia revisados | No se implementa; la guarda léxica lo bloquea (puede dar falsos positivos, que se prefieren a un falso negativo) |
 
 ## Referencias
 

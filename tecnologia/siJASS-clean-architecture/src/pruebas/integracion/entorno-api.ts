@@ -5,6 +5,7 @@
 import type { INestApplication } from '@nestjs/common';
 import type pg from 'pg';
 import { crearAplicacion } from '../../api/aplicacion.js';
+import type { Corpus } from '../../dominio/asistente/corpus.js';
 import type { DecoradorRepositoriosAcceso } from '../../dominio/puertos-acceso.js';
 import { UnidadDeTrabajoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-postgres.js';
 import { UnidadDeTrabajoAccesoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
@@ -34,8 +35,8 @@ export interface Api {
   cerrar(): Promise<void>;
 }
 
-export async function iniciarApi(pool: pg.Pool, decorar?: DecoradorRepositoriosAcceso): Promise<Api> {
-  const entorno = crearEntorno(new UnidadDeTrabajoAccesoPostgres(pool, decorar), { mediciones: new UnidadDeTrabajoPostgres(pool) });
+export async function iniciarApi(pool: pg.Pool, decorar?: DecoradorRepositoriosAcceso, corpus?: Corpus): Promise<Api> {
+  const entorno = crearEntorno(new UnidadDeTrabajoAccesoPostgres(pool, decorar), { mediciones: new UnidadDeTrabajoPostgres(pool), corpus });
   const errores: string[] = [];
   const app = await crearAplicacion({ casos: entorno.casos, registrar: (m) => errores.push(m) });
   await app.listen(0, '127.0.0.1');
@@ -88,8 +89,8 @@ export interface Mundo {
 }
 
 /** API + escenario sembrado + un token de acceso por cuenta. */
-export async function crearMundo(pool: pg.Pool, decorar?: DecoradorRepositoriosAcceso): Promise<Mundo> {
-  const api = await iniciarApi(pool, decorar);
+export async function crearMundo(pool: pg.Pool, decorar?: DecoradorRepositoriosAcceso, corpus?: Corpus): Promise<Mundo> {
+  const api = await iniciarApi(pool, decorar, corpus);
   const esc = await sembrarEscenario(api.entorno);
   const token = {
     consejoA: (await api.iniciarSesion(esc.consejoA.correo)).tokenAcceso,

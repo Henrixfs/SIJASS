@@ -8,6 +8,9 @@ import { construirCasos, type Casos } from '../aplicacion/casos.js';
 import type { ContextoAcceso } from '../dominio/acceso.js';
 import type { GeneradorIds, Reloj, UnidadDeTrabajo } from '../dominio/puertos.js';
 import { UnidadDeTrabajoMemoria } from '../infraestructura/memoria.js';
+import { cargarCorpus, DIRECTORIO_CORPUS_EJEMPLO } from '../infraestructura/corpus-archivo.js';
+import type { Corpus } from '../dominio/asistente/corpus.js';
+import { fileURLToPath } from 'node:url';
 import type { UnidadDeTrabajoAcceso } from '../dominio/puertos-acceso.js';
 import { ContrasenasScrypt } from '../infraestructura/seguridad/contrasenas-scrypt.js';
 import { TokensHs256 } from '../infraestructura/seguridad/tokens-hs256.js';
@@ -30,7 +33,7 @@ export interface Entorno {
 /** Dependencias con reloj fijo y contraseñas baratas. `ids` aleatorios por defecto (PostgreSQL). */
 export function crearEntorno(
   unidadDeTrabajo: UnidadDeTrabajoAcceso,
-  opciones: { secuencial?: boolean; reloj?: RelojFijo; mediciones?: UnidadDeTrabajo } = {},
+  opciones: { secuencial?: boolean; reloj?: RelojFijo; mediciones?: UnidadDeTrabajo; corpus?: Corpus } = {},
 ): Entorno {
   const reloj = opciones.reloj ?? new RelojFijo(AHORA_PRUEBAS);
   const ids: GeneradorIds = opciones.secuencial ? new GeneradorIdsSecuencial() : new GeneradorIdsAleatorio();
@@ -41,7 +44,7 @@ export function crearEntorno(
     contrasenas: new ContrasenasScrypt({ N: 1024, r: 8, p: 1 }),
     tokens: new TokensHs256(SECRETO_PRUEBAS),
   };
-  return { dependencias, casos: construirCasos(dependencias, opciones.mediciones ?? new UnidadDeTrabajoMemoria()), reloj };
+  return { dependencias, casos: construirCasos(dependencias, opciones.mediciones ?? new UnidadDeTrabajoMemoria(), opciones.corpus ?? cargarCorpus(fileURLToPath(DIRECTORIO_CORPUS_EJEMPLO))), reloj };
 }
 
 export interface Cuenta {

@@ -59,6 +59,10 @@ SIJASS_PERMITIR_DEMO=1 SIJASS_CLAVE_DEMO='<contraseña>' npm run sembrar-demo   
 - Pruebas (verificadas en local el 2026-11-19): `npm test` pasa 256 pruebas unitarias; `npm run test:integration` pasa 215 (esquema `0002`, baterías compartidas con la memoria, concurrencia en 10 rondas, API HTTP, matriz de aislamiento, seguridad). La interfaz está en [`../sijass-web`](../sijass-web/README.md) y el E2E en [`../e2e`](../e2e/README.md).
 - Limitaciones de `s1b`: una membresía activa por cuenta; sin cambio ni recuperación de contraseña; sin correcciones de mediciones ni reservorios por HTTP (`s1c`); `medicion.registrado_por` aún sin clave foránea a `usuario`; el listado de asociados calcula el saldo de cada uno con consultas por asociado (aceptable para el tamaño de una JASS; se medirá en `s1e`).
 
+## Asistente documental (`s1d-asistente-tecnico`)
+
+`POST /v1/asistente/consultas` y `GET /v1/asistente/documentos`. Recuperación léxica y extractiva sobre un corpus validado; responde con citas (documento, versión, página, fragmento literal), se abstiene sin evidencia y rechaza como fuera de alcance todo pedido de dosis o tratamiento. **El corpus incluido (`corpus-ejemplo/`) es ficticio y está rotulado `EJEMPLO`.** Para incorporar el corpus aprobado: un directorio con `manifiesto.json` (ver la especificación) y `ASISTENTE_CORPUS_DIR=<ruta>`; un manifiesto inválido impide arrancar. El proveedor de modelo de lenguaje se enchufa implementando `RedactorRespuesta`; hoy no hay ninguno. Local: 393 unitarias, 264 de integración.
+
 ## Qué demuestra
 
 - Separación en capas `dominio`, `aplicacion` e `infraestructura`; el dominio no importa `pg` ni `node:crypto`.
