@@ -7,11 +7,20 @@
  */
 import type { Membresia, Sesion, Usuario } from './acceso.js';
 import type { Asociado, Cuota, Pago, ReversaPago } from './padron.js';
+import type { Reservorio } from './reservorio.js';
 
 export interface RepositorioJass {
   /** @throws ErrorConflicto('jass-duplicada') si el identificador ya existe. */
   crear(jass: { readonly id: string; readonly nombre: string }): Promise<void>;
   existe(id: string): Promise<boolean>;
+}
+
+/** Alta y consulta de reservorios (módulo `organizacion`, s1c). */
+export interface RepositorioReservoriosJass {
+  /** @throws ErrorConflicto('reservorio-duplicado') si el nombre ya existe en la JASS (sin distinguir mayúsculas). */
+  crear(reservorio: Reservorio): Promise<void>;
+  /** Solo los de esa JASS, por nombre sin distinguir mayúsculas y luego por `id`. */
+  listar(jassId: string): Promise<Reservorio[]>;
 }
 
 export interface RepositorioUsuarios {
@@ -119,6 +128,7 @@ export interface RepositorioAuditoria {
 
 export interface RepositoriosAcceso {
   readonly jass: RepositorioJass;
+  readonly reservorios: RepositorioReservoriosJass;
   readonly usuarios: RepositorioUsuarios;
   readonly membresias: RepositorioMembresias;
   readonly sesiones: RepositorioSesiones;

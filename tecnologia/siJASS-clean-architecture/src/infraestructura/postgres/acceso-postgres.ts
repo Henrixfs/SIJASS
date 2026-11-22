@@ -1,6 +1,7 @@
 import type { Membresia, Perfil, Rol, Sesion, Usuario } from '../../dominio/acceso.js';
 import { ErrorConflicto } from '../../dominio/errores.js';
 import type { Asociado, Cuota, Pago, ReversaPago } from '../../dominio/padron.js';
+import type { Reservorio } from '../../dominio/reservorio.js';
 import type {
   EventoAuditoria,
   RepositorioAsociados,
@@ -9,6 +10,7 @@ import type {
   RepositorioJass,
   RepositorioMembresias,
   RepositorioPagos,
+  RepositorioReservoriosJass,
   RepositorioSesiones,
   RepositorioUsuarios,
   ResultadoCreacionPago,
@@ -40,6 +42,22 @@ export class JassPostgres implements RepositorioJass {
   async existe(id: string): Promise<boolean> {
     const { rowCount } = await this.db.query('SELECT 1 FROM jass WHERE id = $1', [id]);
     return rowCount === 1;
+  }
+}
+
+export class ReservoriosJassPostgres implements RepositorioReservoriosJass {
+  constructor(private readonly db: Consultable) {}
+  async crear(r: Reservorio): Promise<void> {
+    await conConflictos(() => this.db.query('INSERT INTO reservorio (id, jass_id, nombre) VALUES ($1, $2, $3)', [r.id, r.jassId, r.nombre]), {
+      reservorio_jass_nombre_key: 'reservorio-duplicado',
+    });
+  }
+  async listar(jassId: string): Promise<Reservorio[]> {
+    const { rows } = await this.db.query<{ id: string; jass_id: string; nombre: string }>(
+      'SELECT id, jass_id, nombre FROM reservorio WHERE jass_id = $1 ORDER BY lower(nombre) COLLATE "C", id',
+      [jassId],
+    );
+    return rows.map((f) => ({ id: f.id, jassId: f.jass_id, nombre: f.nombre }));
   }
 }
 

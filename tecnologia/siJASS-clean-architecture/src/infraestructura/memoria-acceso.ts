@@ -1,6 +1,7 @@
 import type { Membresia, Sesion, Usuario } from '../dominio/acceso.js';
 import { ErrorConflicto } from '../dominio/errores.js';
 import type { Asociado, Cuota, Pago, ReversaPago } from '../dominio/padron.js';
+import type { Reservorio } from '../dominio/reservorio.js';
 import type {
   DecoradorRepositoriosAcceso,
   EventoAuditoria,
@@ -10,6 +11,7 @@ import type {
   RepositorioJass,
   RepositorioMembresias,
   RepositorioPagos,
+  RepositorioReservoriosJass,
   RepositorioSesiones,
   RepositorioUsuarios,
   RepositoriosAcceso,
@@ -20,6 +22,7 @@ import type {
 /** Estado confirmado de la base en memoria del contexto de acceso y padrón. */
 export interface EstadoAcceso {
   jass: Map<string, string>;
+  reservorios: Map<string, Reservorio>;
   usuarios: Map<string, Usuario>;
   membresias: Map<string, Membresia>;
   sesiones: Map<string, Sesion>;
@@ -33,6 +36,7 @@ export interface EstadoAcceso {
 export function estadoAccesoVacio(): EstadoAcceso {
   return {
     jass: new Map(),
+    reservorios: new Map(),
     usuarios: new Map(),
     membresias: new Map(),
     sesiones: new Map(),
@@ -47,6 +51,7 @@ export function estadoAccesoVacio(): EstadoAcceso {
 function copiar(e: EstadoAcceso): EstadoAcceso {
   return {
     jass: new Map(e.jass),
+    reservorios: new Map(e.reservorios),
     usuarios: new Map(e.usuarios),
     membresias: new Map(e.membresias),
     sesiones: new Map(e.sesiones),
@@ -66,6 +71,25 @@ class JassMemoria implements RepositorioJass {
   }
   async existe(id: string): Promise<boolean> {
     return this.e.jass.has(id);
+  }
+}
+
+class ReservoriosJassMemoria implements RepositorioReservoriosJass {
+  constructor(private readonly e: EstadoAcceso) {}
+  async crear(r: Reservorio): Promise<void> {
+    for (const o of this.e.reservorios.values()) {
+      if (o.jassId === r.jassId && o.nombre.toLowerCase() === r.nombre.toLowerCase()) throw new ErrorConflicto('reservorio-duplicado');
+    }
+    this.e.reservorios.set(r.id, r);
+  }
+  async listar(jassId: string): Promise<Reservorio[]> {
+    return [...this.e.reservorios.values()]
+      .filter((r) => r.jassId === jassId)
+      .sort((a, b) => {
+        const x = a.nombre.toLowerCase();
+        const y = b.nombre.toLowerCase();
+        return x < y ? -1 : x > y ? 1 : a.id < b.id ? -1 : 1;
+      });
   }
 }
 
@@ -250,6 +274,7 @@ class AuditoriaMemoria implements RepositorioAuditoria {
 export function repositoriosAccesoMemoria(e: EstadoAcceso): RepositoriosAcceso {
   return {
     jass: new JassMemoria(e),
+    reservorios: new ReservoriosJassMemoria(e),
     usuarios: new UsuariosMemoria(e),
     membresias: new MembresiasMemoria(e),
     sesiones: new SesionesMemoria(e),

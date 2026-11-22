@@ -100,10 +100,11 @@ describe('interfaz — ingreso y guardia por perfil', () => {
     expect(llamadas.some((l) => l.ruta === '/v1/auth/logout')).toBe(true);
   });
 
-  test('un operador (sin permiso sobre el padrón) ve un aviso y no datos', async () => {
-    const { usuario } = montar((_m, r, c, h) => loginPersonal('operador')(_m, r, c, h) ?? (r === '/v1/asociados' ? json(403, { codigo: 'acceso-denegado', mensaje: 'Acceso denegado' }) : undefined));
+  test('un operador no ve las pestañas del padrón: entra directo a Mediciones', async () => {
+    const { usuario } = montar((_m, r, c, h) => loginPersonal('operador')(_m, r, c, h) ?? (r === '/v1/reservorios' ? json(200, { reservorios: [] }) : r === '/v1/mediciones/catalogo' ? json(200, { metodos: [], unidad: 'mg/L' }) : undefined));
     await ingresar(usuario);
-    expect(await screen.findByTestId('sin-permiso')).toHaveTextContent('Su rol no tiene acceso');
+    expect(await screen.findByRole('heading', { name: 'Mediciones de cloro residual' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Asociados' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('tabla-asociados')).not.toBeInTheDocument();
   });
 });

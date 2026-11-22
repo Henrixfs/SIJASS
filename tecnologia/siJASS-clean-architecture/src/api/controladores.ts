@@ -141,4 +141,48 @@ export class PortalController {
   }
 }
 
-export const CONTROLADORES = [AuthController, YoController, AsociadosController, CuotasController, PagosController, PortalController];
+@Controller('v1/reservorios')
+export class ReservoriosController {
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  @Get()
+  listar(@ActorActual() actor: ContextoAcceso) {
+    return this.casos.listarReservorios.ejecutar(actor).then((reservorios) => ({ reservorios }));
+  }
+
+  /** La JASS sale de la membresía: un `jassId` del cuerpo se ignora. */
+  @Post()
+  crear(@ActorActual() actor: ContextoAcceso, @Body() body: unknown) {
+    return this.casos.crearReservorio.ejecutar(actor, { nombre: cuerpo(body).nombre });
+  }
+
+  @Get(':id/mediciones')
+  historial(@ActorActual() actor: ContextoAcceso, @Param('id') id: string) {
+    return this.casos.historial.ejecutar(actor, id).then((mediciones) => ({ mediciones }));
+  }
+}
+
+@Controller('v1/mediciones')
+export class MedicionesController {
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  @Get('catalogo')
+  catalogo(@ActorActual() actor: ContextoAcceso) {
+    return this.casos.catalogo.ejecutar(actor);
+  }
+
+  /** `201` si es nueva; `200` con el mismo resultado si es un reintento de la misma clave. */
+  @Post()
+  async registrar(
+    @ActorActual() actor: ContextoAcceso,
+    @Body() body: unknown,
+    @Headers('idempotency-key') clave: string | undefined,
+    @Res({ passthrough: true }) respuesta: Response,
+  ) {
+    const { duplicado, ...resultado } = await this.casos.registrarMedicion.ejecutar(actor, cuerpo(body), clave);
+    respuesta.status(duplicado ? 200 : 201);
+    return resultado;
+  }
+}
+
+export const CONTROLADORES = [AuthController, YoController, AsociadosController, CuotasController, PagosController, PortalController, ReservoriosController, MedicionesController];

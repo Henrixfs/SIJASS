@@ -18,11 +18,11 @@ describe('acceso — matriz de permisos perfil/rol', () => {
     operador: { ...base, perfil: 'personal', rol: 'operador', asociadoId: null },
     asociado: { ...base, perfil: 'asociado', rol: null, asociadoId: 'a' },
   };
-  const permisos: Permiso[] = ['padron.leer', 'padron.escribir', 'pagos.leer', 'pagos.registrar', 'acceso-asociado.crear', 'portal.consultar'];
+  const permisos: Permiso[] = ['padron.leer', 'padron.escribir', 'pagos.leer', 'pagos.registrar', 'acceso-asociado.crear', 'portal.consultar', 'reservorios.leer', 'reservorios.crear', 'mediciones.registrar', 'mediciones.leer'];
   const esperado: Record<string, Permiso[]> = {
-    consejo: ['padron.leer', 'padron.escribir', 'pagos.leer', 'pagos.registrar', 'acceso-asociado.crear'],
-    tesorero: ['padron.leer', 'padron.escribir', 'pagos.leer', 'pagos.registrar', 'acceso-asociado.crear'],
-    operador: [],
+    consejo: ['padron.leer', 'padron.escribir', 'pagos.leer', 'pagos.registrar', 'acceso-asociado.crear', 'reservorios.leer', 'reservorios.crear', 'mediciones.leer'],
+    tesorero: ['padron.leer', 'padron.escribir', 'pagos.leer', 'pagos.registrar', 'acceso-asociado.crear', 'reservorios.leer', 'mediciones.leer'],
+    operador: ['reservorios.leer', 'mediciones.registrar', 'mediciones.leer'],
     asociado: ['portal.consultar'],
   };
   for (const [cuenta, actor] of Object.entries(cuentas)) {

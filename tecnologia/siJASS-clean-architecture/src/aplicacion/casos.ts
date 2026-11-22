@@ -11,6 +11,10 @@ import {
   RegistrarAsociado,
 } from './padron/padron.js';
 import { ConsultarPago, RegistrarPago, ReversarPago } from './padron/pagos.js';
+import { ConsultarCatalogo, ConsultarHistorial, RegistrarMedicionAutorizada } from './mediciones-autorizadas.js';
+import { RegistrarMedicion } from './registrar-medicion.js';
+import { CrearReservorio, ListarReservorios } from './reservorios.js';
+import type { UnidadDeTrabajo } from '../dominio/puertos.js';
 
 /** Todos los casos de uso de acceso, padrón y pagos, ya construidos con sus dependencias. */
 export interface Casos {
@@ -31,9 +35,18 @@ export interface Casos {
   readonly registrarPago: RegistrarPago;
   readonly reversarPago: ReversarPago;
   readonly consultarPago: ConsultarPago;
+  readonly crearReservorio: CrearReservorio;
+  readonly listarReservorios: ListarReservorios;
+  readonly registrarMedicion: RegistrarMedicionAutorizada;
+  readonly historial: ConsultarHistorial;
+  readonly catalogo: ConsultarCatalogo;
 }
 
-export function construirCasos(d: DependenciasAcceso): Casos {
+/**
+ * @param unidadMediciones unidad de trabajo del módulo de mediciones (distinta de la de acceso:
+ *   un módulo no escribe las tablas de otro, diseño interno §1).
+ */
+export function construirCasos(d: DependenciasAcceso, unidadMediciones: UnidadDeTrabajo): Casos {
   return {
     autenticar: new AutenticarUsuario(d),
     renovar: new RenovarSesion(d),
@@ -52,5 +65,10 @@ export function construirCasos(d: DependenciasAcceso): Casos {
     registrarPago: new RegistrarPago(d),
     reversarPago: new ReversarPago(d),
     consultarPago: new ConsultarPago(d),
+    crearReservorio: new CrearReservorio(d),
+    listarReservorios: new ListarReservorios(d),
+    registrarMedicion: new RegistrarMedicionAutorizada(new RegistrarMedicion({ unidadDeTrabajo: unidadMediciones, reloj: d.reloj, ids: d.ids })),
+    historial: new ConsultarHistorial(unidadMediciones),
+    catalogo: new ConsultarCatalogo(),
   };
 }

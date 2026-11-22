@@ -4,6 +4,7 @@ import type { EstadoDeCuenta, ResumenAsociado } from '../api/tipos';
 import { useCarga } from '../hooks';
 import { mensajeDeError, useApp } from '../contexto';
 import { formatearSoles, parsearSoles } from '../lib/dinero';
+import { Mediciones } from './Mediciones';
 import { nuevoUuid } from '../lib/uuid';
 
 const RUTA_ASOCIADOS = '/personal';
@@ -27,7 +28,9 @@ function SinPermiso() {
 export function Personal({ ruta }: { ruta: string }) {
   const { api, sesion, navegar, salir } = useApp();
   const coincidencia = /^\/personal\/asociados\/([0-9a-f-]{36})$/.exec(ruta);
-  const [seccion, setSeccion] = useState<'asociados' | 'cuotas'>('asociados');
+  // Tesorero y consejo gestionan el padrón y los pagos; el operador solo mediciones (matriz de actores).
+  const puedePadron = sesion?.rol === 'tesorero' || sesion?.rol === 'consejo';
+  const [seccion, setSeccion] = useState<'asociados' | 'cuotas' | 'mediciones'>(puedePadron ? 'asociados' : 'mediciones');
   void api;
 
   return (
@@ -47,14 +50,21 @@ export function Personal({ ruta }: { ruta: string }) {
         ) : (
           <>
             <nav className="pestanas" aria-label="Secciones">
-              <button type="button" aria-pressed={seccion === 'asociados'} onClick={() => setSeccion('asociados')}>
-                Asociados
-              </button>
-              <button type="button" aria-pressed={seccion === 'cuotas'} onClick={() => setSeccion('cuotas')}>
-                Generar cuotas
+              {puedePadron && (
+                <>
+                  <button type="button" aria-pressed={seccion === 'asociados'} onClick={() => setSeccion('asociados')}>
+                    Asociados
+                  </button>
+                  <button type="button" aria-pressed={seccion === 'cuotas'} onClick={() => setSeccion('cuotas')}>
+                    Generar cuotas
+                  </button>
+                </>
+              )}
+              <button type="button" aria-pressed={seccion === 'mediciones'} onClick={() => setSeccion('mediciones')}>
+                Mediciones
               </button>
             </nav>
-            {seccion === 'asociados' ? <Asociados /> : <GenerarCuotas />}
+            {seccion === 'asociados' && puedePadron ? <Asociados /> : seccion === 'cuotas' && puedePadron ? <GenerarCuotas /> : <Mediciones />}
           </>
         )}
       </main>
