@@ -79,6 +79,10 @@ export class UsuariosPostgres implements RepositorioUsuarios {
     const { rows } = await this.db.query<FilaUsuario>('SELECT * FROM usuario WHERE id = $1', [id]);
     return rows[0] ? aUsuario(rows[0]) : undefined;
   }
+  async buscarPorIdBloqueando(id: string): Promise<Usuario | undefined> {
+    const { rows } = await this.db.query<FilaUsuario>('SELECT * FROM usuario WHERE id = $1 FOR UPDATE', [id]);
+    return rows[0] ? aUsuario(rows[0]) : undefined;
+  }
   async registrarFallo(id: string, umbral: number, bloqueadoHasta: string) {
     // Atómico: dos fallos concurrentes se suman y ninguno pisa el contador del otro.
     const { rows } = await this.db.query<{ intentos_fallidos: number; bloqueado_hasta: Date | null }>(

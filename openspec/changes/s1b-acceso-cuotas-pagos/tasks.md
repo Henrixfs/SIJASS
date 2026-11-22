@@ -60,6 +60,34 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 - Fusionar y archivar con `/opsx:archive s1b-acceso-cuotas-pagos`.
 - Planificar `s1c-reservorios-mediciones-ui`.
 
+## 10. Corrección de permisos y revisión de concurrencia
+
+- [x] 10.1 Alinear la especificación y la tabla D9 con los permisos restrictivos existentes; validar OpenSpec estrictamente y comprobar matriz de roles y aislamiento por HTTP.
+- [x] 10.2 Probar un inicio correcto concurrente con el fallo que activa el bloqueo; si revela un defecto, documentarlo sin modificar la lógica de negocio.
+- [x] 10.3 Ejecutar lint, compilación, unitarias e integración en una base nueva aislada y registrar resultados y limitaciones; no ejecutar E2E destructivas.
+
+## 11. Bloqueo concurrente de autenticación
+
+- [x] 11.1 Extender el puerto de usuarios y sus adaptadores para lectura bloqueante transaccional por cuenta; comprobar equivalencia de contrato en memoria y PostgreSQL y aislamiento entre cuentas.
+- [x] 11.2 Revalidar estado, hash y bloqueo bajo el bloqueo por cuenta después de `scrypt`; hacer atómicos contador, sesión y auditoría; verificar que la prueba controlada existente pasa sin debilitarla y que un fallo transaccional revierte todo.
+- [x] 11.3 Probar con barreras ambos órdenes del inicio correcto y quinto fallo, múltiples fallos, expiración y primer fallo posterior, y persistencia de `429`; ejecutar al menos diez rondas en PostgreSQL desechable.
+- [x] 11.4 Probar dos procesos de backend independientes con pools PostgreSQL separados contra la misma cuenta y otra cuenta, y la rotación concurrente de refresco; comprobar que no se pierden incrementos ni se altera o bloquea indebidamente la otra cuenta.
+- [x] 11.5 Ejecutar validación estricta OpenSpec, lint, compilación, unitarias e integración completa; registrar comandos y resultados reales, sin ejecutar E2E destructivas ni modificar frontend.
+
+### Evidencia de revisión aislada
+
+- Copia de `cabdbe2daf8c861ef528d7a3b2dd1d1b3419ff64`: validación estricta OpenSpec, lint y build con código 0; unitarias 256/256. Se reutilizaron mediante junction las dependencias instaladas del árbol s1e, sin ejecutar instalación limpia.
+- PostgreSQL 16 en el contenedor de auditoría con tmpfs y sin montajes: base nueva `sijass_s1b_rbac_a1`, verificada vacía antes de aplicar 0001 y 0002. Integración: 216 pruebas, 215 aprobadas y 1 fallida; la matriz HTTP de permisos y aislamiento pasó. No se ejecutó E2E de navegador.
+- Hallazgo: la prueba controlada `un inicio correcto iniciado antes del bloqueo no abre sesión después de activarse` falla con `Missing expected rejection (ErrorCuentaBloqueada)`: un inicio que había leído el usuario antes del quinto fallo completa después de activarse el bloqueo. La lógica de autenticación no fue modificada; requiere análisis y autorización para corregirse.
+
+### Evidencia posterior a la corrección de concurrencia
+
+- Validación integral en clon aislado del head `cabdbe2`: `npm ci --no-audit --no-fund`, lint y build con código 0; 259 unitarias y 225 pruebas de integración aprobadas, 0 fallidas. PostgreSQL 16 usó la base nueva `sijass_s1b_pr9_final_a1`, verificada con cero tablas antes de migrar. La nueva prueba confirmó que un bloqueo vigente prevalece aunque cambie el hash. No se ejecutó E2E de navegador local.
+
+- Copia aislada de `cabdbe2`: `npm run lint`, `npm run build` y validación estricta OpenSpec con código 0; `node --test ... dist/pruebas/unitarias/*.test.js`: 259 aprobadas, 0 fallidas.
+- PostgreSQL 16: contenedor de auditoría verificado sin montajes y con tmpfs; base nueva `sijass_s1b_auth_fix_a1` con cero tablas antes de aplicar 0001 y 0002. `node --test --test-concurrency=1 ... dist/pruebas/integracion/*.test.js`: 224 aprobadas, 0 fallidas. Las pruebas se repitieron sobre esa misma base exclusiva después de su creación.
+- La prueba previamente fallida pasó diez rondas sin debilitar sus aserciones; ambos órdenes, dos procesos independientes, otra cuenta, rotación de refresco, cambio de hash/estado, expiración, reversión y matriz HTTP pasaron. Las dependencias instaladas de s1e se reutilizaron mediante junction; no se ejecutó instalación limpia ni E2E de navegador.
+
 ## Evidencia local (2026-11-19, copia limpia del commit `git archive HEAD`)
 
 - `tecnologia/siJASS-clean-architecture/`: `npm ci`, `npm run lint`, `npm run build` con código 0; `npm test` 256/256; `npm run test:integration` 215/215 contra PostgreSQL 16 (Docker, puerto 5433).

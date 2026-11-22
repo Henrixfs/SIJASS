@@ -19,6 +19,8 @@ export interface RepositorioUsuarios {
   crear(usuario: Usuario): Promise<void>;
   buscarPorCorreo(correo: string): Promise<Usuario | undefined>;
   buscarPorId(id: string): Promise<Usuario | undefined>;
+  /** Serializa las decisiones de la cuenta hasta el fin de la unidad de trabajo. */
+  buscarPorIdBloqueando(id: string): Promise<Usuario | undefined>;
   /**
    * Suma un intento fallido de forma atómica y, al alcanzar `umbral`, fija el bloqueo
    * hasta `bloqueadoHasta`. Devuelve el estado resultante.

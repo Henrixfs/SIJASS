@@ -20,6 +20,7 @@ export interface SesionIniciada {
 
 type Fallo = { readonly fallo: ErrorNoAutenticado | ErrorCuentaBloqueada | ErrorAccesoDenegado };
 type Exito = { readonly sesion: SesionIniciada };
+type InicioConfirmado = { readonly usuarioId: string; readonly ahora: Date; readonly tokenRefresco: string; readonly perfil: Perfil; readonly rol: Rol | null };
 
 /**
  * Inicio de sesión (spec `acceso-por-perfiles`). Los fallos que deben dejar rastro (contador de
@@ -45,71 +46,74 @@ export class AutenticarUsuario {
       throw new ErrorNoAutenticado('credenciales-invalidas');
     }
     const contrasena = typeof comando.contrasena === 'string' ? comando.contrasena : '';
-    const ahora = this.d.reloj.ahora();
-
     const usuario = await this.d.unidadDeTrabajo.ejecutar(async (r) => r.usuarios.buscarPorCorreo(correo));
 
     if (!usuario) {
       await this.d.contrasenas.verificar(contrasena, await this.ficticio());
       await this.d.unidadDeTrabajo.ejecutar((r) =>
-        auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', detalle: { motivo: 'cuenta-desconocida' } }, ahora),
+        auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', detalle: { motivo: 'cuenta-desconocida' } }, this.d.reloj.ahora()),
       );
       throw new ErrorNoAutenticado('credenciales-invalidas');
     }
 
-    if (usuario.bloqueadoHasta !== null && new Date(usuario.bloqueadoHasta).getTime() > ahora.getTime()) {
-      await this.d.unidadDeTrabajo.ejecutar(async (r) => {
-        const m = await r.membresias.activaDeUsuario(usuario.id);
-        await auditar(r, m ? { jassId: m.jassId, usuarioId: usuario.id } : null, { accion: 'sesion.bloqueada', recurso: 'sesion', recursoId: usuario.id }, ahora);
-      });
-      throw new ErrorCuentaBloqueada(usuario.bloqueadoHasta);
-    }
-
     const correcta = await this.d.contrasenas.verificar(contrasena, usuario.hashContrasena);
 
-    const resultado: Fallo | Exito = await this.d.unidadDeTrabajo.ejecutar(async (r): Promise<Fallo | Exito> => {
-      const membresia = await r.membresias.activaDeUsuario(usuario.id);
-      const actorAuditoria = membresia ? { jassId: membresia.jassId, usuarioId: usuario.id } : null;
+    const resultado = await this.d.unidadDeTrabajo.ejecutar(async (r): Promise<Fallo | InicioConfirmado> => {
+      const actual = await r.usuarios.buscarPorIdBloqueando(usuario.id);
+      const ahora = this.d.reloj.ahora();
+      if (!actual) {
+        await auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', detalle: { motivo: 'cuenta-desconocida' } }, ahora);
+        return { fallo: new ErrorNoAutenticado('credenciales-invalidas') };
+      }
+      const membresia = await r.membresias.activaDeUsuario(actual.id);
+      const actorAuditoria = membresia ? { jassId: membresia.jassId, usuarioId: actual.id } : null;
+      if (actual.bloqueadoHasta !== null && new Date(actual.bloqueadoHasta).getTime() > ahora.getTime()) {
+        await auditar(r, actorAuditoria, { accion: 'sesion.bloqueada', recurso: 'sesion', recursoId: actual.id }, ahora);
+        return { fallo: new ErrorCuentaBloqueada(actual.bloqueadoHasta) };
+      }
+      if (actual.hashContrasena !== usuario.hashContrasena) {
+        await auditar(r, actorAuditoria, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: actual.id, detalle: { motivo: 'credenciales' } }, ahora);
+        return { fallo: new ErrorNoAutenticado('credenciales-invalidas') };
+      }
+      if (actual.bloqueadoHasta !== null) await r.usuarios.reiniciarIntentos(actual.id);
 
-      if (!correcta || usuario.estado !== 'activo') {
+      if (!correcta || actual.estado !== 'activo') {
         const hasta = new Date(ahora.getTime() + BLOQUEO_MS).toISOString();
-        const estado = await r.usuarios.registrarFallo(usuario.id, MAX_INTENTOS_FALLIDOS, hasta);
-        await auditar(r, actorAuditoria, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: usuario.id, detalle: { motivo: 'credenciales' } }, ahora);
+        const estado = await r.usuarios.registrarFallo(actual.id, MAX_INTENTOS_FALLIDOS, hasta);
+        await auditar(r, actorAuditoria, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: actual.id, detalle: { motivo: 'credenciales' } }, ahora);
         if (estado.bloqueadoHasta !== null && estado.intentosFallidos >= MAX_INTENTOS_FALLIDOS) {
-          await auditar(r, actorAuditoria, { accion: 'sesion.bloqueada', recurso: 'sesion', recursoId: usuario.id, detalle: { hasta } }, ahora);
+          await auditar(r, actorAuditoria, { accion: 'sesion.bloqueada', recurso: 'sesion', recursoId: actual.id, detalle: { hasta } }, ahora);
         }
         return { fallo: new ErrorNoAutenticado('credenciales-invalidas') };
       }
       if (!membresia) {
-        await auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: usuario.id, detalle: { motivo: 'sin-membresia' } }, ahora);
+        await auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: actual.id, detalle: { motivo: 'sin-membresia' } }, ahora);
         return { fallo: new ErrorAccesoDenegado('sin-membresia') };
       }
 
-      await r.usuarios.reiniciarIntentos(usuario.id);
+      await r.usuarios.reiniciarIntentos(actual.id);
       const refresco = this.d.tokens.nuevoRefresco();
       await r.sesiones.crear({
         id: this.d.ids.nuevo(),
-        usuarioId: usuario.id,
+        usuarioId: actual.id,
         familiaId: this.d.ids.nuevo(),
         refreshHash: refresco.hash,
         expiraEn: new Date(ahora.getTime() + VIGENCIA_REFRESCO_MS).toISOString(),
         usadaEn: null,
         revocadaEn: null,
       });
-      await auditar(r, actorAuditoria, { accion: 'sesion.iniciada', recurso: 'sesion', recursoId: usuario.id }, ahora);
-      return {
-        sesion: {
-          tokenAcceso: this.d.tokens.emitirAcceso(usuario.id, ahora),
-          tokenRefresco: refresco.token,
-          venceEnSegundos: VIGENCIA_ACCESO_S,
-          perfil: membresia.perfil,
-          rol: membresia.rol,
-        },
-      };
+      await auditar(r, actorAuditoria, { accion: 'sesion.iniciada', recurso: 'sesion', recursoId: actual.id }, ahora);
+      return { usuarioId: actual.id, ahora, tokenRefresco: refresco.token, perfil: membresia.perfil, rol: membresia.rol };
     });
 
     if ('fallo' in resultado) throw resultado.fallo;
-    return resultado.sesion;
+    return {
+      tokenAcceso: this.d.tokens.emitirAcceso(resultado.usuarioId, resultado.ahora),
+      tokenRefresco: resultado.tokenRefresco,
+      venceEnSegundos: VIGENCIA_ACCESO_S,
+      perfil: resultado.perfil,
+      rol: resultado.rol,
+    };
   }
 }
 
