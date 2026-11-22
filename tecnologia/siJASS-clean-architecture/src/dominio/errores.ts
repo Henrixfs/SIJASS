@@ -45,3 +45,46 @@ export class ErrorMedicionDuplicada extends ErrorDominio {
     super('medicion-duplicada', `medición duplicada: ${jassId}/${medicionId}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Errores de acceso, padrón y pagos (s1b-acceso-cuotas-pagos). Cada uno lleva un código
+// estable; la capa de interfaz los traduce a HTTP (design.md D9) sin interpretar mensajes.
+// ---------------------------------------------------------------------------
+
+/** Falta o falla la autenticación (credenciales o token): HTTP 401. */
+export class ErrorNoAutenticado extends ErrorDominio {
+  constructor(codigo: 'credenciales-invalidas' | 'token-invalido' | 'sesion-invalida' = 'credenciales-invalidas') {
+    super(codigo, codigo);
+  }
+}
+
+/** La cuenta está bloqueada temporalmente por intentos fallidos: HTTP 429. */
+export class ErrorCuentaBloqueada extends ErrorDominio {
+  constructor(readonly bloqueadoHasta: string) {
+    super('cuenta-bloqueada', 'cuenta bloqueada temporalmente');
+  }
+}
+
+/**
+ * El actor autenticado no tiene permiso sobre la operación o el recurso: HTTP 403. El
+ * mismo error se usa para un recurso inexistente y para uno de otra JASS (RF01).
+ */
+export class ErrorAccesoDenegado extends ErrorDominio {
+  constructor(readonly motivo: string) {
+    super('acceso-denegado', 'acceso denegado');
+  }
+}
+
+/** Dato de entrada que incumple una regla de negocio: HTTP 422. */
+export class ErrorDatoInvalido extends ErrorDominio {
+  constructor(codigo: string, detalle?: string) {
+    super(codigo, detalle ? `${codigo}: ${detalle}` : codigo);
+  }
+}
+
+/** La operación choca con el estado actual (duplicado, ya revertido, baja…): HTTP 409. */
+export class ErrorConflicto extends ErrorDominio {
+  constructor(codigo: string, detalle?: string) {
+    super(codigo, detalle ? `${codigo}: ${detalle}` : codigo);
+  }
+}

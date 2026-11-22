@@ -8,10 +8,14 @@
     "lint": "eslint src",
     "test": "npm run build && node --test dist/pruebas/unitarias/*.test.js",
     "test:integration": "npm run build && node scripts/exigir-database-url.mjs && node --test --test-concurrency=1 dist/pruebas/integracion/*.test.js",
+    "api": "node dist/api/main.js",
+    "crear-jass": "node dist/api/cli.js crear-jass",
+    "sembrar-demo": "node dist/api/cli.js sembrar-demo",
     "migrar": "node-pg-migrate up -m migraciones",
     "migrar:revertir": "node-pg-migrate down -m migraciones"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^22",
     "@types/pg": "^8.23.1",
     "eslint": "^9.39.5",
@@ -23,6 +27,12 @@
     "node": ">=22"
   },
   "dependencies": {
-    "pg": "^8.23.1"
-  }
+    "@nestjs/common": "^12.5.1",
+    "@nestjs/core": "^12.5.1",
+    "@nestjs/platform-express": "^12.5.1",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "type": "module"
 }

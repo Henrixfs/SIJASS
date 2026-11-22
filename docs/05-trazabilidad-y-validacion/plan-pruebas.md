@@ -1,6 +1,6 @@
 # Plan de pruebas y validación — SIJASS
 
-**Estado:** plan de calidad para la arquitectura objetivo. Ninguna prueba del MVP ha sido ejecutada; el prototipo contiene 73 pruebas unitarias y 52 de integración contra PostgreSQL que cubren PT01–PT04, PT11 y PT12.
+**Estado:** plan de calidad para la arquitectura objetivo. Ninguna prueba del MVP ha sido ejecutada en CI sobre un despliegue; el prototipo contiene pruebas unitarias, de contrato, de integración contra PostgreSQL, HTTP y E2E que cubren PT01–PT04, PT11–PT14 (ver la sección 1).
 
 ## 1. Situación verificada del prototipo
 
@@ -27,7 +27,28 @@ El archivo `dominio.test.ts` (cinco pruebas sobre el modelo heredado) se retiró
 | PT12 | Conflicto sin sobrescritura: [`registro-idempotente.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts) | Contrato | ambos |
 | — | Restricciones del esquema por SQL directo y coherencia del catálogo: [`esquema.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/esquema.test.ts) | Integración | `npm run test:integration` |
 
-PT13 (denegación entre JASS por usuarios) sigue **pendiente**: el prototipo prueba que las lecturas de mediciones están aisladas por JASS, pero aún no tiene usuarios, sesión ni autorización.
+PT13 se cubre ya para asociados, cuotas, pagos y portal (ver abajo); para mediciones y reservorios sigue **pendiente** (`s1c`).
+
+### Verificación de `s1b-acceso-cuotas-pagos` (2026-11-19, en local)
+
+| Comprobación | Resultado |
+|---|---|
+| `npm run lint`, `npm run build` y `npm test` en `tecnologia/siJASS-clean-architecture/` (Node.js 24.18) | Código 0; 256 pruebas unitarias, 0 fallos |
+| `npm run test:integration` contra PostgreSQL 16 en Docker (esquema `0002` por SQL directo, baterías compartidas con la memoria, concurrencia en 10 rondas, API HTTP, aislamiento, seguridad y procesos reales) | Código 0; 215 pruebas, 0 fallos, en dos ejecuciones consecutivas más |
+| `npm run migrar`, `npm run migrar:revertir` y `npm run migrar` | Código 0; la reversión de `0002` deja solo las tablas de `0001` |
+| `npm audit --omit=dev` (API) | 0 vulnerabilidades en dependencias de ejecución |
+| `npm run lint`, `npm test` y `npm run build` en `tecnologia/sijass-web/` | Código 0; 56 pruebas de interfaz |
+| `npx playwright test` en `tecnologia/e2e/` (Chrome del sistema, API real, PostgreSQL y la interfaz construida) | 5 pruebas aprobadas en tres ejecuciones consecutivas |
+
+Esta tabla es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI en GitHub Actions: [PR #9](https://github.com/Henrixfs/SIJASS/pull/9), commit `97ba688`, [ejecución 44635444554](https://github.com/Henrixfs/SIJASS/actions/runs/44635444554) con `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde. No valida despliegue, rendimiento, PWA, sincronización ni RAG.
+
+| PT | Prueba de `s1b` | Nivel |
+|---|---|---|
+| PT13 / PT14 | [`casos-acceso.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-acceso.ts) y [`casos-padron.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-padron.ts): las mismas baterías sobre memoria (`npm test`) y PostgreSQL (`npm run test:integration`), con la matriz perfil/rol × caso de uso | Contrato |
+| PT13 | [`api-aislamiento.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-aislamiento.test.ts): cada una de 8 cuentas × cada ruta × cada recurso por HTTP; todo `403` idéntico y auditado | Seguridad |
+| PT14 | [`acceso-concurrencia.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/acceso-concurrencia.test.ts): diez reintentos simultáneos, dos pagos que juntos superan la cuota, rotación simultánea del refresco | Integración |
+| — | [`api-seguridad.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-seguridad.test.ts): arranque sin `JWT_SECRET`, secretos fuera de la bitácora y la base, errores internos sin detalles | Seguridad |
+| — | [`flujo-pagos.spec.ts`](../../tecnologia/e2e/pruebas/flujo-pagos.spec.ts): el tesorero registra un pago y el asociado, en otro navegador, ve su saldo actualizado | E2E |
 
 ## 2. Matriz de pruebas
 
@@ -45,8 +66,8 @@ PT13 (denegación entre JASS por usuarios) sigue **pendiente**: el prototipo pru
 | PT10 | Integración | Corregir una medición; corregir sobre una revisión desactualizada | Conserva original, nuevo valor, motivo, actor y fecha; la segunda devuelve `conflict` | RF08, RF11 | Pendiente |
 | PT11 | Integración | Falla entre la reserva del `operationId` y la escritura de la medición | Reversión completa; ni `accepted` falso ni pérdida silenciosa | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
 | PT12 | Integración | Mismo `operationId` con contenido distinto | `conflict` sin sobrescritura | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
-| PT13 | Seguridad | Usuario de la JASS A accede a datos de la JASS B (mediciones, asociados, reservorios, reportes) | Denegación sin filtrar datos | RF01–RF03, RF11, RNF05 | Pendiente |
-| PT14 | Integración | Pago parcial, doble envío con la misma `Idempotency-Key` y reversa | Saldos exactos; un solo pago; reversa auditada | RF04, RF05, RNF04 | Pendiente |
+| PT13 | Seguridad | Usuario de la JASS A accede a datos de la JASS B (mediciones, asociados, reservorios, reportes) | Denegación sin filtrar datos | RF01–RF03, RF11, RNF05 | Prototipo para asociados, cuotas, pagos y portal (verificado en local, `s1b`: [matriz de aislamiento HTTP](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-aislamiento.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-pagos.spec.ts)); mediciones y reservorios pendientes |
+| PT14 | Integración | Pago parcial, doble envío con la misma `Idempotency-Key` y reversa | Saldos exactos; un solo pago; reversa auditada | RF04, RF05, RNF04 | Prototipo (verificado en local, `s1b`: [casos de padrón y pagos](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-padron.ts) sobre memoria y PostgreSQL y [concurrencia](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/acceso-concurrencia.test.ts) en 10 rondas) |
 | PT15 | RAG | Pregunta sin fuentes suficientes | Abstención explícita | RF13, RNF09 | Pendiente |
 | PT16 | RAG | Pregunta con fuentes aprobadas | Citas de documento, versión y página verificables | RF13, RF14, RNF09 | Pendiente |
 | PT17 | Seguridad RAG | Instrucciones maliciosas en un PDF y consulta dirigida a otra JASS | Sin escrituras, sin exfiltración, sin obediencia al documento | RF13, RNF05, RNF09 | Pendiente |
