@@ -15,6 +15,8 @@
 - [ ] 3.1 Escalonado del Resumen en `personal.css` con `--i` por `:nth-child` y retardo con tope de 6 pasos (D5); contenedor del Resumen solo con opacidad; el inicio del portal de familias reutiliza la entrada en `portal.css`.
 - [ ] 3.2 Botones y enlaces: `scale(0.97)` al pulsar con la transición existente ampliada, sin movimiento en botones deshabilitados, colores de hover nuevos dentro de `@media (hover: hover) and (pointer: fine)` y tarjetas informativas sin hover (D6).
 
+- [ ] 3.3 Ambiente del Resumen en `personal.css`: deriva lenta de `.hero-ondas` (18 s, `transform`) y latido de opacidad del punto de `.hero-etiqueta` (2,4 s); texto y cifras quietos; compartir el `@keyframes` de deriva con el ingreso en lugar de duplicarlo (D7b).
+
 ## 4. Ingreso
 
 - [ ] 4.1 En `Ingreso.tsx`, envolver cada paso en un contenedor con `key` y `data-sentido` sin cambiar el foco ni los roles; en `ingreso.css`, entrada de la tarjeta (300 ms), paso adelante o atrás (220 ms), aviso de estado con fundido (180 ms) y deriva lenta de las ondas (16 s) (D7).

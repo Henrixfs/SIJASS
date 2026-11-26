@@ -10,6 +10,7 @@ La interfaz de SIJASS ya sigue el diseño de Penpot, pero se siente estática: e
 - **Entrada de página más rápida y entrada escalonada de las tarjetas del Resumen** (y del inicio del portal de familias). La página anterior no se anima al salir.
 - **Microinteracciones**: los botones se hunden al pulsar, el color cambia al pasar el puntero (solo con puntero fino) y el indicador de la sección actual aparece con una escala vertical breve.
 - **Ingreso con entrada suave**: la tarjeta aparece con fundido, el paso «tipo de acceso» → «DNI y clave» se desplaza con suavidad, los avisos aparecen con fundido y las ondas del panel de marca se mueven con lentitud. Nada se sacude ante un error.
+- **Ambiente discreto del Resumen**: las ondas del héroe se mueven con mucha lentitud y el punto de estado del servicio late con un fundido suave; el texto y las cifras no se mueven.
 - **Una sola base de movimiento**: duraciones y curvas como variables compartidas; **reducir movimiento** pasa de «apagar todo» a «solo fundidos breves».
 - **Prueba de guardia** que revisa las hojas de estilo y rechaza `transition: all`, `scale(0)`, `ease-in`, duraciones de más de 300 ms y animaciones sin regla de movimiento reducido.
 - Sin cambios de paleta, de estructura, de textos ni de API. **No hay cambios incompatibles.**

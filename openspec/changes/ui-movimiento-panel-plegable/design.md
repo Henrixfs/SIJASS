@@ -36,6 +36,7 @@
 | Tarjetas del Resumen | una o dos veces al día | Sí, escalonadas | Orientar la lectura de arriba abajo |
 | Pulsar un botón | decenas al día | Sí, 140 ms | Retroalimentación inmediata |
 | Color al pasar el puntero | decenas al día | Sí, 120 ms, solo puntero fino | Estado |
+| Ondas del héroe del Resumen y punto de estado | ambiente continuo, solo en esa pantalla | Sí, muy lento (16 s) y fundido de 2,4 s | Dar vida sin tocar datos ni retrasar ninguna acción |
 | Píldora deslizante entre secciones | decenas al día | **No** | Añade espera percibida a la navegación más frecuente |
 | Elevación de tarjetas informativas | — | **No** | Una tarjeta que no se puede pulsar no debe parecer pulsable |
 | Cambios por atajo de teclado | cientos al día | **No** | Se vuelve molesto |
@@ -55,6 +56,8 @@
 **D6 — Microinteracciones.** El botón pasa de `translateY(1px)` a `scale(0.97)` con `transition: transform var(--duracion-pulsar) var(--curva)` (se amplía la transición que ya existe en `estilos.css`, sin duplicarla). Los colores de hover nuevos van dentro de `@media (hover: hover) and (pointer: fine)`. El indicador de la sección actual deja de ser una sombra interior instantánea y pasa a un `::before` con `transform: scaleY()` de 0 a 1 en 180 ms.
 
 **D7 — Ingreso.** Cada paso se envuelve en un contenedor con `key` y `data-sentido` («adelante» o «atras») para animar con `translateX(16px)` o `translateX(-16px)` hacia 0 y fundido en 220 ms; la tarjeta entra con 10 px y 300 ms; `.estado-acceso` aparece con fundido de 180 ms y sin sacudida. Las ondas de la marca derivan 18 px en un ciclo de 16 s (`transform`, `alternate`, sin `will-change`). El foco y los roles (`alert`, `status`) no cambian.
+
+**D7b — Ambiente del Resumen.** Es la pantalla de inicio del personal y la que más se mira sin hacer nada, así que es donde un movimiento ambiente cuesta menos y aporta más. Las ondas del héroe reutilizan el `@keyframes` de deriva del ingreso (`transform: translateX`, `alternate`, ciclo de 18 s, solo `transform`) y el punto de estado (`.hero-etiqueta::before`) late con un fundido de opacidad de 2,4 s. No hay movimiento de texto, cifras ni tarjetas. *Plan B:* si la comprobación de sensación o el consumo en un equipo de gama baja muestran costo o distracción, se quita el ambiente y el resto del cambio no se ve afectado. *Descartado:* ondas animadas en las demás secciones (más tiempo en pantalla, sin beneficio) y partículas o degradados animados (costo de pintado).
 
 **D8 — Reducir movimiento = menos y más suave.** Se sustituye el apagado global por reglas por módulo: las entradas pasan a un fundido de 120 ms (se cambia el nombre de la animación a una que solo usa opacidad), se anula el escalonado, el panel cambia sin transición, no hay escala al pulsar y las ondas se detienen. Se comprueba con Chrome emulando `prefers-reduced-motion: reduce`.
 

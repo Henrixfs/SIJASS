@@ -105,4 +105,15 @@ El sistema SHALL mover las ondas del panel de marca del ingreso con un ciclo de 
 
 #### Scenario: Ondas del ingreso
 - **WHEN** se muestra el ingreso
-- **THEN** las ondas se desplazan con un ciclo de 12 s o más y no aparecen en el panel del personal
+- **THEN** las ondas se desplazan con un ciclo de 12 s o más y el texto de la tarjeta no se mueve
+
+### Requirement: Ambiente discreto del Resumen
+El sistema SHALL mover las ondas del héroe del Resumen con un ciclo de 16 s o más y hacer latir con un fundido de 2,4 s el punto de estado del servicio; SHALL NOT mover texto, cifras ni tarjetas con este ambiente; y SHALL detener ambos movimientos cuando el navegador pida reducir el movimiento.
+
+#### Scenario: Héroe del Resumen
+- **WHEN** se abre el Resumen
+- **THEN** las ondas del héroe se desplazan con un ciclo de 16 s o más, el punto de estado late con un fundido suave y el texto y las cifras permanecen quietos
+
+#### Scenario: Ambiente con movimiento reducido
+- **WHEN** el navegador pide reducir el movimiento
+- **THEN** las ondas del héroe y el punto de estado permanecen quietos
