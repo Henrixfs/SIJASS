@@ -3,6 +3,7 @@
  */
 import { before, describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { ConsultarAsistente } from '../../aplicacion/asistente.js';
 import { validarManifiesto } from '../../dominio/asistente/corpus.js';
 import { ErrorAccesoDenegado, ErrorDatoInvalido } from '../../dominio/errores.js';
 import type { UnidadDeTrabajoAcceso } from '../../dominio/puertos-acceso.js';
@@ -118,6 +119,25 @@ export function suiteAsistente(fabrica: FabricaUnidadDeTrabajoAcceso): void {
       assert.ok(!/EJEMPLO/.test(r.mensaje));
       const sin = await e3.casos.asistente.ejecutar(esc.operadorA.actor, 'receta de lomo saltado');
       assert.ok(!/EJEMPLO/.test(sin.mensaje));
+    });
+
+    test('una respuesta con dosificación se sustituye por el texto literal de una cita segura', async () => {
+      const corpus = validarManifiesto({
+        corpus: { nombre: 'Guías de lectura' },
+        documentos: [{
+          id: 'lectura', titulo: 'Guía de lectura', version: '1.0', estado: 'aprobado', responsable: 'Consejo',
+          paginas: [{ numero: 1, texto: 'Registre la lectura del comparador DPD en el sistema.' }],
+        }],
+      });
+      const esperado = await new ConsultarAsistente(e.dependencias, corpus).ejecutar(esc.operadorA.actor, 'lectura comparador DPD');
+      const asistente = new ConsultarAsistente(e.dependencias, corpus, {
+        redactar: async () => 'Fórmula de dosificación: [MARCADOR_RESPUESTA].',
+      });
+      const respuesta = await asistente.ejecutar(esc.operadorA.actor, 'lectura comparador DPD');
+      assert.equal(respuesta.estado, 'respondida');
+      assert.deepEqual(respuesta, esperado);
+      assert.ok(respuesta.respuesta?.includes(respuesta.citas[0].fragmento));
+      assert.doesNotMatch(JSON.stringify(respuesta), /MARCADOR_RESPUESTA/);
     });
   });
 }

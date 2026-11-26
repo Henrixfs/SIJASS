@@ -3,8 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { ErrorCorpus, validarManifiesto, type Corpus } from '../../dominio/asistente/corpus.js';
-import { pideDosisOTratamiento } from '../../dominio/asistente/guarda.js';
-import { componerRespuesta, Indice, MAX_CITAS, MAX_FRAGMENTO, normalizar, terminos } from '../../dominio/asistente/recuperacion.js';
+import { contieneContenidoSanitarioRestringido, normalizar, pideDosisOTratamiento } from '../../dominio/asistente/guarda.js';
+import { componerRespuesta, Indice, MAX_CITAS, MAX_FRAGMENTO, terminos } from '../../dominio/asistente/recuperacion.js';
 import { cargarCorpus, DIRECTORIO_CORPUS_EJEMPLO } from '../../infraestructura/corpus-archivo.js';
 
 const ejemplo = cargarCorpus(fileURLToPath(DIRECTORIO_CORPUS_EJEMPLO));
@@ -203,4 +203,45 @@ describe('guarda de fuera de alcance (dosis y tratamiento)', () => {
   for (const q of [...CON_EVIDENCIA, '¿Cuántas lecturas debo registrar por día?', '¿Cuánto tiempo debo esperar para leer el comparador?', '¿Qué reactivo se usa en el frasco de muestra?', '¿Cómo registro una medición?', ...SIN_EVIDENCIA]) {
     test(`no bloquea: ${q}`, () => assert.equal(pideDosisOTratamiento(q), false));
   }
+});
+
+describe('límite sanitario en el contenido documental', () => {
+  test('detecta fórmulas e instrucciones por contexto, incluidos saltos de línea', () => {
+    for (const texto of [
+      'Registro de muestra: FÓRMULA de dosificación [MARCADOR].',
+      'Para el reservorio,\nincorpore el hipoclorito según [MARCADOR].',
+      'Dosificación indicada en la tabla: [MARCADOR] 0 mL.',
+      'Registro de muestra: dosis calculada = [MARCADOR].',
+      'Calcule la dosis con [MARCADOR].',
+      'Potabilice el agua siguiendo [MARCADOR].',
+    ]) {
+      assert.equal(contieneContenidoSanitarioRestringido(texto), true, texto);
+    }
+  });
+
+  test('permite mediciones, unidades de lectura y remisiones al protocolo validado', () => {
+    for (const texto of [
+      'Registre la lectura de cloro residual en miligramos por litro.',
+      'Registre el valor observado de 0,0 mg/L de cloro residual.',
+      'Añada 0 mL de reactivo al frasco de muestra para leer el comparador DPD.',
+      'Compare el color de la muestra. Anote el resultado en la página 2.',
+      'Las indicaciones sobre dosificación deben provenir del protocolo validado de la JASS.',
+    ]) {
+      assert.equal(contieneContenidoSanitarioRestringido(texto), false, texto);
+    }
+  });
+
+  test('revisa la página original incluso cuando el fragmento ganador se recortaría antes de la instrucción', () => {
+    const manifiesto = manifiestoValido();
+    manifiesto.documentos[0].paginas[0].texto =
+      'Registro de muestra ' + 'documental '.repeat(35) + 'con fórmula de dosificación [MARCADOR].';
+    assert.deepEqual(new Indice(validarManifiesto(manifiesto)).buscar('registro muestra'), []);
+  });
+
+  test('rechaza una cita con instrucciones repartidas entre la referencia y el fragmento', () => {
+    const manifiesto = manifiestoValido();
+    manifiesto.documentos[0].titulo = 'Procedimiento para incorporar';
+    manifiesto.documentos[0].paginas[0].texto = 'Hipoclorito: nota de archivo para verificación documental.';
+    assert.deepEqual(new Indice(validarManifiesto(manifiesto)).buscar('verificacion documental'), []);
+  });
 });

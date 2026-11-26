@@ -140,6 +140,99 @@ describe('API — asistente con un corpus con instrucciones maliciosas', () => {
   });
 });
 
+describe('API — límite sanitario en las citas y aislamiento entre JASS', () => {
+  const pool = crearPool();
+  let m: Mundo;
+  before(async () => {
+    const documentos = {
+      version: '1.0',
+      estado: 'aprobado',
+      responsable: 'Prueba',
+    };
+    const corpus = validarManifiesto({
+      corpus: { nombre: 'Guías de prueba' },
+      documentos: [
+        {
+          ...documentos, id: 'limite', titulo: 'Apuntes',
+          paginas: [{ numero: 1, texto: 'Registro de muestra crítica: fórmula de dosificación [MARCADOR_PAGINA].' }],
+        },
+        {
+          ...documentos, id: 'referencia', titulo: 'Fórmula de dosificación [MARCADOR_REFERENCIA]',
+          paginas: [{ numero: 1, texto: 'Registro de muestra crítica en archivo. La lectura del comparador DPD se anota.' }],
+        },
+        {
+          ...documentos, id: 'lectura', titulo: 'Guía de lectura',
+          paginas: [{ numero: 1, texto: 'La lectura del comparador DPD se registra junto a la hora de toma.' }],
+        },
+      ],
+    });
+    m = await crearMundo(pool, undefined, corpus);
+  });
+  after(async () => {
+    await m.api.cerrar();
+    await pool.end();
+  });
+
+  test('una pregunta inocua sin evidencia segura se abstiene sin devolver fragmentos ni referencias', async () => {
+    const pregunta = 'registro muestra crítica';
+    for (const token of [m.token.operadorA, m.token.operadorB]) {
+      const respuesta = await preguntar(m, token, pregunta);
+      assert.equal(respuesta.estado, 200);
+      assert.equal(respuesta.cuerpo.estado, 'sin-evidencia');
+      assert.deepEqual(respuesta.cuerpo.citas, []);
+      assert.equal(respuesta.cuerpo.respuesta, undefined);
+      assert.doesNotMatch(respuesta.texto, /MARCADOR_|dosificaci[oó]n/);
+
+      const lista = await m.api.peticion('GET', '/v1/asistente/documentos', { token });
+      assert.equal(lista.estado, 200);
+      assert.deepEqual(lista.cuerpo.documentos.map(({ id }: { id: string }) => id), ['lectura']);
+      assert.doesNotMatch(lista.texto, /MARCADOR_|dosificaci[oó]n/);
+    }
+  });
+
+  test('ambas JASS conservan la evidencia permitida y cada consulta se audita en su propia JASS', async () => {
+    const actores = [
+      { token: m.token.operadorA, cuenta: m.esc.operadorA, jassId: m.esc.jassA, otra: m.esc.operadorB },
+      { token: m.token.operadorB, cuenta: m.esc.operadorB, jassId: m.esc.jassB, otra: m.esc.operadorA },
+    ];
+    for (const { token, cuenta, jassId, otra } of actores) {
+      const respuesta = await preguntar(m, token, 'lectura comparador DPD');
+      assert.equal(respuesta.estado, 200);
+      assert.equal(respuesta.cuerpo.estado, 'respondida');
+      assert.equal(respuesta.cuerpo.citas.length, 1);
+      assert.equal(respuesta.cuerpo.citas[0].documentoId, 'lectura');
+      assert.ok(respuesta.cuerpo.respuesta.includes(respuesta.cuerpo.citas[0].fragmento));
+      assert.doesNotMatch(respuesta.texto, /MARCADOR_/);
+
+      const consultaAjena = await preguntar(m, token, 'identidad de ' + otra.correo);
+      assert.equal(consultaAjena.estado, 200);
+      assert.equal(consultaAjena.cuerpo.estado, 'sin-evidencia');
+      assert.ok(!consultaAjena.texto.includes(otra.correo) && !consultaAjena.texto.includes(otra.usuarioId));
+
+      const { rows } = await pool.query(
+        "SELECT jass_id, detalle FROM evento_auditoria WHERE actor_id = $1 AND accion = 'asistente.consulta'",
+        [cuenta.usuarioId],
+      );
+      assert.ok(rows.length >= 2);
+      assert.ok(rows.every((fila) => fila.jass_id === jassId));
+      assert.ok(rows.some((fila) => fila.detalle.estado === 'respondida' && fila.detalle.citas === 1));
+      assert.ok(!JSON.stringify(rows).includes(otra.correo));
+    }
+  });
+
+  test('asociados de ambas JASS y solicitudes anónimas no ven contenido ni referencias', async () => {
+    for (const token of [m.token.asociadoA1, m.token.asociadoB1, undefined]) {
+      const consulta = await preguntar(m, token, 'registro muestra crítica');
+      const lista = await m.api.peticion('GET', '/v1/asistente/documentos', { token });
+      for (const respuesta of [consulta, lista]) {
+        assert.equal(respuesta.estado, token ? 403 : 401);
+        if (token) assert.equal(respuesta.texto, CUERPO_403);
+        assert.doesNotMatch(respuesta.texto, /MARCADOR_|dosificaci[oó]n/);
+      }
+    }
+  });
+});
+
 describe('API — arranque con un corpus inválido (proceso real)', () => {
   const dist = fileURLToPath(new URL('../../api/main.js', import.meta.url));
   const arrancar = (dir: string) =>

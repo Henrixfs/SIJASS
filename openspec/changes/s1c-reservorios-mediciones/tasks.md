@@ -31,7 +31,7 @@ Las rutas son relativas a `tecnologia/siJASS-clean-architecture/` salvo que se i
 
 ## 7. Integración final
 
-- [ ] 7.1 `openspec validate s1c-reservorios-mediciones --strict` con código 0.
+- [x] 7.1 `openspec validate s1c-reservorios-mediciones --strict` con código 0; verificado en checkout del head `2949a1b` antes de integrar.
 - [x] 7.2 En una copia limpia del commit final: `npm ci`, lint, build, `npm test`, `npm run test:integration`, interfaz y E2E.
 - [x] 7.3 Subir la rama, abrir el PR contra `feat/s1b-acceso-cuotas-pagos` y anotar la URL del CI con todos los jobs en verde.
 

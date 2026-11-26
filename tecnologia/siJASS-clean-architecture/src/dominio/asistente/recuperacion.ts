@@ -3,6 +3,7 @@
  * sin red, sin modelo y sin aleatoriedad. Prefiere abstenerse a citar algo no relacionado.
  */
 import type { Corpus } from './corpus.js';
+import { contieneContenidoSanitarioRestringido, normalizar, referenciaSanitariaPermitida } from './guarda.js';
 
 /** Máximo de citas por respuesta. */
 export const MAX_CITAS = 3;
@@ -18,16 +19,6 @@ const PALABRAS_VACIAS = new Set(
     'esta este esto estos estas ese esa eso tiene tienen desde hasta cada todo toda todos todas ser son fue han les sus mis nos mismo misma parte ' +
     'sistema favor quiero necesito saber dime explica explicame dame').split(' '),
 );
-
-/** Minúsculas, sin acentos y con todo lo que no es letra o dígito convertido en espacio. */
-export function normalizar(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9ñ]+/g, ' ')
-    .trim();
-}
 
 /** Términos distintos y relevantes de un texto: 3 o más caracteres y fuera de las palabras vacías. */
 export function terminos(texto: string): string[] {
@@ -60,7 +51,10 @@ export class Indice {
 
   constructor(corpus: Corpus) {
     for (const d of corpus.documentos) {
+      if (!referenciaSanitariaPermitida(d)) continue;
       for (const p of d.paginas) {
+        // Se revisa la página completa antes de que una extracción o un recorte pierda el contexto.
+        if (contieneContenidoSanitarioRestringido(p.texto)) continue;
         const frecuencias = new Map<string, number>();
         for (const t of normalizar(p.texto).split(' ')) {
           if (t.length < 3 || PALABRAS_VACIAS.has(t)) continue;
@@ -95,13 +89,15 @@ export class Indice {
     }
     candidatas.sort((a, b) => b.puntuacion - a.puntuacion || (a.pagina.documentoId < b.pagina.documentoId ? -1 : a.pagina.documentoId > b.pagina.documentoId ? 1 : a.pagina.numero - b.pagina.numero));
 
-    return candidatas.slice(0, MAX_CITAS).map(({ pagina, coincidentes }) => ({
-      documentoId: pagina.documentoId,
-      documento: pagina.documento,
-      version: pagina.version,
-      pagina: pagina.numero,
-      fragmento: mejorFragmento(pagina.texto, coincidentes),
-    }));
+    const citas: Cita[] = [];
+    for (const { pagina, coincidentes } of candidatas) {
+      const { documentoId, documento, version } = pagina;
+      const fragmento = mejorFragmento(pagina.texto, coincidentes);
+      if (contieneContenidoSanitarioRestringido(`${documentoId} ${documento} ${version} ${fragmento}`)) continue;
+      citas.push({ documentoId, documento, version, pagina: pagina.numero, fragmento });
+      if (citas.length === MAX_CITAS) break;
+    }
+    return citas;
   }
 }
 

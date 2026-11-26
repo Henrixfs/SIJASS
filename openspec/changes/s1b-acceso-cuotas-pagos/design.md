@@ -33,6 +33,14 @@ Estado observado al 2026-11-19 en `tecnologia/siJASS-clean-architecture/` (rama 
 
 **D3 — Autorización en cada solicitud.** Un guardia lee el token, verifica firma y vigencia, carga de PostgreSQL la membresía activa del usuario y construye el `ContextoActor { usuarioId, jassId, perfil, rol, asociadoId? }`. Cada ruta declara el perfil y los roles permitidos con un decorador; el guardia compara. Toda consulta de repositorio recibe `jassId` del contexto. Un recurso inexistente y uno de otra JASS devuelven el mismo `403` sin cuerpo informativo (RF01). Un filtro global audita cada `403` (`acceso.denegado`) fuera de la transacción de negocio, con actor, método, ruta con identificadores y motivo, nunca el cuerpo ni los encabezados.
 
+**D3a — Decisión de autenticación serializada por cuenta.** La lectura inicial por correo solo obtiene la identidad y el hash para verificar `scrypt` fuera de la transacción crítica. Después, una unidad de trabajo `READ COMMITTED` vuelve a leer la fila de usuario con `SELECT ... FOR UPDATE` por identificador y toma `ahora` después de adquirir el bloqueo. Esa fila es el punto de orden común a todos los inicios de la cuenta, incluso desde procesos distintos. Bajo el mismo bloqueo se revalidan existencia, estado, hash usado en la verificación y bloqueo vigente; un bloqueo vigente prevalece incluso si cambió el hash, devuelve el resultado de bloqueo y se audita sin sesión ni reinicio. Sin bloqueo vigente, si el hash cambió, se rechaza de manera genérica sin usar la verificación obsoleta; un intento posterior puede verificar el hash nuevo.
+
+En la misma transacción corta, si el bloqueo venció se comienza un conteo nuevo; una contraseña incorrecta incrementa el contador y el quinto fallo fija 15 minutos desde la decisión. Los fallos decididos durante bloqueo no lo extienden. Una contraseña correcta, solo con cuenta y membresía activas y sin bloqueo vigente, reinicia contador, crea sesión y registra auditoría conjuntamente. La respuesta y los tokens se entregan solo después del commit; un fallo de persistencia revierte los tres efectos. El caso de cuenta desconocida conserva verificación ficticia y error genérico. El adaptador en memoria implementa el mismo contrato transaccional usando su unidad de trabajo serializada, sin usar un mutex local como garantía en PostgreSQL.
+
+Alternativas: releer sin bloqueo deja una ventana entre lectura y escritura; un `UPDATE` condicional puede ser correcto si abarca todos los estados, pero complica distinguir resultados y mantener auditoría y sesión coherentes; un bloqueo durante `scrypt` aumentaría la contención y facilitaría agotar conexiones. El bloqueo por fila posterior a `scrypt` mantiene la decisión transaccional corta. Se debe mantener un orden de adquisición de bloqueos coherente con otros flujos de acceso, medir contención y tratar los errores de base sin emitir tokens. La lectura de membresía permanece en el contrato existente; cualquier cambio de semántica sobre desactivación concurrente requiere especificación y prueba adicional.
+
+La prueba de regresión cubre el quinto fallo confirmado antes de completar el inicio correcto; también se verificaron dos procesos independientes y cambios concurrentes de hash y estado. Quedan por medir contención y comportamiento bajo carga real. Los relojes de las instancias deben estar sincronizados; usar el reloj inyectado al adquirir el bloqueo mantiene la prueba controlable y evita usar el instante capturado antes de esperar.
+
 **D4 — Esquema (migración `0002`).**
 - `usuario(id, correo único en minúsculas, hash_contrasena, estado, intentos_fallidos, bloqueado_hasta, creado_en)`.
 - `asociado(id, jass_id, nombre, documento, estado, creado_en)` con `UNIQUE (id, jass_id)` y `UNIQUE (jass_id, documento)`.
@@ -59,10 +67,10 @@ Estado observado al 2026-11-19 en `tecnologia/siJASS-clean-architecture/` (rama 
 |---|---|---|
 | `POST /auth/login`, `/auth/refresh`, `/auth/logout` | público / refresh | respuesta uniforme de credenciales inválidas; `429` por bloqueo |
 | `GET /yo` | autenticado | perfil, rol y nombre; nunca JASS ni tokens |
-| `GET/POST /asociados`, `POST /asociados/:id/baja`, `POST /asociados/:id/acceso` | personal (lectura), `tesorero`/`consejo` (escritura) | `acceso` crea usuario + membresía de asociado |
-| `GET /asociados/:id/estado-de-cuenta` | personal | `403` si no es de la JASS |
+| `GET/POST /asociados`, `POST /asociados/:id/baja`, `POST /asociados/:id/acceso` | `tesorero`/`consejo` | `acceso` crea usuario + membresía de asociado; el listado contiene saldo financiero |
+| `GET /asociados/:id/estado-de-cuenta` | `tesorero`/`consejo` | `403` si no es de la JASS |
 | `POST /cuotas/generar` | `tesorero`/`consejo` | `{ periodo, importeCentimos }` |
-| `POST /pagos` (`Idempotency-Key`), `GET /pagos/:id`, `POST /pagos/:id/reversa` | `tesorero`/`consejo`; lectura personal | códigos del spec |
+| `POST /pagos` (`Idempotency-Key`), `GET /pagos/:id`, `POST /pagos/:id/reversa` | `tesorero`/`consejo` | el operador no lee ni modifica pagos; códigos del spec |
 | `GET /portal/saldo`, `/portal/cuotas`, `/portal/pagos` | `asociado` | sin identificadores en la ruta |
 
 Errores con cuerpo `{ codigo, mensaje }` estable. El documento OpenAPI (ADR-011) no entra en este cambio: la tabla anterior es el contrato provisional y la prueba HTTP de D11 lo fija; el contrato OpenAPI se produce en `s1e`.
@@ -85,6 +93,7 @@ Errores con cuerpo `{ codigo, mensaje }` estable. El documento OpenAPI (ADR-011)
 - **Hash `scrypt` con N=2^15:** consume ~32 MB y ~50 ms por intento; adecuado para el MVP, pero limita el rendimiento de inicio de sesión bajo carga (se medirá en el paso 5 con k6; el token de acceso evita rehacer el hash en cada solicitud).
 - **Membresía única por cuenta:** impide a una persona operar en dos JASS; se registra como decisión abierta del roadmap.
 - **Contraseña inicial fijada por el personal:** el asociado debería cambiarla; el cambio de contraseña no entra en este cambio y queda como limitación documentada.
+- **Cierre sin conexión:** borrar el refresco local no confirma su revocación remota; el JWT de acceso ya emitido puede seguir vigente hasta su expiración. El refresco en `sessionStorage` puede quedar expuesto a XSS. El comportamiento de cierre, CSP y alternativas de almacenamiento requieren revisión posterior; esta corrección no modifica frontend ni autenticación.
 - **`403` en lugar de `404`:** evita enumerar recursos, pero dificulta depurar; se compensa con la bitácora de auditoría.
 - **Reloj en UTC-5:** correcto para el Perú; si una JASS operara fuera de esa zona, el periodo exigible diferiría por horas, sin efecto en el saldo de periodos cerrados.
 

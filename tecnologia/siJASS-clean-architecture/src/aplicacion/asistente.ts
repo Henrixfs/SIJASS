@@ -5,7 +5,7 @@
  */
 import { exigirPermiso, type ContextoAcceso } from '../dominio/acceso.js';
 import type { Corpus, EstadoCorpus } from '../dominio/asistente/corpus.js';
-import { ADVERTENCIA_EJEMPLO, MENSAJE_FUERA_DE_ALCANCE, MENSAJE_SIN_EVIDENCIA, pideDosisOTratamiento } from '../dominio/asistente/guarda.js';
+import { ADVERTENCIA_EJEMPLO, contieneContenidoSanitarioRestringido, MENSAJE_FUERA_DE_ALCANCE, MENSAJE_SIN_EVIDENCIA, pideDosisOTratamiento, referenciaSanitariaPermitida } from '../dominio/asistente/guarda.js';
 import { componerRespuesta, Indice, MAX_PREGUNTA, type Cita } from '../dominio/asistente/recuperacion.js';
 import { ErrorDatoInvalido } from '../dominio/errores.js';
 import { auditar, type DependenciasAcceso } from './acceso/comun.js';
@@ -52,33 +52,41 @@ export class ConsultarAsistente {
     if (typeof pregunta !== 'string' || pregunta.trim().length === 0 || pregunta.length > MAX_PREGUNTA) {
       throw new ErrorDatoInvalido('pregunta-invalida', `texto de 1 a ${MAX_PREGUNTA} caracteres`);
     }
-    const advertencia = this.corpus.estado === 'ejemplo' ? ` ${ADVERTENCIA_EJEMPLO}` : '';
-    let respuesta: RespuestaAsistente;
-
-    if (pideDosisOTratamiento(pregunta)) {
-      // Antes de recuperar: este pedido nunca consulta el corpus.
-      respuesta = { estado: 'fuera-de-alcance', corpus: this.corpus.estado, mensaje: MENSAJE_FUERA_DE_ALCANCE + advertencia, citas: [] };
-    } else {
-      const citas = this.indice.buscar(pregunta);
-      if (citas.length === 0) {
-        respuesta = { estado: 'sin-evidencia', corpus: this.corpus.estado, mensaje: MENSAJE_SIN_EVIDENCIA + advertencia, citas: [] };
-      } else {
-        const redactada = await this.redactor.redactar(pregunta, citas);
-        respuesta = {
-          estado: 'respondida',
-          corpus: this.corpus.estado,
-          mensaje: this.corpus.estado === 'ejemplo' ? ADVERTENCIA_EJEMPLO : 'Respuesta basada en los documentos citados.',
-          respuesta: redactada ?? componerRespuesta(citas),
-          citas,
-        };
-      }
-    }
+    const respuesta = await this.responder(pregunta);
 
     // La pregunta y la respuesta no se almacenan: el evento guarda solo el estado y los conteos.
     await this.d.unidadDeTrabajo.ejecutar((r) =>
       auditar(r, actor, { accion: 'asistente.consulta', recurso: 'asistente', detalle: { estado: respuesta.estado, citas: respuesta.citas.length, corpus: respuesta.corpus } }, this.d.reloj.ahora()),
     );
     return respuesta;
+  }
+
+  private async responder(pregunta: string): Promise<RespuestaAsistente> {
+    const corpus = this.corpus.estado;
+    const advertencia = corpus === 'ejemplo' ? ` ${ADVERTENCIA_EJEMPLO}` : '';
+    if (pideDosisOTratamiento(pregunta)) {
+      return { estado: 'fuera-de-alcance', corpus, mensaje: MENSAJE_FUERA_DE_ALCANCE + advertencia, citas: [] };
+    }
+
+    const citas = this.indice.buscar(pregunta);
+    const extractiva = componerRespuesta(citas);
+    if (citas.length === 0 || contieneContenidoSanitarioRestringido(extractiva)) {
+      return { estado: 'sin-evidencia', corpus, mensaje: MENSAJE_SIN_EVIDENCIA + advertencia, citas: [] };
+    }
+
+    const redactada = await this.redactor.redactar(pregunta, citas);
+    const respuesta = redactada
+      && !contieneContenidoSanitarioRestringido(redactada)
+      && redactada.split('\n').every((fragmento) => citas.some((cita) => cita.fragmento === fragmento))
+      ? redactada
+      : extractiva;
+    return {
+      estado: 'respondida',
+      corpus,
+      mensaje: corpus === 'ejemplo' ? ADVERTENCIA_EJEMPLO : 'Respuesta basada en los documentos citados.',
+      respuesta,
+      citas,
+    };
   }
 }
 
@@ -97,8 +105,10 @@ export class ListarDocumentosAsistente {
     exigirPermiso(actor, 'asistente.consultar');
     return {
       corpus: this.corpus.estado,
-      nombre: this.corpus.nombre,
-      documentos: this.corpus.documentos.map((d) => ({ id: d.id, titulo: d.titulo, version: d.version, estado: d.estado, paginas: d.paginas.length })),
+      nombre: contieneContenidoSanitarioRestringido(this.corpus.nombre) ? 'Corpus documental' : this.corpus.nombre,
+      documentos: this.corpus.documentos
+        .filter((d) => referenciaSanitariaPermitida(d) && d.paginas.some((p) => !contieneContenidoSanitarioRestringido(p.texto)))
+        .map((d) => ({ id: d.id, titulo: d.titulo, version: d.version, estado: d.estado, paginas: d.paginas.length })),
     };
   }
 }
