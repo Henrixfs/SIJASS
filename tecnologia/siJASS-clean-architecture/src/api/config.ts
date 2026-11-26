@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 /**
  * Configuración de la API leída del entorno (design.md D2). La API **no arranca** sin un
  * `JWT_SECRET` de al menos 32 bytes ni sin `DATABASE_URL`: no hay valores por defecto.
@@ -12,7 +14,14 @@ export interface ConfiguracionApi {
   readonly directorioWeb: string | undefined;
   /** Directorio con `manifiesto.json` del corpus del asistente; sin él se usa el corpus de EJEMPLO. */
   readonly corpusDir: string | undefined;
+  /** Archivo OpenAPI que se publica en `/docs`; sin él (o si no existe) no hay documentación interactiva. */
+  readonly archivoOpenapi: string | undefined;
+  /** Detrás de un proxy de confianza (Caddy): el origen de la solicitud sale de `X-Forwarded-For`. */
+  readonly confiarEnProxy: boolean;
 }
+
+/** En el repositorio el contrato está en `docs/api/openapi.yaml` (cuatro niveles sobre `dist/api`). */
+const ARCHIVO_OPENAPI_LOCAL = fileURLToPath(new URL('../../../../docs/api/openapi.yaml', import.meta.url));
 
 export function leerConfiguracion(env: NodeJS.ProcessEnv = process.env): ConfiguracionApi {
   const jwtSecret = env.JWT_SECRET ?? '';
@@ -29,5 +38,7 @@ export function leerConfiguracion(env: NodeJS.ProcessEnv = process.env): Configu
     .filter((o) => o !== '');
   const directorioWeb = (env.WEB_DIR ?? '').trim() || undefined;
   const corpusDir = (env.ASISTENTE_CORPUS_DIR ?? '').trim() || undefined;
-  return { jwtSecret, databaseUrl, puerto, origenesPermitidos, directorioWeb, corpusDir };
+  const confiarEnProxy = (env.TRUST_PROXY ?? '').trim() === '1';
+  const archivoOpenapi = (env.OPENAPI_FILE ?? '').trim() || ARCHIVO_OPENAPI_LOCAL;
+  return { jwtSecret, databaseUrl, puerto, origenesPermitidos, directorioWeb, corpusDir, archivoOpenapi, confiarEnProxy };
 }

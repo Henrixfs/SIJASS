@@ -4,6 +4,16 @@ export interface ResumenAsociado {
   documento: string;
   estado: 'activo' | 'baja';
   saldoCentimos: number;
+  /** Si tiene cuenta de acceso al portal. */
+  acceso: EstadoAcceso;
+}
+
+export type EstadoAcceso = 'sin-acceso' | 'activo' | 'inactivo';
+
+/** Respuesta que entrega una clave temporal: solo se muestra una vez. */
+export interface AccesoEntregado {
+  usuarioId: string;
+  claveTemporal: string;
 }
 
 export interface VistaCuota {
@@ -25,8 +35,14 @@ export interface VistaPago {
   estado: 'vigente' | 'revertido';
 }
 
+export type PagoConReversa = Omit<VistaPago, 'periodo'> & {
+  reversa: { motivo: string; creadaEn: string } | null;
+};
+
 export interface EstadoDeCuenta {
   asociado: { id: string; nombre: string; documento: string; estado: 'activo' | 'baja' };
+  /** Solo en la consulta del personal. */
+  acceso?: EstadoAcceso;
   saldoCentimos: number;
   periodoActual: string;
   cuotas: VistaCuota[];

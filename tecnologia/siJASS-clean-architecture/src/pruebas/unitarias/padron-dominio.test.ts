@@ -1,5 +1,5 @@
 /** Reglas puras de cuotas, pagos y saldo (tarea 2.2, spec `cuotas-y-pagos`). */
-import { describe, test } from 'node:test';
+import { describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { ErrorDatoInvalido } from '../../dominio/errores.js';
 import {

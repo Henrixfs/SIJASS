@@ -6,7 +6,7 @@ import { crearPool } from './entorno.js';
 
 const pool = crearPool();
 const entorno = crearEntorno(new UnidadDeTrabajoAccesoPostgres(pool));
-const correo = process.argv[2];
+const documento = process.argv[2];
 const correcta = process.argv[3] === 'correcta';
 const original = entorno.dependencias.contrasenas;
 const contrasenas = {
@@ -21,7 +21,7 @@ const contrasenas = {
 };
 try {
   const caso = new AutenticarUsuario({ ...entorno.dependencias, contrasenas });
-  await caso.ejecutar({ correo, contrasena: correcta ? CLAVE : 'incorrecta-123' });
+  await caso.ejecutar({ documento, contrasena: correcta ? CLAVE : 'incorrecta-123' });
   process.send?.('exito');
 } catch (error) {
   process.send?.(error instanceof Error ? error.name : 'error-desconocido');

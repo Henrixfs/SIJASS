@@ -1,31 +1,48 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ClienteApi, Sesion } from './api/cliente';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import type { ClienteApi, Sesion, SesionBasica } from './api/cliente';
 import { Contexto } from './contexto';
 import { destinoPara, RUTA_INGRESO } from './lib/rutas';
+import { CambiarClave } from './paginas/CambiarClave';
 import { Ingreso } from './paginas/Ingreso';
-import { Personal } from './paginas/Personal';
-import { Portal } from './paginas/Portal';
+import { Carga } from './ui';
+
+const Personal = lazy(() => import('./paginas/Personal').then(modulo => ({ default: modulo.Personal })));
+const Portal = lazy(() => import('./paginas/Portal').then(modulo => ({ default: modulo.Portal })));
+const Plataforma = lazy(() => import('./paginas/Plataforma').then(modulo => ({ default: modulo.Plataforma })));
+
+/** Combina lo que llega en un inicio o una renovación con lo que ya se sabe de la persona. */
+function fusionar(actual: Sesion | null, nueva: SesionBasica | Sesion): Sesion {
+  if ('nombre' in nueva) return nueva;
+  if (actual && actual.perfil === nueva.perfil && actual.rol === nueva.rol) return { ...actual, debeCambiarContrasena: nueva.debeCambiarContrasena };
+  return { ...nueva, nombre: '', documento: null, jass: null };
+}
 
 /**
- * Raíz de la interfaz: restaura la sesión al cargar, aplica la guardia de pantallas por
- * perfil y elige la pantalla. No hay biblioteca de rutas: basta `history` y tres pantallas.
+ * Restaura la sesión y separa el portal de familias de las rutas del personal.
  */
 export function App({ api }: { api: ClienteApi }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [listo, setListo] = useState(false);
+  const [expirada, setExpirada] = useState(false);
   const [ruta, setRuta] = useState(() => window.location.pathname);
 
   const navegar = useCallback((destino: string) => {
-    if (window.location.pathname !== destino) window.history.pushState(null, '', destino);
+    if (window.location.pathname !== destino) {
+      window.history.pushState({ retorno: window.location.pathname }, '', destino);
+    }
     setRuta(destino);
   }, []);
 
   useEffect(() => {
     let vigente = true;
     api.configurar({
-      alIniciarSesion: setSesion,
+      alIniciarSesion: (nueva) => {
+        setExpirada(false);
+        setSesion((actual) => fusionar(actual, nueva));
+      },
       onSesionExpirada: () => {
         setSesion(null);
+        setExpirada(true);
         navegar(RUTA_INGRESO);
       },
     });
@@ -43,9 +60,10 @@ export function App({ api }: { api: ClienteApi }) {
   }, [api, navegar]);
 
   const salir = useCallback(async () => {
-    await api.cerrarSesion();
+    const cierre = api.cerrarSesion();
     setSesion(null);
     navegar(RUTA_INGRESO);
+    await cierre;
   }, [api, navegar]);
 
   // Sin sesión solo existe el ingreso; con sesión, cada perfil ve únicamente sus pantallas.
@@ -56,11 +74,15 @@ export function App({ api }: { api: ClienteApi }) {
   }, [destino]);
 
   const valor = useMemo(() => ({ api, sesion, navegar, salir }), [api, sesion, navegar, salir]);
-  if (!listo || destino === null) return <p className="suave centrado">Cargando…</p>;
+  if (!listo || destino === null) return <main><Carga /></main>;
 
   return (
     <Contexto.Provider value={valor}>
-      {sesion === null ? <Ingreso /> : sesion.perfil === 'personal' ? <Personal ruta={destino} /> : <Portal />}
+      {sesion === null ? <Ingreso expirada={expirada} /> : sesion.debeCambiarContrasena ? <CambiarClave obligatorio /> : (
+        <Suspense fallback={<main><Carga /></main>}>
+          {sesion.perfil === 'personal' ? <Personal ruta={destino} /> : sesion.perfil === 'plataforma' ? <Plataforma /> : <Portal ruta={destino} />}
+        </Suspense>
+      )}
     </Contexto.Provider>
   );
 }

@@ -1,0 +1,1489 @@
+{
+  "info": {
+    "name": "API de SIJASS (0.1.0-prototipo)",
+    "description": "Generada desde docs/api/openapi.yaml con `node scripts/generar-postman.mjs`. No la edite a mano: regenérela.\n\nEjecute primero «POST /v1/auth/login» (guarda `token` y `refresco`). Cambie `documento`, `clave` y `tipo` en las variables de la colección para entrar con otra cuenta.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "documento",
+      "value": "10000002"
+    },
+    {
+      "key": "clave",
+      "value": ""
+    },
+    {
+      "key": "tipo",
+      "value": "administrador"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "refresco",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Sistema",
+      "item": [
+        {
+          "name": "GET /v1/salud",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/salud",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "salud"
+              ],
+              "variable": []
+            },
+            "description": "Sonda de salud (pública)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 503)', () => pm.expect([200, 503]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Acceso",
+      "item": [
+        {
+          "name": "POST /v1/auth/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"{{documento}}\",\n  \"contrasena\": \"{{clave}}\",\n  \"tipo\": \"{{tipo}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ],
+              "variable": []
+            },
+            "description": "Inicio de sesión con DNI y clave"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 400, 401, 403, 409, 422, 429)', () => pm.expect([200, 400, 401, 403, 409, 422, 429]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "if (pm.response.code === 200) { const s = pm.response.json(); pm.collectionVariables.set('token', s.tokenAcceso); pm.collectionVariables.set('refresco', s.tokenRefresco); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tokenRefresco\": \"{{refresco}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "refresh"
+              ],
+              "variable": []
+            },
+            "description": "Renueva la sesión; el token de refresco rota"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 400, 401)', () => pm.expect([200, 400, 401]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "if (pm.response.code === 200) { const s = pm.response.json(); pm.collectionVariables.set('token', s.tokenAcceso); pm.collectionVariables.set('refresco', s.tokenRefresco); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tokenRefresco\": \"{{refresco}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "logout"
+              ],
+              "variable": []
+            },
+            "description": "Cierra la sesión (idempotente)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (204, 400)', () => pm.expect([204, 400]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/auth/cambiar-contrasena",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrasenaActual\": \"texto\",\n  \"contrasenaNueva\": \"xxxxxxxx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/cambiar-contrasena",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "cambiar-contrasena"
+              ],
+              "variable": []
+            },
+            "description": "Cambia la propia clave, cierra las sesiones anteriores y devuelve una sesión nueva"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 400, 401, 403, 422, 429)', () => pm.expect([200, 400, 401, 403, 422, 429]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/yo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/yo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "yo"
+              ],
+              "variable": []
+            },
+            "description": "Perfil, rol, nombre, DNI enmascarado y nombre de la JASS de quien consulta (sin identificadores internos)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Equipo de la JASS",
+      "item": [
+        {
+          "name": "GET /v1/equipo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/equipo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "equipo"
+              ],
+              "variable": []
+            },
+            "description": "Tesorería y Operador de la JASS, con el DNI enmascarado (solo consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/equipo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"texto\",\n  \"documento\": \"texto\",\n  \"rol\": \"tesorero\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/equipo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "equipo"
+              ],
+              "variable": []
+            },
+            "description": "Alta de Tesorería u Operador con clave temporal generada y cambio pendiente (solo consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (201, 401, 403, 409, 422)', () => pm.expect([201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/equipo/{usuarioId}/desactivar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/equipo/:usuarioId/desactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "equipo",
+                ":usuarioId",
+                "desactivar"
+              ],
+              "variable": [
+                {
+                  "key": "usuarioId",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Desactiva la cuenta y cierra sus sesiones (solo consejo; no a sí mismo ni a un consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (204, 401, 403, 409)', () => pm.expect([204, 401, 403, 409]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/equipo/{usuarioId}/restablecer-clave",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/equipo/:usuarioId/restablecer-clave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "equipo",
+                ":usuarioId",
+                "restablecer-clave"
+              ],
+              "variable": [
+                {
+                  "key": "usuarioId",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Restablece la clave de Tesorería u Operador con una clave temporal y cambio pendiente (solo consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409)', () => pm.expect([200, 401, 403, 409]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Plataforma",
+      "item": [
+        {
+          "name": "GET /v1/plataforma/jass",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/plataforma/jass",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "plataforma",
+                "jass"
+              ],
+              "variable": []
+            },
+            "description": "JASS con su estado y cantidad de cuentas activas, sin datos de negocio (solo plataforma)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/plataforma/jass",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"texto\",\n  \"ubicacion\": {},\n  \"consejo\": {\n    \"nombre\": \"texto\",\n    \"documento\": \"texto\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/plataforma/jass",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "plataforma",
+                "jass"
+              ],
+              "variable": []
+            },
+            "description": "Alta de una JASS con su primer Consejo y clave temporal con cambio pendiente (solo plataforma)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (201, 401, 403, 409, 422)', () => pm.expect([201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/plataforma/jass/{id}/suspender",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/plataforma/jass/:id/suspender",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "plataforma",
+                "jass",
+                ":id",
+                "suspender"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Suspende la JASS; sus cuentas no inician ni renuevan sesión y sus datos se conservan (solo plataforma)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (204, 401, 403, 422)', () => pm.expect([204, 401, 403, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/plataforma/jass/{id}/reactivar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/plataforma/jass/:id/reactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "plataforma",
+                "jass",
+                ":id",
+                "reactivar"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Reactiva una JASS suspendida (solo plataforma)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (204, 401, 403, 422)', () => pm.expect([204, 401, 403, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/plataforma/jass/{id}/consejo/restablecer-clave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuarioId\": \"00000000-0000-4000-8000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/plataforma/jass/:id/consejo/restablecer-clave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "plataforma",
+                "jass",
+                ":id",
+                "consejo",
+                "restablecer-clave"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Restablece la clave de un Consejo activo de la JASS con una clave temporal y cambio pendiente (solo plataforma)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 422)', () => pm.expect([200, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Padrón y pagos",
+      "item": [
+        {
+          "name": "GET /v1/asociados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/asociados",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asociados"
+              ],
+              "variable": []
+            },
+            "description": "Padrón de la JASS con el saldo de cada asociado (tesorero, consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/asociados",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"texto\",\n  \"documento\": \"texto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/asociados",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asociados"
+              ],
+              "variable": []
+            },
+            "description": "Alta de asociado (tesorero, consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (201, 401, 403, 409, 422)', () => pm.expect([201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/asociados/{id}/baja",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/asociados/:id/baja",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asociados",
+                ":id",
+                "baja"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Baja lógica (se conservan cuotas y pagos)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (204, 401, 403)', () => pm.expect([204, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/asociados/{id}/acceso",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/asociados/:id/acceso",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asociados",
+                ":id",
+                "acceso"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Crea la cuenta de acceso del asociado con su DNI del padrón y una clave temporal generada (tesorero, consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (201, 401, 403, 409, 422)', () => pm.expect([201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/asociados/{id}/acceso/restablecer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/asociados/:id/acceso/restablecer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asociados",
+                ":id",
+                "acceso",
+                "restablecer"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Restablece la clave del asociado con una clave temporal nueva y cierra sus sesiones (tesorero, consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409)', () => pm.expect([200, 401, 403, 409]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/asociados/{id}/estado-de-cuenta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/asociados/:id/estado-de-cuenta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asociados",
+                ":id",
+                "estado-de-cuenta"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Estado de cuenta de un asociado de la JASS"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/cuotas/generar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"periodo\": \"texto\",\n  \"importeCentimos\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/cuotas/generar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "cuotas",
+                "generar"
+              ],
+              "variable": []
+            },
+            "description": "Genera una cuota por asociado activo para un periodo (idempotente)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 422)', () => pm.expect([200, 401, 403, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/pagos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuotaId\": \"00000000-0000-4000-8000-000000000000\",\n  \"importeCentimos\": 1,\n  \"comprobante\": \"texto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/pagos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "pagos"
+              ],
+              "variable": []
+            },
+            "description": "Registra un pago en línea (tesorero, consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 201, 401, 403, 409, 422)', () => pm.expect([200, 201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/pagos/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/pagos/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "pagos",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Detalle de un pago con su reversa, si la hay"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/pagos/{id}/reversa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"texto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/pagos/:id/reversa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "pagos",
+                ":id",
+                "reversa"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Reversa compensatoria con motivo; el pago no se borra"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 422)', () => pm.expect([200, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Portal del asociado",
+      "item": [
+        {
+          "name": "GET /v1/portal/saldo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/portal/saldo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "portal",
+                "saldo"
+              ],
+              "variable": []
+            },
+            "description": "Saldo del propio asociado (sin identificadores en la ruta)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/portal/cuotas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/portal/cuotas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "portal",
+                "cuotas"
+              ],
+              "variable": []
+            },
+            "description": "Cuotas del propio asociado"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/portal/pagos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/portal/pagos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "portal",
+                "pagos"
+              ],
+              "variable": []
+            },
+            "description": "Pagos del propio asociado"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reservorios y mediciones",
+      "item": [
+        {
+          "name": "GET /v1/reservorios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reservorios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reservorios"
+              ],
+              "variable": []
+            },
+            "description": "Reservorios de la JASS (todo el personal)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/reservorios",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"texto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/reservorios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reservorios"
+              ],
+              "variable": []
+            },
+            "description": "Alta de reservorio (consejo)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (201, 401, 403, 409, 422)', () => pm.expect([201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/reservorios/{id}/mediciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reservorios/:id/mediciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reservorios",
+                ":id",
+                "mediciones"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Historial del reservorio, de la toma más reciente a la más antigua (máximo 200)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/mediciones/catalogo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/mediciones/catalogo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "mediciones",
+                "catalogo"
+              ],
+              "variable": []
+            },
+            "description": "Métodos de medición (catálogo provisional) y unidad\n\nDato de referencia igual para todos. Es el único `GET` de `/v1` con caché (`Cache-Control: private, max-age=300`, `ETag` y `304`; ADR-016); el resto responde `no-store`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/mediciones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservorioId\": \"00000000-0000-4000-8000-000000000000\",\n  \"metodo\": \"comparador-dpd\",\n  \"valor\": 0,\n  \"unidad\": \"texto\",\n  \"tomadaEn\": \"2026-11-25T08:00:00-05:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/mediciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "mediciones"
+              ],
+              "variable": []
+            },
+            "description": "Registra una medición manual (operador); la lectura no se estima ni se dictamina"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 201, 401, 403, 409, 422)', () => pm.expect([200, 201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Asistente",
+      "item": [
+        {
+          "name": "GET /v1/asistente/documentos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/asistente/documentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asistente",
+                "documentos"
+              ],
+              "variable": []
+            },
+            "description": "Documentos del corpus del asistente y su estado"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/asistente/consultas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pregunta\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/asistente/consultas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "asistente",
+                "consultas"
+              ],
+              "variable": []
+            },
+            "description": "Consulta documental con citas, abstención o fuera de alcance (no calcula dosis)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 422)', () => pm.expect([200, 401, 403, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

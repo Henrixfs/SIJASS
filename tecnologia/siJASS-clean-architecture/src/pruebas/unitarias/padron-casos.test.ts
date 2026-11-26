@@ -1,5 +1,5 @@
 /** Padrón, cuotas, pagos y portal sobre la memoria (tarea 2.3). */
-import { describe } from 'node:test';
+import { describe } from '../marco.js';
 import { AlmacenAccesoMemoria, UnidadDeTrabajoAccesoMemoria } from '../../infraestructura/memoria-acceso.js';
 import { suitePadron } from '../contrato/casos-padron.js';
 import { suiteAsistente } from '../contrato/casos-asistente.js';

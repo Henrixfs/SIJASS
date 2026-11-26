@@ -29,9 +29,11 @@ export interface Api {
   readonly app: INestApplication;
   readonly url: string;
   readonly entorno: Entorno;
+  /** Mensajes que la API escribió en su registro de errores (nunca debe haber secretos). */
+  readonly registros: readonly string[];
   peticion(metodo: string, ruta: string, opciones?: Peticion): Promise<Respuesta>;
   /** Inicia sesión por HTTP y devuelve los tokens. */
-  iniciarSesion(correo: string, contrasena?: string): Promise<{ tokenAcceso: string; tokenRefresco: string }>;
+  iniciarSesion(documento: string, contrasena?: string): Promise<{ tokenAcceso: string; tokenRefresco: string }>;
   cerrar(): Promise<void>;
 }
 
@@ -69,9 +71,10 @@ export async function iniciarApi(pool: pg.Pool, decorar?: DecoradorRepositoriosA
     app,
     url,
     entorno,
+    registros: errores,
     peticion,
-    async iniciarSesion(correo, contrasena = CLAVE) {
-      const r = await peticion('POST', '/v1/auth/login', { cuerpo: { correo, contrasena } });
+    async iniciarSesion(documento, contrasena = CLAVE) {
+      const r = await peticion('POST', '/v1/auth/login', { cuerpo: { documento, contrasena } });
       if (r.estado !== 200) throw new Error(`inicio de sesión fallido (${r.estado}): ${r.texto}`);
       return { tokenAcceso: r.cuerpo.tokenAcceso, tokenRefresco: r.cuerpo.tokenRefresco };
     },
@@ -93,15 +96,15 @@ export async function crearMundo(pool: pg.Pool, decorar?: DecoradorRepositoriosA
   const api = await iniciarApi(pool, decorar, corpus);
   const esc = await sembrarEscenario(api.entorno);
   const token = {
-    consejoA: (await api.iniciarSesion(esc.consejoA.correo)).tokenAcceso,
-    tesoreroA: (await api.iniciarSesion(esc.tesoreroA.correo)).tokenAcceso,
-    operadorA: (await api.iniciarSesion(esc.operadorA.correo)).tokenAcceso,
-    tesoreroB: (await api.iniciarSesion(esc.tesoreroB.correo)).tokenAcceso,
-    consejoB: (await api.iniciarSesion(esc.consejoB.correo)).tokenAcceso,
-    operadorB: (await api.iniciarSesion(esc.operadorB.correo)).tokenAcceso,
-    asociadoA1: (await api.iniciarSesion(esc.asociadoA1.cuenta.correo)).tokenAcceso,
-    asociadoA2: (await api.iniciarSesion(esc.asociadoA2.cuenta.correo)).tokenAcceso,
-    asociadoB1: (await api.iniciarSesion(esc.asociadoB1.cuenta.correo)).tokenAcceso,
+    consejoA: (await api.iniciarSesion(esc.consejoA.documento)).tokenAcceso,
+    tesoreroA: (await api.iniciarSesion(esc.tesoreroA.documento)).tokenAcceso,
+    operadorA: (await api.iniciarSesion(esc.operadorA.documento)).tokenAcceso,
+    tesoreroB: (await api.iniciarSesion(esc.tesoreroB.documento)).tokenAcceso,
+    consejoB: (await api.iniciarSesion(esc.consejoB.documento)).tokenAcceso,
+    operadorB: (await api.iniciarSesion(esc.operadorB.documento)).tokenAcceso,
+    asociadoA1: (await api.iniciarSesion(esc.asociadoA1.cuenta.documento)).tokenAcceso,
+    asociadoA2: (await api.iniciarSesion(esc.asociadoA2.cuenta.documento)).tokenAcceso,
+    asociadoB1: (await api.iniciarSesion(esc.asociadoB1.cuenta.documento)).tokenAcceso,
   };
   return { api, esc, token };
 }

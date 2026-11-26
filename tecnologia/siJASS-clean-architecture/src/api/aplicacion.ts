@@ -7,6 +7,7 @@ import { join, sep } from 'node:path';
 import type { Casos } from '../aplicacion/casos.js';
 import { CASOS } from './comun.js';
 import { CONTROLADORES } from './controladores.js';
+import { montarDocumentacion } from './documentacion.js';
 import { FiltroErrores, GuardiaAcceso } from './guardia-y-filtro.js';
 
 @Module({})
@@ -21,7 +22,11 @@ export interface OpcionesAplicacion {
   readonly origenesPermitidos?: readonly string[];
   /** Carpeta de la interfaz construida; si existe, la API la sirve con respaldo a `index.html`. */
   readonly directorioWeb?: string;
+  /** Contrato OpenAPI; si existe, la API publica Swagger UI en `/docs`. */
+  readonly archivoOpenapi?: string;
   readonly registrar?: (mensaje: string) => void;
+  /** Con `true` Express usa `X-Forwarded-For` (un salto) para el origen; solo detrás de un proxy propio. */
+  readonly confiarEnProxy?: boolean;
 }
 
 /** Cabeceras seguras en toda respuesta y `Cache-Control: no-store` en la API. */
@@ -40,6 +45,7 @@ function cabecerasSeguras(solicitud: Request, respuesta: Response, siguiente: Ne
 export async function crearAplicacion(opciones: OpcionesAplicacion): Promise<INestApplication> {
   const app = await NestFactory.create<NestExpressApplication>(ModuloApi.con(opciones.casos), { logger: ['error', 'warn'], bodyParser: true });
   app.disable('x-powered-by');
+  if (opciones.confiarEnProxy === true) app.set('trust proxy', 1);
   app.useBodyParser('json', { limit: '100kb' });
   app.use(cabecerasSeguras);
   app.useGlobalGuards(new GuardiaAcceso(opciones.casos));
@@ -47,6 +53,8 @@ export async function crearAplicacion(opciones: OpcionesAplicacion): Promise<INe
   if (opciones.origenesPermitidos && opciones.origenesPermitidos.length > 0) {
     app.enableCors({ origin: [...opciones.origenesPermitidos], methods: ['GET', 'POST'], allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'] });
   }
+  // Antes del respaldo de la SPA: `/docs` no es una ruta de la interfaz.
+  montarDocumentacion(app, opciones.archivoOpenapi);
   if (opciones.directorioWeb && existsSync(join(opciones.directorioWeb, 'index.html'))) {
     const raiz = opciones.directorioWeb;
     // Caché estática (s1e, D2): los archivos de /assets/ llevan hash en el nombre, así que son
@@ -64,7 +72,7 @@ export async function crearAplicacion(opciones: OpcionesAplicacion): Promise<INe
     app.useStaticAssets(raiz, opcionesEstaticas as Parameters<typeof app.useStaticAssets>[1]);
     // Respaldo de la SPA: un GET que no sea API ni /assets/ devuelve index.html (un /assets/ inexistente es 404).
     app.use((solicitud: Request, respuesta: Response, siguiente: NextFunction) => {
-      if (solicitud.method !== 'GET' || solicitud.path.startsWith('/v1/') || solicitud.path.startsWith('/assets/')) return siguiente();
+      if (solicitud.method !== 'GET' || solicitud.path.startsWith('/v1/') || solicitud.path.startsWith('/assets/') || solicitud.path.startsWith('/docs')) return siguiente();
       respuesta.setHeader('Cache-Control', 'no-cache');
       respuesta.sendFile(join(raiz, 'index.html'));
     });

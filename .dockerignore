@@ -10,6 +10,7 @@
 **/.env.*
 !**/.env.example
 docs
+!docs/api/openapi.yaml
 openspec
 scripts
 tecnologia/e2e

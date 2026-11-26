@@ -6,7 +6,8 @@
 
 ```text
 tecnologia/siJASS-clean-architecture/
-├── package.json                      # ESM; scripts build, lint, test, test:integration, api, crear-jass, sembrar-demo, migrar y migrar:revertir
+├── package.json                      # ESM; scripts build, lint, test (Jest), test:cobertura, test:nativo, test:integration, api, crear-jass, crear-plataforma, sembrar-demo, migrar y migrar:revertir
+├── jest.config.mjs                   # Jest en modo ESM con ts-jest; alcance y umbrales de cobertura
 ├── package-lock.json                 # Instalación reproducible con npm ci
 ├── docker-compose.yml                # PostgreSQL 16 desechable para el desarrollo local
 ├── .env.example                      # DATABASE_URL de ejemplo (credenciales desechables)
@@ -14,7 +15,10 @@ tecnologia/siJASS-clean-architecture/
 ├── tsconfig.json                     # ES2022, NodeNext, strict; compila src/ en dist/
 ├── migraciones/
 │   ├── 0001_esquema-mediciones.sql   # jass, reservorio, metodo_medicion, medicion, operacion_idempotente (up y down)
-│   └── 0002_acceso-padron-pagos.sql  # usuario, membresia, sesion, asociado, cuota, pago, reversa_pago, evento_auditoria (up y down)
+│   ├── 0002_acceso-padron-pagos.sql  # usuario, membresia, sesion, asociado, cuota, pago, reversa_pago, evento_auditoria (up y down)
+│   ├── 0003_reservorios-unicos.sql   # nombre de reservorio único por JASS (s1c)
+│   ├── 0004_acceso-por-documento.sql # DNI, clave generada, estado y ubicación de la JASS, perfil de plataforma (s2a)
+│   └── 0005_seguridad-por-filas.sql  # rol sijass_app y políticas RLS por JASS (s2a)
 ├── scripts/
 │   └── exigir-database-url.mjs       # Falla con un mensaje claro si falta DATABASE_URL
 └── src/
@@ -49,7 +53,7 @@ tecnologia/siJASS-clean-architecture/
 export DATABASE_URL=postgres://sijass:sijass@127.0.0.1:5432/sijass   # ver «Pruebas de integración»
 export JWT_SECRET="<al menos 32 bytes aleatorios>"                   # la API no arranca sin él
 npm run migrar && npm run build
-SIJASS_CLAVE_INICIAL='<contraseña>' npm run crear-jass -- "JASS Ejemplo" consejo@ejemplo.pe
+SIJASS_CLAVE_INICIAL='<contraseña>' npm run crear-jass -- "JASS Ejemplo" 23456789 "Nombre del Consejo"   # desde s2a: DNI y nombre, no correo
 npm run api                                                          # http://localhost:3000 (PORT, CORS_ORIGIN, WEB_DIR opcionales)
 SIJASS_PERMITIR_DEMO=1 SIJASS_CLAVE_DEMO='<contraseña>' npm run sembrar-demo   # solo desarrollo
 ```
@@ -57,7 +61,39 @@ SIJASS_PERMITIR_DEMO=1 SIJASS_CLAVE_DEMO='<contraseña>' npm run sembrar-demo   
 - Rutas (`/v1`): `auth/login|refresh|logout`, `yo`, `asociados` (+ `:id/baja`, `:id/acceso`, `:id/estado-de-cuenta`), `cuotas/generar`, `pagos` (+ `:id`, `:id/reversa`, con `Idempotency-Key`) y `portal/saldo|cuotas|pagos`. El contrato OpenAPI llega en `s1e`.
 - Decisiones: contraseñas `scrypt` (N=2^15), JWT HS256 de 15 min sin JASS ni rol, refresco opaco rotativo guardado como SHA-256, JASS/perfil/rol leídos de la membresía **en cada solicitud**, `403` idéntico para recurso ajeno e inexistente y auditado, importes en céntimos, pagos con bloqueo de la cuota.
 - Pruebas (verificadas en local el 2026-11-19): `npm test` pasa 256 pruebas unitarias; `npm run test:integration` pasa 215 (esquema `0002`, baterías compartidas con la memoria, concurrencia en 10 rondas, API HTTP, matriz de aislamiento, seguridad). La interfaz está en [`../sijass-web`](../sijass-web/README.md) y el E2E en [`../e2e`](../e2e/README.md).
-- Limitaciones de `s1b`: una membresía activa por cuenta; sin cambio ni recuperación de contraseña; sin correcciones de mediciones ni reservorios por HTTP (`s1c`); `medicion.registrado_por` aún sin clave foránea a `usuario`; el listado de asociados calcula el saldo de cada uno con consultas por asociado (aceptable para el tamaño de una JASS; se medirá en `s1e`).
+- Limitaciones de `s1b` (las de contraseña y correo las supera `s2a`, abajo): una membresía activa por cuenta; sin cambio ni recuperación de contraseña; sin correcciones de mediciones ni reservorios por HTTP (`s1c`); `medicion.registrado_por` aún sin clave foránea a `usuario`; el listado de asociados calcula el saldo de cada uno con consultas por asociado (aceptable para el tamaño de una JASS; se medirá en `s1e`).
+
+## Pruebas con Jest, cobertura, Swagger y Postman (Sprint 2)
+
+```bash
+npm test                  # Jest (ESM + ts-jest): 470 pruebas unitarias y baterías de contrato sobre memoria
+npm run test:cobertura    # lo mismo con reporte en cobertura/ (HTML y lcov) y umbrales mínimos
+npm run test:nativo       # las mismas pruebas con el ejecutor nativo de Node.js (comprobación cruzada)
+npm run test:integration  # PostgreSQL y HTTP, con el ejecutor nativo (un proceso por archivo)
+```
+
+- **Un solo código de pruebas, dos ejecutores:** todas las pruebas importan [`src/pruebas/marco.ts`](src/pruebas/marco.ts), que usa Jest cuando corre bajo Jest y el ejecutor nativo en la integración. Las baterías de contrato (`src/pruebas/contrato/`) se ejecutan así sobre la memoria (Jest) y sobre PostgreSQL (nativo) sin duplicarse.
+- **Cobertura (2026-11-26):** el núcleo del negocio (dominio, aplicación, adaptadores de memoria y de seguridad) alcanza 98,1 % de líneas, 92,3 % de ramas y 98,0 % de funciones, con umbrales de 90/85/90 que hacen fallar `npm run test:cobertura` si bajan. Quedan fuera de esa medida los archivos que solo declaran tipos y los adaptadores de PostgreSQL y HTTP, que se verifican con las 364 pruebas de integración (cobertura nativa de la integración: 96,6 % de líneas y 88,9 % de ramas sobre el JavaScript compilado).
+- **Swagger UI:** con la API en marcha, `http://localhost:3000/docs` muestra el contrato [`docs/api/openapi.yaml`](../../docs/api/openapi.yaml) (Swagger UI autoalojado, sin cargar scripts de terceros). `OPENAPI_FILE` cambia el archivo; si no existe, `/docs` no se monta.
+- **Postman:** [`docs/api/sijass.postman_collection.json`](../../docs/api/sijass.postman_collection.json) se genera desde el contrato (`node scripts/generar-postman.mjs`; `--verificar` falla si está desactualizada y corre en CI). Se ejecuta con Newman: `npx newman run docs/api/sijass.postman_collection.json --env-var baseUrl=http://localhost:3000 --env-var documento=<DNI> --env-var clave=<clave>`.
+
+## Acceso por DNI y varias JASS (`s2a-acceso-dni-multi-jass`)
+
+Verificado en local el 2026-11-25 (456 pruebas unitarias y 364 de integración sobre una base limpia). La operación paso a paso está en la [guía de operación](../../docs/08-despliegue/guia-operacion-acceso.md); el contrato, en [`openapi.yaml`](../../docs/api/openapi.yaml).
+
+```bash
+SIJASS_CLAVE_INICIAL='<contraseña>' npm run crear-plataforma -- 12345678 "Nombre del responsable"   # primera cuenta de plataforma
+SIJASS_CLAVE_INICIAL='<contraseña>' npm run crear-jass -- "JASS Ejemplo" 23456789 "Nombre del Consejo"
+npm run asignar-documento -- consejo@ejemplo.pe 23456789 "Nombre"                                   # cuenta anterior a s2a
+```
+
+- **Ingreso:** `POST /v1/auth/login` con `documento` (8 dígitos), `contrasena` y `tipo` opcional (`asociado` o `administrador`, solo una pista). Con las credenciales correctas y el tipo equivocado responde `409 tipo-de-acceso-distinto` con el `tipoReal` y **sin tokens**.
+- **Claves:** las genera el servidor (tres palabras de una lista de 2.310, con `crypto.randomInt`), se devuelven una sola vez y se almacenan solo derivadas con `scrypt`. Se comparan sin distinguir mayúsculas, tildes ni separadores únicamente mientras sean las generadas; la clave elegida por la persona (10 a 128 caracteres) se compara exacta. Personal, Consejo y plataforma deben cambiarla en el primer ingreso: la guardia responde `403 cambio-de-clave-pendiente` salvo para `cambiar-contrasena`, `yo` y `logout`.
+- **Rutas nuevas:** `POST /v1/auth/cambiar-contrasena`, `GET|POST /v1/equipo` (+ `:id/restablecer-clave` y `:id/desactivar`), `GET|POST /v1/plataforma/jass` (+ `:id/suspender`, `:id/reactivar` y `:id/consejo/restablecer-clave`), `POST /v1/asociados/:id/acceso/restablecer`, y `GET /v1/yo` ampliado con nombre, DNI enmascarado y nombre de la JASS.
+- **Límites:** cuenta bloqueada 15 minutos tras 5 intentos fallidos; 50 intentos **fallidos** por origen en 15 minutos (en memoria; con proxy, `TRUST_PROXY=1`). JASS suspendida: `403 jass-suspendida`.
+- **Plataforma:** membresía con perfil `plataforma` y `jass_id` nulo. Administra JASS pero no puede leer padrón, cuotas, pagos ni mediciones (`403`).
+- **Aislamiento en la base:** la migración `0005` crea el rol `sijass_app` y políticas de seguridad por filas; cada transacción hace `SET LOCAL ROLE sijass_app` y fija `app.jass_id` (o `app.sistema`, solo para operaciones de sistema acotadas). Una transacción de negocio sin JASS no ve filas.
+- **Limitaciones:** sin recuperación autónoma de clave; el límite por origen vive en memoria de un solo proceso; una persona, una membresía activa; no se pasó a CI.
 
 ## Asistente documental (`s1d-asistente-tecnico`)
 

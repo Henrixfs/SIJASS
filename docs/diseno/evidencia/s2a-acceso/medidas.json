@@ -1,0 +1,416 @@
+{
+  "generado": "2026-11-26T00:35:39.119Z",
+  "navegador": "Chrome (Playwright)",
+  "medidas": [
+    {
+      "pantalla": "cambio-de-clave",
+      "ancho": 320,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "contrastes": {
+        "h1": 14.68,
+        ".tarjeta-clave .suave": 6.52,
+        ".formulario-clave label": 14.68,
+        ".formulario-clave .ayuda-campo": 6.52,
+        ".pie-formulario-clave .primario": 6.04,
+        ".mostrar-claves": 6.04,
+        ".salir-clave": 6.52,
+        ".error-campo": 7.15
+      },
+      "teclado": [
+        "Clave que te entregaron",
+        "Clave nueva",
+        "Repite la clave nueva",
+        "Mostrar las claves",
+        "Guardar mi clave",
+        "Salir"
+      ]
+    },
+    {
+      "pantalla": "cambio-de-clave",
+      "ancho": 360,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "contrastes": {
+        "h1": 14.68,
+        ".tarjeta-clave .suave": 6.52,
+        ".formulario-clave label": 14.68,
+        ".formulario-clave .ayuda-campo": 6.52,
+        ".pie-formulario-clave .primario": 6.04,
+        ".mostrar-claves": 6.04,
+        ".salir-clave": 6.52,
+        ".error-campo": 7.15
+      },
+      "teclado": [
+        "Clave que te entregaron",
+        "Clave nueva",
+        "Repite la clave nueva",
+        "Mostrar las claves",
+        "Guardar mi clave",
+        "Salir"
+      ]
+    },
+    {
+      "pantalla": "cambio-de-clave",
+      "ancho": 390,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "contrastes": {
+        "h1": 14.68,
+        ".tarjeta-clave .suave": 6.52,
+        ".formulario-clave label": 14.68,
+        ".formulario-clave .ayuda-campo": 6.52,
+        ".pie-formulario-clave .primario": 6.04,
+        ".mostrar-claves": 6.04,
+        ".salir-clave": 6.52,
+        ".error-campo": 7.15
+      },
+      "teclado": [
+        "Clave que te entregaron",
+        "Clave nueva",
+        "Repite la clave nueva",
+        "Mostrar las claves",
+        "Guardar mi clave",
+        "Salir"
+      ]
+    },
+    {
+      "pantalla": "cambio-de-clave",
+      "ancho": 768,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "contrastes": {
+        "h1": 14.68,
+        ".tarjeta-clave .suave": 6.52,
+        ".formulario-clave label": 14.68,
+        ".formulario-clave .ayuda-campo": 6.52,
+        ".pie-formulario-clave .primario": 6.04,
+        ".mostrar-claves": 6.04,
+        ".salir-clave": 6.52,
+        ".error-campo": 7.15
+      },
+      "teclado": [
+        "Clave que te entregaron",
+        "Clave nueva",
+        "Repite la clave nueva",
+        "Mostrar las claves",
+        "Guardar mi clave",
+        "Salir"
+      ]
+    },
+    {
+      "pantalla": "cambio-de-clave",
+      "ancho": 1440,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "contrastes": {
+        "h1": 14.68,
+        ".tarjeta-clave .suave": 6.52,
+        ".formulario-clave label": 14.68,
+        ".formulario-clave .ayuda-campo": 6.52,
+        ".pie-formulario-clave .primario": 6.04,
+        ".mostrar-claves": 6.04,
+        ".salir-clave": 6.52,
+        ".error-campo": 7.15
+      },
+      "teclado": [
+        "Clave que te entregaron",
+        "Clave nueva",
+        "Repite la clave nueva",
+        "Mostrar las claves",
+        "Guardar mi clave",
+        "Salir"
+      ]
+    },
+    {
+      "pantalla": "entrega-de-clave",
+      "ancho": 320,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "tamanoClavePx": 24,
+      "contrastes": {
+        "dialog[open] .clave-grande": 12.44,
+        "dialog[open] .entrega-clave p": 14.36,
+        "dialog[open] h2": 14.36
+      },
+      "recorridoTeclado": [
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo",
+        "Ir al contenidoSIJASSMenúGestión de agua comunitar",
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo"
+      ]
+    },
+    {
+      "pantalla": "entrega-de-clave",
+      "ancho": 360,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "tamanoClavePx": 24,
+      "contrastes": {
+        "dialog[open] .clave-grande": 12.44,
+        "dialog[open] .entrega-clave p": 14.36,
+        "dialog[open] h2": 14.36
+      },
+      "recorridoTeclado": [
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo",
+        "Ir al contenidoSIJASSMenúGestión de agua comunitar",
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo"
+      ]
+    },
+    {
+      "pantalla": "entrega-de-clave",
+      "ancho": 390,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "tamanoClavePx": 24,
+      "contrastes": {
+        "dialog[open] .clave-grande": 12.44,
+        "dialog[open] .entrega-clave p": 14.36,
+        "dialog[open] h2": 14.36
+      },
+      "recorridoTeclado": [
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo",
+        "Ir al contenidoSIJASSMenúGestión de agua comunitar",
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo"
+      ]
+    },
+    {
+      "pantalla": "entrega-de-clave",
+      "ancho": 768,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "tamanoClavePx": 33.6,
+      "contrastes": {
+        "dialog[open] .clave-grande": 12.44,
+        "dialog[open] .entrega-clave p": 14.36,
+        "dialog[open] h2": 14.36
+      },
+      "recorridoTeclado": [
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo",
+        "Ir al contenidoSIJASSMenúGestión de agua comunitar",
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo"
+      ]
+    },
+    {
+      "pantalla": "entrega-de-clave",
+      "ancho": 1440,
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "tamanoClavePx": 33.6,
+      "contrastes": {
+        "dialog[open] .clave-grande": 12.44,
+        "dialog[open] .entrega-clave p": 14.36,
+        "dialog[open] h2": 14.36
+      },
+      "recorridoTeclado": [
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo",
+        "Ir al contenidoSIJASSMenúGestión de agua comunitar",
+        "Copiar",
+        "Imprimir tarjeta",
+        "Listo"
+      ]
+    },
+    {
+      "pantalla": "ingreso",
+      "ancho": 320,
+      "botonesTipo": [
+        {
+          "ancho": 238,
+          "alto": 105
+        },
+        {
+          "ancho": 238,
+          "alto": 106
+        }
+      ],
+      "contrastes": {
+        "h1": 14.68,
+        ".descripcion-ingreso": 6.52,
+        ".tipo-acceso strong": 14.68,
+        ".tipo-acceso small": 6.52,
+        ".ayuda-ingreso span": 6.52,
+        ".etiqueta-ingreso": 14.68,
+        "#documento-ingreso": 14.68,
+        ".ayuda-campo": 6.52,
+        ".tipo-elegido": 5.7,
+        ".boton-ingreso": 6.04,
+        ".error-campo": 7.15
+      },
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "teclado": [
+        "Soy asociado",
+        "Soy administrador",
+        "DNI",
+        "Clave",
+        "Mostrar clave",
+        "Ingresar"
+      ]
+    },
+    {
+      "pantalla": "ingreso",
+      "ancho": 360,
+      "botonesTipo": [
+        {
+          "ancho": 278,
+          "alto": 105
+        },
+        {
+          "ancho": 278,
+          "alto": 88
+        }
+      ],
+      "contrastes": {
+        "h1": 14.68,
+        ".descripcion-ingreso": 6.52,
+        ".tipo-acceso strong": 14.68,
+        ".tipo-acceso small": 6.52,
+        ".ayuda-ingreso span": 6.52,
+        ".etiqueta-ingreso": 14.68,
+        "#documento-ingreso": 14.68,
+        ".ayuda-campo": 6.52,
+        ".tipo-elegido": 5.7,
+        ".boton-ingreso": 6.04,
+        ".error-campo": 7.15
+      },
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "teclado": [
+        "Soy asociado",
+        "Soy administrador",
+        "DNI",
+        "Clave",
+        "Mostrar clave",
+        "Ingresar"
+      ]
+    },
+    {
+      "pantalla": "ingreso",
+      "ancho": 390,
+      "botonesTipo": [
+        {
+          "ancho": 308,
+          "alto": 105
+        },
+        {
+          "ancho": 308,
+          "alto": 88
+        }
+      ],
+      "contrastes": {
+        "h1": 14.68,
+        ".descripcion-ingreso": 6.52,
+        ".tipo-acceso strong": 14.68,
+        ".tipo-acceso small": 6.52,
+        ".ayuda-ingreso span": 6.52,
+        ".etiqueta-ingreso": 14.68,
+        "#documento-ingreso": 14.68,
+        ".ayuda-campo": 6.52,
+        ".tipo-elegido": 5.7,
+        ".boton-ingreso": 6.04,
+        ".error-campo": 7.15
+      },
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "teclado": [
+        "Soy asociado",
+        "Soy administrador",
+        "DNI",
+        "Clave",
+        "Mostrar clave",
+        "Ingresar"
+      ]
+    },
+    {
+      "pantalla": "ingreso",
+      "ancho": 768,
+      "botonesTipo": [
+        {
+          "ancho": 275,
+          "alto": 105
+        },
+        {
+          "ancho": 275,
+          "alto": 106
+        }
+      ],
+      "contrastes": {
+        "h1": 14.68,
+        ".descripcion-ingreso": 6.52,
+        ".tipo-acceso strong": 14.68,
+        ".tipo-acceso small": 6.52,
+        ".ayuda-ingreso span": 6.52,
+        ".etiqueta-ingreso": 14.68,
+        "#documento-ingreso": 14.68,
+        ".ayuda-campo": 6.52,
+        ".tipo-elegido": 5.7,
+        ".boton-ingreso": 6.04,
+        ".error-campo": 7.15
+      },
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "teclado": [
+        "Soy asociado",
+        "Soy administrador",
+        "DNI",
+        "Clave",
+        "Mostrar clave",
+        "Ingresar"
+      ]
+    },
+    {
+      "pantalla": "ingreso",
+      "ancho": 1440,
+      "botonesTipo": [
+        {
+          "ancho": 412,
+          "alto": 88
+        },
+        {
+          "ancho": 412,
+          "alto": 88
+        }
+      ],
+      "contrastes": {
+        "h1": 14.68,
+        ".descripcion-ingreso": 6.52,
+        ".tipo-acceso strong": 14.68,
+        ".tipo-acceso small": 6.52,
+        ".ayuda-ingreso span": 6.52,
+        ".etiqueta-ingreso": 14.68,
+        "#documento-ingreso": 14.68,
+        ".ayuda-campo": 6.52,
+        ".tipo-elegido": 5.7,
+        ".boton-ingreso": 6.04,
+        ".error-campo": 7.15
+      },
+      "desborde": false,
+      "controlesMenoresDe44": 0,
+      "teclado": [
+        "Soy asociado",
+        "Soy administrador",
+        "DNI",
+        "Clave",
+        "Mostrar clave",
+        "Ingresar"
+      ]
+    }
+  ]
+}

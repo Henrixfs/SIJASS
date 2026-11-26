@@ -1,6 +1,8 @@
-import { CrearJassConConsejo, CrearPersonal } from './acceso/administracion.js';
+import { AsignarDocumento, CrearJassConConsejo, CrearPersonal, CrearPlataforma } from './acceso/administracion.js';
+import { CrearMiembroEquipo, DesactivarMiembroEquipo, ListarEquipo, RestablecerClaveEquipo } from './acceso/equipo.js';
+import { CrearJassPlataforma, ListarJass, ReactivarJass, RestablecerClaveConsejo, SuspenderJass } from './acceso/plataforma.js';
 import type { DependenciasAcceso } from './acceso/comun.js';
-import { AutenticarUsuario, AutorizarSolicitud, CerrarSesion, RegistrarAccesoDenegado, RenovarSesion } from './acceso/sesiones.js';
+import { AutenticarUsuario, AutorizarSolicitud, CambiarContrasena, CerrarSesion, ConsultarYo, RegistrarAccesoDenegado, RenovarSesion } from './acceso/sesiones.js';
 import {
   ConsultarEstadoDeCuenta,
   ConsultarPortal,
@@ -9,6 +11,7 @@ import {
   GenerarCuotas,
   ListarAsociados,
   RegistrarAsociado,
+  RestablecerClaveAsociado,
 } from './padron/padron.js';
 import { ConsultarPago, RegistrarPago, ReversarPago } from './padron/pagos.js';
 import { ConsultarCatalogo, ConsultarHistorial, RegistrarMedicionAutorizada } from './mediciones-autorizadas.js';
@@ -26,8 +29,22 @@ export interface Casos {
   readonly cerrarSesion: CerrarSesion;
   readonly autorizar: AutorizarSolicitud;
   readonly registrarDenegado: RegistrarAccesoDenegado;
+  readonly cambiarContrasena: CambiarContrasena;
+  readonly yo: ConsultarYo;
   readonly crearJass: CrearJassConConsejo;
   readonly crearPersonal: CrearPersonal;
+  readonly crearPlataforma: CrearPlataforma;
+  readonly asignarDocumento: AsignarDocumento;
+  readonly listarEquipo: ListarEquipo;
+  readonly crearMiembroEquipo: CrearMiembroEquipo;
+  readonly desactivarMiembroEquipo: DesactivarMiembroEquipo;
+  readonly restablecerClaveEquipo: RestablecerClaveEquipo;
+  readonly listarJass: ListarJass;
+  readonly crearJassPlataforma: CrearJassPlataforma;
+  readonly suspenderJass: SuspenderJass;
+  readonly reactivarJass: ReactivarJass;
+  readonly restablecerClaveConsejo: RestablecerClaveConsejo;
+  readonly restablecerClaveAsociado: RestablecerClaveAsociado;
   readonly registrarAsociado: RegistrarAsociado;
   readonly darDeBaja: DarDeBajaAsociado;
   readonly listarAsociados: ListarAsociados;
@@ -61,8 +78,22 @@ export function construirCasos(d: DependenciasAcceso, unidadMediciones: UnidadDe
     cerrarSesion: new CerrarSesion(d),
     autorizar: new AutorizarSolicitud(d),
     registrarDenegado: new RegistrarAccesoDenegado(d),
+    cambiarContrasena: new CambiarContrasena(d),
+    yo: new ConsultarYo(d),
     crearJass: new CrearJassConConsejo(d),
     crearPersonal: new CrearPersonal(d),
+    crearPlataforma: new CrearPlataforma(d),
+    asignarDocumento: new AsignarDocumento(d),
+    listarEquipo: new ListarEquipo(d),
+    crearMiembroEquipo: new CrearMiembroEquipo(d),
+    desactivarMiembroEquipo: new DesactivarMiembroEquipo(d),
+    restablecerClaveEquipo: new RestablecerClaveEquipo(d),
+    listarJass: new ListarJass(d),
+    crearJassPlataforma: new CrearJassPlataforma(d),
+    suspenderJass: new SuspenderJass(d),
+    reactivarJass: new ReactivarJass(d),
+    restablecerClaveConsejo: new RestablecerClaveConsejo(d),
+    restablecerClaveAsociado: new RestablecerClaveAsociado(d),
     registrarAsociado: new RegistrarAsociado(d),
     darDeBaja: new DarDeBajaAsociado(d),
     listarAsociados: new ListarAsociados(d),

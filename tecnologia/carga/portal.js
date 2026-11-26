@@ -1,5 +1,5 @@
 // Escenario k6 del portal del asociado (s1e, design.md D7). Cada usuario virtual usa su propia
-// cuenta (`asociado<__VU>@carga.sijass.pe`), inicia sesión UNA vez y consulta repetidamente su
+// cuenta (DNI `9` + `__VU` con 7 dígitos, p. ej. 90000001; desde `s2a` se entra con el DNI), inicia sesión UNA vez y consulta repetidamente su
 // saldo, sus cuotas y sus pagos con tiempo de pensamiento. La carga sube por etapas hasta META_VU.
 //
 //   k6 run -e BASE_URL=http://host:3000 -e CLAVE_CARGA=… -e META_VU=2000 portal.js
@@ -63,7 +63,7 @@ const inicios = new Counter('inicios_de_sesion');
 let token = null;
 
 function iniciarSesion() {
-  const r = http.post(`${BASE}/v1/auth/login`, JSON.stringify({ correo: `asociado${__VU}@carga.sijass.pe`, contrasena: CLAVE }), {
+  const r = http.post(`${BASE}/v1/auth/login`, JSON.stringify({ documento: `9${String(__VU).padStart(7, '0')}`, contrasena: CLAVE, tipo: 'asociado' }), {
     headers: { 'Content-Type': 'application/json' },
     tags: { tipo: 'login' },
   });

@@ -25,11 +25,12 @@ describe('parsearSoles', () => {
     ['  7.25 ', 725],
     ['0,5', 50],
     ['1234567.89', 123456789],
+    ['10000000.00', 1000000000],
   ])('«%s» → %i céntimos', (texto, esperado) => {
     expect(parsearSoles(texto)).toBe(esperado);
   });
 
-  test.each(['', 'abc', '0', '0.00', '-5', '1.234', '1,2,3', '12345678', '1e3', '15 soles', 'S/ 15', '.5', '5.'])('«%s» no es un monto válido', (texto) => {
+  test.each(['', 'abc', '0', '0.00', '-5', '1.234', '1,2,3', '12345678', '10000000.01', '1e3', '15 soles', 'S/ 15', '.5', '5.'])('«%s» no es un monto válido', (texto) => {
     expect(parsearSoles(texto)).toBeNull();
   });
 

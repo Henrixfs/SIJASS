@@ -2,7 +2,7 @@
  * Aislamiento entre cuentas y entre JASS por HTTP (tarea 4.3, specs `acceso-por-perfiles`,
  * `portal-asociado` y `auditoria-eventos`): cada cuenta intenta cada ruta con cada recurso.
  */
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { nuevaClave } from '../entorno-acceso.js';
 import { crearPool } from './entorno.js';
@@ -108,14 +108,15 @@ describe('API — matriz de aislamiento (cada cuenta × cada ruta × cada recurs
 
   test('rutas de escritura: toda combinación sin permiso o de otra JASS responde 401/403 y no cambia ningún dato', async () => {
     const antesDatos = await fotoDeDatos();
+    const usuariosAntes = (await pool.query('SELECT count(*)::int AS n FROM usuario')).rows[0].n as number;
     const antes403 = await contarEventosDenegados();
     let observados403 = 0;
     const escrituras: Array<{ nombre: string; metodo: string; ruta: string; cuerpo: unknown; recurso: 'A1' | 'B1' | 'pagoA1' | 'pagoB1' | null; clave?: boolean }> = [
       { nombre: 'registrar asociado', metodo: 'POST', ruta: '/v1/asociados', cuerpo: { nombre: 'Intruso', documento: 'INTRUSO-1' }, recurso: null },
       { nombre: 'baja de A1', metodo: 'POST', ruta: '/v1/asociados/{A1}/baja', cuerpo: {}, recurso: 'A1' },
       { nombre: 'baja de B1', metodo: 'POST', ruta: '/v1/asociados/{B1}/baja', cuerpo: {}, recurso: 'B1' },
-      { nombre: 'crear acceso de A1', metodo: 'POST', ruta: '/v1/asociados/{A1}/acceso', cuerpo: { correo: 'intruso-a@prueba.pe', contrasena: 'Clave-de-prueba-123' }, recurso: 'A1' },
-      { nombre: 'crear acceso de B1', metodo: 'POST', ruta: '/v1/asociados/{B1}/acceso', cuerpo: { correo: 'intruso-b@prueba.pe', contrasena: 'Clave-de-prueba-123' }, recurso: 'B1' },
+      { nombre: 'crear acceso de A1', metodo: 'POST', ruta: '/v1/asociados/{A1}/acceso', cuerpo: {}, recurso: 'A1' },
+      { nombre: 'crear acceso de B1', metodo: 'POST', ruta: '/v1/asociados/{B1}/acceso', cuerpo: {}, recurso: 'B1' },
       { nombre: 'generar cuotas', metodo: 'POST', ruta: '/v1/cuotas/generar', cuerpo: { periodo: '2027-01', importeCentimos: 100 }, recurso: null },
       { nombre: 'reversar pago de A1', metodo: 'POST', ruta: '/v1/pagos/{pagoA1}/reversa', cuerpo: { motivo: 'intruso' }, recurso: 'pagoA1' },
       { nombre: 'reversar pago de B1', metodo: 'POST', ruta: '/v1/pagos/{pagoB1}/reversa', cuerpo: { motivo: 'intruso' }, recurso: 'pagoB1' },
@@ -145,8 +146,8 @@ describe('API — matriz de aislamiento (cada cuenta × cada ruta × cada recurs
     }
     assert.equal(await fotoDeDatos(), antesDatos, 'una escritura denegada no debe cambiar ningún dato');
     assert.equal((await contarEventosDenegados()) - antes403, observados403);
-    const { rows } = await pool.query("SELECT count(*)::int AS n FROM usuario WHERE correo LIKE 'intruso-%'");
-    assert.equal(rows[0].n, 0);
+    const { rows } = await pool.query('SELECT count(*)::int AS n FROM usuario');
+    assert.equal(rows[0].n, usuariosAntes, 'ninguna escritura denegada crea una cuenta');
   });
 
   test('el portal ignora cualquier identificador enviado: devuelve solo lo propio', async () => {
@@ -188,7 +189,7 @@ describe('API — matriz de aislamiento (cada cuenta × cada ruta × cada recurs
   });
 
   test('con la membresía desactivada, el token vigente deja de servir (403 por HTTP)', async () => {
-    const sesion = await m.api.iniciarSesion(m.esc.operadorA.correo);
+    const sesion = await m.api.iniciarSesion(m.esc.operadorA.documento);
     assert.equal((await m.api.peticion('GET', '/v1/yo', { token: sesion.tokenAcceso })).estado, 200);
     await pool.query("UPDATE membresia SET estado = 'inactiva' WHERE usuario_id = $1", [m.esc.operadorA.usuarioId]);
     const r = await m.api.peticion('GET', '/v1/yo', { token: sesion.tokenAcceso });

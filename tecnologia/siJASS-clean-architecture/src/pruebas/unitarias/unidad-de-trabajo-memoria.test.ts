@@ -1,16 +1,25 @@
-import { test } from 'node:test';
+import { test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { AlmacenMemoria, UnidadDeTrabajoMemoria } from '../../infraestructura/memoria.js';
+import type { RepositoriosTransaccion } from '../../dominio/puertos.js';
 import { medicionDePrueba } from '../contrato/repositorio-mediciones.js';
 
 const JASS = '11111111-1111-4111-8111-111111111111';
 const RESERVORIO = '33333333-3333-4333-8333-333333333333';
 const OPERACION = '55555555-5555-4555-8555-555555555555';
 const HASH = 'a'.repeat(64);
+
+/** La unidad de trabajo exige la JASS de la transacción (s2a): estas pruebas usan siempre la misma. */
+function conJass(unidad: UnidadDeTrabajoMemoria) {
+  return {
+    almacen: unidad.almacen,
+    ejecutar: <T>(trabajo: (repos: RepositoriosTransaccion) => Promise<T>): Promise<T> => unidad.ejecutar(trabajo, { jassId: JASS }),
+  };
+}
 const RESULTADO = { medicionId: '44444444-4444-4444-8444-444444444444', revision: 1, registradaEn: '2026-10-12T13:10:00.000Z' };
 
 test('un trabajo que se resuelve publica todas sus escrituras', async () => {
-  const uow = new UnidadDeTrabajoMemoria();
+  const uow = conJass(new UnidadDeTrabajoMemoria());
   const medicion = medicionDePrueba(JASS, RESERVORIO);
   const valor = await uow.ejecutar(async ({ mediciones, operaciones }) => {
     await operaciones.reservar(JASS, OPERACION, HASH, 'registrar-medicion');
@@ -28,7 +37,7 @@ test('un trabajo que se resuelve publica todas sus escrituras', async () => {
 });
 
 test('un trabajo que lanza no deja ninguna escritura y propaga el error', async () => {
-  const uow = new UnidadDeTrabajoMemoria();
+  const uow = conJass(new UnidadDeTrabajoMemoria());
   const medicion = medicionDePrueba(JASS, RESERVORIO);
   const fallo = new Error('fallo simulado');
   await assert.rejects(
@@ -54,14 +63,14 @@ test('dos trabajos simultáneos sobre el mismo almacén se ejecutan en serie', a
     eventos.push(`fin ${nombre}`);
   };
   await Promise.all([
-    new UnidadDeTrabajoMemoria(almacen).ejecutar(trabajo('A')),
-    new UnidadDeTrabajoMemoria(almacen).ejecutar(trabajo('B')),
+    conJass(new UnidadDeTrabajoMemoria(almacen)).ejecutar(trabajo('A')),
+    conJass(new UnidadDeTrabajoMemoria(almacen)).ejecutar(trabajo('B')),
   ]);
   assert.deepEqual(eventos, ['inicio A', 'fin A', 'inicio B', 'fin B']);
 });
 
 test('un fallo no bloquea la cola: la transacción siguiente se ejecuta', async () => {
-  const uow = new UnidadDeTrabajoMemoria();
+  const uow = conJass(new UnidadDeTrabajoMemoria());
   const primera = uow.ejecutar(async () => {
     throw new Error('primera falla');
   });
@@ -71,7 +80,7 @@ test('un fallo no bloquea la cola: la transacción siguiente se ejecuta', async 
 });
 
 test('el decorador envuelve los repositorios de cada transacción', async () => {
-  const uow = new UnidadDeTrabajoMemoria(new AlmacenMemoria(), (repos) => ({
+  const uow = conJass(new UnidadDeTrabajoMemoria(new AlmacenMemoria(), (repos) => ({
     ...repos,
     mediciones: {
       ...repos.mediciones,
@@ -81,7 +90,7 @@ test('el decorador envuelve los repositorios de cada transacción', async () => 
         throw new Error('guardar decorado');
       },
     },
-  }));
+  })));
   await assert.rejects(
     uow.ejecutar(({ mediciones }) => mediciones.guardar(medicionDePrueba(JASS, RESERVORIO))),
     /guardar decorado/,
@@ -89,7 +98,7 @@ test('el decorador envuelve los repositorios de cada transacción', async () => 
 });
 
 test('una reserva repetida devuelve el hash y el resultado almacenados', async () => {
-  const uow = new UnidadDeTrabajoMemoria();
+  const uow = conJass(new UnidadDeTrabajoMemoria());
   await uow.ejecutar(async ({ operaciones }) => {
     assert.deepStrictEqual(await operaciones.reservar(JASS, OPERACION, HASH, 'registrar-medicion'), { nueva: true });
     await operaciones.registrarResultado(JASS, OPERACION, RESULTADO);

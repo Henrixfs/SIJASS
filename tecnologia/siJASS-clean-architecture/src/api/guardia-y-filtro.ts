@@ -3,14 +3,18 @@ import type { Response } from 'express';
 import type { Casos } from '../aplicacion/casos.js';
 import {
   ErrorAccesoDenegado,
+  ErrorCambioDeClavePendiente,
   ErrorConflicto,
   ErrorCuentaBloqueada,
   ErrorDatoInvalido,
+  ErrorJassSuspendida,
+  ErrorLimiteDeOrigen,
   ErrorMedicionDuplicada,
   ErrorNoAutenticado,
+  ErrorTipoDeAccesoDistinto,
   ErrorValidacion,
 } from '../dominio/errores.js';
-import { esPublico, type SolicitudAutenticada } from './comun.js';
+import { esPublico, permiteCambioPendiente, type SolicitudAutenticada } from './comun.js';
 
 function tokenDe(solicitud: SolicitudAutenticada): string | undefined {
   const cabecera = solicitud.headers.authorization;
@@ -30,7 +34,10 @@ export class GuardiaAcceso implements CanActivate {
   async canActivate(contexto: ExecutionContext): Promise<boolean> {
     if (esPublico(contexto)) return true;
     const solicitud = contexto.switchToHttp().getRequest<SolicitudAutenticada>();
-    solicitud.actor = await this.casos.autorizar.ejecutar(tokenDe(solicitud));
+    const actor = await this.casos.autorizar.ejecutar(tokenDe(solicitud));
+    solicitud.actor = actor;
+    // Con el cambio de clave pendiente solo se puede cambiar la clave, consultar `yo` o cerrar sesión.
+    if (actor.debeCambiarContrasena === true && !permiteCambioPendiente(contexto)) throw new ErrorCambioDeClavePendiente();
     return true;
   }
 }
@@ -66,6 +73,23 @@ export class FiltroErrores implements ExceptionFilter {
       const restante = Math.max(1, Math.ceil((new Date(error.bloqueadoHasta).getTime() - Date.now()) / 1000));
       respuesta.setHeader('Retry-After', String(restante));
       respuesta.status(429).json({ codigo: 'cuenta-bloqueada', mensaje: 'Demasiados intentos fallidos; vuelva a intentar más tarde' });
+      return;
+    }
+    if (error instanceof ErrorLimiteDeOrigen) {
+      respuesta.setHeader('Retry-After', String(error.reintentarEnSegundos));
+      respuesta.status(429).json({ codigo: 'demasiados-intentos', mensaje: 'Demasiados intentos; vuelva a intentar más tarde' });
+      return;
+    }
+    if (error instanceof ErrorTipoDeAccesoDistinto) {
+      respuesta.status(409).json({ codigo: error.codigo, mensaje: 'El tipo de acceso elegido no corresponde a esta cuenta', tipoReal: error.tipoReal });
+      return;
+    }
+    if (error instanceof ErrorJassSuspendida) {
+      respuesta.status(403).json({ codigo: 'jass-suspendida', mensaje: 'La JASS está suspendida' });
+      return;
+    }
+    if (error instanceof ErrorCambioDeClavePendiente) {
+      respuesta.status(403).json({ codigo: 'cambio-de-clave-pendiente', mensaje: 'Debe cambiar su clave antes de continuar' });
       return;
     }
     if (error instanceof ErrorAccesoDenegado) {

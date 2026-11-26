@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Siembra datos para las pruebas de carga k6 (s1e, design.md D8): una JASS de carga con N
- * asociados, cada uno con su cuenta (`asociado<N>@carga.sijass.pe`), tres cuotas y, para uno de
- * cada tres, un pago. SOLO para entornos de prueba.
+ * asociados, cada uno con su cuenta (DNI ficticio `9` + el número con 7 dígitos: `90000001`…), tres
+ * cuotas y, para uno de cada tres, un pago. SOLO para entornos de prueba. Desde `s2a` se entra con el DNI.
  *
  *   DATABASE_URL=… SIJASS_CLAVE_CARGA=… node scripts/sembrar-carga.mjs [N=2000]   (tras `npm run build`)
  *
@@ -29,11 +29,11 @@ try {
   await cliente.query(`INSERT INTO jass (id, nombre) VALUES (${jass}, 'JASS de carga') ON CONFLICT DO NOTHING`);
   await cliente.query(
     `INSERT INTO asociado (id, jass_id, nombre, documento)
-     SELECT md5('carga-asociado-' || g)::uuid, ${jass}, 'Asociado de carga ' || g, 'C' || lpad(g::text, 7, '0') FROM generate_series(1, $1) g
+     SELECT md5('carga-asociado-' || g)::uuid, ${jass}, 'Asociado de carga ' || g, '9' || lpad(g::text, 7, '0') FROM generate_series(1, $1) g
      ON CONFLICT DO NOTHING`, [n]);
   await cliente.query(
-    `INSERT INTO usuario (id, correo, hash_contrasena)
-     SELECT md5('carga-usuario-' || g)::uuid, 'asociado' || g || '@carga.sijass.pe', $2 FROM generate_series(1, $1) g
+    `INSERT INTO usuario (id, documento, nombre, hash_contrasena)
+     SELECT md5('carga-usuario-' || g)::uuid, '9' || lpad(g::text, 7, '0'), 'Asociado de carga ' || g, $2 FROM generate_series(1, $1) g
      ON CONFLICT DO NOTHING`, [n, hash]);
   await cliente.query(
     `INSERT INTO membresia (id, usuario_id, jass_id, perfil, rol, asociado_id, estado)
@@ -46,7 +46,7 @@ try {
        FROM generate_series(1, $1) g, generate_series(0, 2) p
      ON CONFLICT DO NOTHING`, [n]);
   // Un usuario de personal registra los pagos de muestra.
-  await cliente.query(`INSERT INTO usuario (id, correo, hash_contrasena) VALUES (md5('carga-tesorero')::uuid, 'tesorero@carga.sijass.pe', $1) ON CONFLICT DO NOTHING`, [hash]);
+  await cliente.query(`INSERT INTO usuario (id, documento, nombre, hash_contrasena) VALUES (md5('carga-tesorero')::uuid, '99999999', 'Tesorero de carga', $1) ON CONFLICT DO NOTHING`, [hash]);
   await cliente.query(
     `INSERT INTO membresia (id, usuario_id, jass_id, perfil, rol, asociado_id, estado)
      VALUES (md5('carga-membresia-tesorero')::uuid, md5('carga-tesorero')::uuid, ${jass}, 'personal', 'tesorero', NULL, 'activa') ON CONFLICT DO NOTHING`);
@@ -57,7 +57,7 @@ try {
        FROM generate_series(1, $1) g WHERE g % 3 = 0
      ON CONFLICT DO NOTHING`, [n]);
   await cliente.query('COMMIT');
-  const { rows } = await cliente.query(`SELECT (SELECT count(*) FROM usuario WHERE correo LIKE 'asociado%@carga.sijass.pe')::int AS cuentas, (SELECT count(DISTINCT hash_contrasena) FROM usuario WHERE correo LIKE '%@carga.sijass.pe')::int AS hashes`);
+  const { rows } = await cliente.query(`SELECT (SELECT count(*) FROM usuario WHERE documento ~ '^9[0-9]{7}$' AND documento <> '99999999')::int AS cuentas, (SELECT count(DISTINCT hash_contrasena) FROM usuario WHERE documento ~ '^9[0-9]{7}$')::int AS hashes`);
   console.log(`Siembra de carga lista: ${rows[0].cuentas} cuentas de asociado en la JASS de carga (${rows[0].hashes} hash compartido; solo para pruebas).`);
 } catch (error) {
   await cliente.query('ROLLBACK').catch(() => undefined);

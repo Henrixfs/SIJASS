@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import type { Casos } from '../aplicacion/casos.js';
-import type { ContextoAcceso } from '../dominio/acceso.js';
-import { ActorActual, CASOS, cuerpo, Publico } from './comun.js';
+import type { ActorAutenticado, ContextoAcceso, ContextoPlataforma } from '../dominio/acceso.js';
+import { ActorActual, ActorCualquiera, ActorDePlataforma, CASOS, cuerpo, PermitidaConCambioPendiente, Publico, type SolicitudAutenticada } from './comun.js';
 
 /** Sonda pública para despliegues: no devuelve datos de negocio ni de configuración. */
 @Controller('v1/salud')
@@ -25,9 +25,9 @@ export class AuthController {
   @Publico()
   @Post('login')
   @HttpCode(200)
-  login(@Body() body: unknown) {
+  login(@Body() body: unknown, @Req() solicitud: SolicitudAutenticada) {
     const b = cuerpo(body);
-    return this.casos.autenticar.ejecutar({ correo: b.correo, contrasena: b.contrasena });
+    return this.casos.autenticar.ejecutar({ documento: b.documento, contrasena: b.contrasena, tipo: b.tipo, origen: solicitud.ip ?? 'desconocido' });
   }
 
   @Publico()
@@ -43,14 +43,26 @@ export class AuthController {
   async logout(@Body() body: unknown): Promise<void> {
     await this.casos.cerrarSesion.ejecutar({ tokenRefresco: cuerpo(body).tokenRefresco });
   }
+
+  /** Cambio de la propia clave; la única operación (con `yo`) que una cuenta con cambio pendiente puede usar. */
+  @PermitidaConCambioPendiente()
+  @Post('cambiar-contrasena')
+  @HttpCode(200)
+  cambiarContrasena(@ActorCualquiera() actor: ActorAutenticado, @Body() body: unknown) {
+    const b = cuerpo(body);
+    return this.casos.cambiarContrasena.ejecutar(actor, { contrasenaActual: b.contrasenaActual, contrasenaNueva: b.contrasenaNueva });
+  }
 }
 
 @Controller('v1/yo')
 export class YoController {
-  /** Perfil y rol de quien consulta; nunca la JASS ni los tokens. */
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  /** Perfil, rol, nombre, DNI enmascarado y nombre de la JASS de quien consulta; nunca identificadores internos. */
+  @PermitidaConCambioPendiente()
   @Get()
-  yo(@ActorActual() actor: ContextoAcceso) {
-    return { perfil: actor.perfil, rol: actor.rol };
+  yo(@ActorCualquiera() actor: ActorAutenticado) {
+    return this.casos.yo.ejecutar(actor);
   }
 }
 
@@ -75,10 +87,16 @@ export class AsociadosController {
     await this.casos.darDeBaja.ejecutar(actor, id);
   }
 
+  /** Crea el acceso con una clave generada que solo se devuelve en esta respuesta. */
   @Post(':id/acceso')
-  crearAcceso(@ActorActual() actor: ContextoAcceso, @Param('id') id: string, @Body() body: unknown) {
-    const b = cuerpo(body);
-    return this.casos.crearAcceso.ejecutar(actor, id, { correo: b.correo, contrasena: b.contrasena });
+  crearAcceso(@ActorActual() actor: ContextoAcceso, @Param('id') id: string) {
+    return this.casos.crearAcceso.ejecutar(actor, id);
+  }
+
+  @Post(':id/acceso/restablecer')
+  @HttpCode(200)
+  restablecerAcceso(@ActorActual() actor: ContextoAcceso, @Param('id') id: string) {
+    return this.casos.restablecerClaveAsociado.ejecutar(actor, id);
   }
 
   @Get(':id/estado-de-cuenta')
@@ -180,9 +198,17 @@ export class ReservoriosController {
 export class MedicionesController {
   constructor(@Inject(CASOS) private readonly casos: Casos) {}
 
+  /**
+   * Dato de referencia, igual para todos: único `GET /v1` que se puede guardar (ADR-016). Solo se cachea la
+   * respuesta correcta: el encabezado se fija DESPUÉS de autorizar, de modo que un 401 o un 403 siguen en
+   * `no-store`. `Vary: Authorization` evita servirla a otra sesión; Express añade el `ETag` y responde `304`.
+   */
   @Get('catalogo')
-  catalogo(@ActorActual() actor: ContextoAcceso) {
-    return this.casos.catalogo.ejecutar(actor);
+  async catalogo(@ActorActual() actor: ContextoAcceso, @Res({ passthrough: true }) respuesta: Response) {
+    const catalogo = await this.casos.catalogo.ejecutar(actor);
+    respuesta.setHeader('Cache-Control', 'private, max-age=300');
+    respuesta.setHeader('Vary', 'Authorization');
+    return catalogo;
   }
 
   /** `201` si es nueva; `200` con el mismo resultado si es un reintento de la misma clave. */
@@ -216,4 +242,85 @@ export class AsistenteController {
   }
 }
 
-export const CONTROLADORES = [SaludController, AuthController, YoController, AsociadosController, CuotasController, PagosController, PortalController, ReservoriosController, MedicionesController, AsistenteController];
+
+
+/** Equipo de la JASS (Tesorería y Operador), gestionado solo por el Consejo. */
+@Controller('v1/equipo')
+export class EquipoController {
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  @Get()
+  listar(@ActorActual() actor: ContextoAcceso) {
+    return this.casos.listarEquipo.ejecutar(actor).then((equipo) => ({ equipo }));
+  }
+
+  @Post()
+  crear(@ActorActual() actor: ContextoAcceso, @Body() body: unknown) {
+    const b = cuerpo(body);
+    return this.casos.crearMiembroEquipo.ejecutar(actor, { nombre: b.nombre, documento: b.documento, rol: b.rol });
+  }
+
+  @Post(':usuarioId/desactivar')
+  @HttpCode(204)
+  async desactivar(@ActorActual() actor: ContextoAcceso, @Param('usuarioId') usuarioId: string): Promise<void> {
+    await this.casos.desactivarMiembroEquipo.ejecutar(actor, usuarioId);
+  }
+
+  @Post(':usuarioId/restablecer-clave')
+  @HttpCode(200)
+  restablecer(@ActorActual() actor: ContextoAcceso, @Param('usuarioId') usuarioId: string) {
+    return this.casos.restablecerClaveEquipo.ejecutar(actor, usuarioId);
+  }
+}
+
+/** Plataforma: altas, suspensiones y claves de las JASS. Ninguna ruta toca datos de negocio. */
+@Controller('v1/plataforma/jass')
+export class PlataformaController {
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  @Get()
+  listar(@ActorDePlataforma() actor: ContextoPlataforma) {
+    return this.casos.listarJass.ejecutar(actor).then((jass) => ({ jass }));
+  }
+
+  @Post()
+  crear(@ActorDePlataforma() actor: ContextoPlataforma, @Body() body: unknown) {
+    const b = cuerpo(body);
+    const consejo = cuerpo(b.consejo);
+    return this.casos.crearJassPlataforma.ejecutar(actor, { nombre: b.nombre, ubicacion: b.ubicacion, consejo: { nombre: consejo.nombre, documento: consejo.documento } });
+  }
+
+  @Post(':id/suspender')
+  @HttpCode(204)
+  async suspender(@ActorDePlataforma() actor: ContextoPlataforma, @Param('id') id: string): Promise<void> {
+    await this.casos.suspenderJass.ejecutar(actor, id);
+  }
+
+  @Post(':id/reactivar')
+  @HttpCode(204)
+  async reactivar(@ActorDePlataforma() actor: ContextoPlataforma, @Param('id') id: string): Promise<void> {
+    await this.casos.reactivarJass.ejecutar(actor, id);
+  }
+
+  @Post(':id/consejo/restablecer-clave')
+  @HttpCode(200)
+  restablecerConsejo(@ActorDePlataforma() actor: ContextoPlataforma, @Param('id') id: string, @Body() body: unknown) {
+    const usuarioId = cuerpo(body).usuarioId;
+    return this.casos.restablecerClaveConsejo.ejecutar(actor, id, typeof usuarioId === 'string' ? usuarioId : undefined);
+  }
+}
+
+export const CONTROLADORES = [
+  SaludController,
+  AuthController,
+  YoController,
+  AsociadosController,
+  EquipoController,
+  PlataformaController,
+  CuotasController,
+  PagosController,
+  PortalController,
+  ReservoriosController,
+  MedicionesController,
+  AsistenteController,
+];

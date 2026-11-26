@@ -26,6 +26,8 @@
 | ADR-013 | Pagos solo en línea en el MVP | DA05, DA09 | Aceptada (diseño) |
 | ADR-014 | Validaciones determinísticas primero; aprendizaje automático solo con datos validados | DA12 | Aceptada (diseño) |
 | ADR-015 | PostgreSQL + pgvector para la recuperación documental | DA05, DA10 | Propuesta (sujeta a evaluación) |
+| ADR-016 | Caché HTTP para estáticos y datos de referencia; sin caché de datos de personas ni de servidor en el MVP | DA05 | Aceptada (implementada en el prototipo) |
+| ADR-017 | Aislamiento entre JASS reforzado en la base con seguridad por filas | DA04, DA05 | Aceptada (implementada en el prototipo) |
 
 ## 2. Detalle
 
@@ -134,6 +136,21 @@
 - **Alternativas:** base de datos vectorial dedicada (descartada por coste operativo); búsqueda de texto completo de PostgreSQL sin embeddings (alternativa a evaluar; puede ser suficiente para un corpus pequeño); búsqueda híbrida.
 - **Criterio de aceptación:** comparar recuperación textual, vectorial e híbrida con un conjunto de preguntas revisado y adoptar la opción con mejor relación entre calidad y complejidad.
 - **Consecuencias:** misma infraestructura de respaldo. El servicio RAG usa un rol de base de datos limitado a su esquema.
+
+### ADR-016 — Caché HTTP para estáticos y datos de referencia; sin caché de datos de personas ni de servidor
+
+- **Contexto:** el criterio C11 pide una caché medida y ADR-009 excluye Redis mientras no haya una necesidad comprobada. Las mediciones locales del Sprint 2 ([análisis](../07-evaluacion-final/analisis-bd-y-cache.md)) muestran lecturas del portal de ~14 ms de mediana a carga ligera y consultas con índice de menos de 1 ms; el límite es la CPU de un proceso.
+- **Decisión:** (1) caché HTTP de los archivos estáticos con hash (`immutable`) y `ETag`; (2) caché `private` de 5 minutos con `ETag` solo para datos de referencia iguales para todos (`GET /v1/mediciones/catalogo`); (3) `no-store` en toda respuesta con datos de personas; (4) sin caché de servidor (Redis ni memoria del proceso).
+- **Alternativas:** caché de la lectura de membresía (descartada: una desactivación o un restablecimiento de clave deben surtir efecto al instante); caché de saldos con tiempo de vida (descartada: mostraría un saldo equivocado tras un pago); Redis (descartada por ADR-009: infraestructura sin necesidad medida).
+- **Criterio de reevaluación:** p95 de lectura mayor de 800 ms con la carga real del piloto. Primer candidato: caché de lectura por JASS con invalidación al confirmar cada transacción de esa JASS (válida con una sola réplica).
+- **Consecuencias:** los datos personales no quedan en el disco del dispositivo; la interfaz carga rápido gracias a los estáticos inmutables; el servidor no mantiene estado de caché que invalidar.
+
+### ADR-017 — Aislamiento entre JASS reforzado en la base con seguridad por filas
+
+- **Contexto:** la autorización por JASS en la aplicación (ADR-008) depende de que cada consulta filtre por `jass_id`; un olvido filtraría datos de otra organización. SIJASS pasa a ser una plataforma con varias JASS (`s2a-acceso-dni-multi-jass`).
+- **Decisión:** PostgreSQL con seguridad por filas (RLS) en las tablas de negocio. La API ejecuta cada transacción con `SET LOCAL ROLE sijass_app` (rol sin inicio de sesión ni `BYPASSRLS`) y fija la JASS (`app.jass_id`); las operaciones de sistema (inicio de sesión, plataforma) fijan `app.sistema` y solo alcanzan las tablas que lo permiten. Una transacción de negocio sin JASS no ve filas.
+- **Alternativas:** solo filtros en la aplicación (descartada: un solo olvido filtra datos); una base o un esquema por JASS (descartada en el MVP: costo operativo y migraciones por inquilino).
+- **Consecuencias:** defensa en profundidad comprobada con consultas directas en la base ([prueba](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/aislamiento-filas.test.ts)); costo de rendimiento no apreciable ([medición](../07-evaluacion-final/analisis-bd-y-cache.md)); el propietario de la base y las migraciones no se ven afectados.
 
 ## 3. Mantenimiento del registro
 

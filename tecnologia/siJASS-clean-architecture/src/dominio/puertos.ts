@@ -104,5 +104,14 @@ export type DecoradorRepositorios = (repos: RepositoriosTransaccion) => Reposito
  * resuelve y las revierte todas si lanza, propagando el error.
  */
 export interface UnidadDeTrabajo {
-  ejecutar<T>(trabajo: (repos: RepositoriosTransaccion) => Promise<T>): Promise<T>;
+  /**
+   * `contexto.jassId` es la JASS de la solicitud: la implementación PostgreSQL la fija en la
+   * transacción para que la seguridad por filas solo deje ver y escribir esa JASS (s2a, D11).
+   */
+  ejecutar<T>(trabajo: (repos: RepositoriosTransaccion) => Promise<T>, contexto: ContextoJass): Promise<T>;
+}
+
+/** JASS con la que se ejecuta una transacción de negocio. */
+export interface ContextoJass {
+  readonly jassId: string;
 }

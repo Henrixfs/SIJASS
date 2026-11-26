@@ -2,8 +2,9 @@
  * Reservorios y mediciones por HTTP (s1c, tareas 2.x y 3.x): alta, registro por el operador,
  * historial, catálogo y la matriz de aislamiento entre cuentas y JASS.
  */
+import http from 'node:http';
 import { randomUUID } from 'node:crypto';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { nuevaClave } from '../entorno-acceso.js';
 import { crearPool } from './entorno.js';
@@ -224,6 +225,31 @@ describe('API — mediciones: registro, historial y catálogo', () => {
     assert.deepEqual(r.cuerpo.metodos.map((x: { codigo: string }) => x.codigo), ['comparador-dpd', 'colorimetro']);
     assert.equal(r.cuerpo.unidad, 'mg/L');
     assert.equal((await m.api.peticion('GET', '/v1/mediciones/catalogo', { token: m.token.asociadoA1 })).estado, 403);
+  });
+
+  test('catálogo: es el único GET de /v1 que se cachea (privado, 5 min, con ETag y 304); los errores y el resto siguen en no-store', async () => {
+    const r = await m.api.peticion('GET', '/v1/mediciones/catalogo', { token: m.token.operadorA });
+    assert.equal(r.cabeceras.get('cache-control'), 'private, max-age=300');
+    assert.match(r.cabeceras.get('vary') ?? '', /Authorization/i);
+    const etag = r.cabeceras.get('etag');
+    assert.ok(etag, 'lleva ETag');
+    // `fetch` añade `Cache-Control: no-cache` a una solicitud con `If-None-Match` y Express la trata como no fresca;
+    // un navegador revalida sin ese encabezado, así que se usa `http` para reproducirlo.
+    const estado304 = await new Promise<number>((resolver, rechazar) => {
+      http.get(`${m.api.url}/v1/mediciones/catalogo`, { headers: { authorization: `Bearer ${m.token.operadorA}`, 'if-none-match': etag } }, (res) => {
+        res.resume();
+        resolver(res.statusCode ?? 0);
+      }).on('error', rechazar);
+    });
+    assert.equal(estado304, 304);
+    // Sin sesión o sin permiso la respuesta de error NO se puede guardar.
+    for (const token of [undefined, m.token.asociadoA1]) {
+      const e = await m.api.peticion('GET', '/v1/mediciones/catalogo', token ? { token } : {});
+      assert.ok(e.estado === 401 || e.estado === 403);
+      assert.equal(e.cabeceras.get('cache-control'), 'no-store');
+    }
+    // Los datos de personas siguen sin guardarse.
+    assert.equal((await m.api.peticion('GET', '/v1/reservorios', { token: m.token.operadorA })).cabeceras.get('cache-control'), 'no-store');
   });
 });
 

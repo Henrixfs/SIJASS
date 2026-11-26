@@ -1,5 +1,6 @@
 import type pg from 'pg';
-import type { DecoradorRepositoriosAcceso, RepositoriosAcceso, UnidadDeTrabajoAcceso } from '../../dominio/puertos-acceso.js';
+import type { ContextoTransaccion, DecoradorRepositoriosAcceso, RepositoriosAcceso, UnidadDeTrabajoAcceso } from '../../dominio/puertos-acceso.js';
+import { aplicarContextoDeFilas } from './contexto-filas.js';
 import {
   AsociadosPostgres,
   AuditoriaPostgres,
@@ -38,11 +39,12 @@ export class UnidadDeTrabajoAccesoPostgres implements UnidadDeTrabajoAcceso {
     private readonly decorar?: DecoradorRepositoriosAcceso,
   ) {}
 
-  async ejecutar<T>(trabajo: (repos: RepositoriosAcceso) => Promise<T>): Promise<T> {
+  async ejecutar<T>(trabajo: (repos: RepositoriosAcceso) => Promise<T>, contexto: ContextoTransaccion): Promise<T> {
     const cliente = await this.pool.connect();
     let conexionDanada: Error | undefined;
     try {
       await cliente.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+      await aplicarContextoDeFilas(cliente, contexto);
       const repos = repositoriosAccesoPostgres(cliente);
       const valor = await trabajo(this.decorar ? this.decorar(repos) : repos);
       await cliente.query('COMMIT');
