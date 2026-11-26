@@ -33,9 +33,9 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservori
 
 | Comprobación | Resultado |
 |---|---|
-| `npm run lint`, `npm run build` y `npm test` (**Jest**, ESM + ts-jest) en `tecnologia/siJASS-clean-architecture/` | Código 0; 462 pruebas unitarias en 19 suites; la comprobación cruzada con el ejecutor nativo (`npm run test:nativo`) también pasa 462 |
-| `npm run test:cobertura` (Jest, V8) | Núcleo del negocio (dominio, aplicación, adaptadores de memoria y seguridad): 98,3 % de líneas, 92,6 % de ramas y 98,0 % de funciones; umbrales 90/85/90 |
-| `npm run test:integration` contra PostgreSQL 16 sobre una base limpia (ejecutor nativo) | Código 0; 366 pruebas, 0 fallos; la cobertura nativa de la integración (HTTP y PostgreSQL) fue de 96,6 % de líneas y 88,9 % de ramas en la medición del 2026-11-25 |
+| `npm run lint`, `npm run build` y `npm test` (**Jest**, ESM + ts-jest) en `tecnologia/siJASS-clean-architecture/` | Código 0; 470 pruebas unitarias en 19 suites; la comprobación cruzada con el ejecutor nativo (`npm run test:nativo`) también pasa 470 |
+| `npm run test:cobertura` (Jest, V8) | Núcleo del negocio (dominio, aplicación, adaptadores de memoria y seguridad): 98,1 % de líneas, 92,3 % de ramas y 98,0 % de funciones; umbrales 90/85/90 |
+| `npm run test:integration` contra PostgreSQL 16 sobre una base limpia (ejecutor nativo) | Código 0; 380 pruebas, 0 fallos; la cobertura nativa de la integración (HTTP y PostgreSQL) fue de 96,6 % de líneas y 88,9 % de ramas en la medición del 2026-11-25 |
 | Interfaz: `npm run lint`, `tsc -b`, `npm run test:cobertura`, `npm run build` | Código 0; 147 pruebas, 88,5 % de líneas |
 | `npx playwright test` (Chrome, API real y PostgreSQL) | 14 pruebas aprobadas |
 | `npx playwright test -c playwright.responsive.config.ts` | 23 pruebas aprobadas |

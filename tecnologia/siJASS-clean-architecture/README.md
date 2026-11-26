@@ -66,14 +66,14 @@ SIJASS_PERMITIR_DEMO=1 SIJASS_CLAVE_DEMO='<contraseña>' npm run sembrar-demo   
 ## Pruebas con Jest, cobertura, Swagger y Postman (Sprint 2)
 
 ```bash
-npm test                  # Jest (ESM + ts-jest): 462 pruebas unitarias y baterías de contrato sobre memoria
+npm test                  # Jest (ESM + ts-jest): 470 pruebas unitarias y baterías de contrato sobre memoria
 npm run test:cobertura    # lo mismo con reporte en cobertura/ (HTML y lcov) y umbrales mínimos
 npm run test:nativo       # las mismas pruebas con el ejecutor nativo de Node.js (comprobación cruzada)
 npm run test:integration  # PostgreSQL y HTTP, con el ejecutor nativo (un proceso por archivo)
 ```
 
 - **Un solo código de pruebas, dos ejecutores:** todas las pruebas importan [`src/pruebas/marco.ts`](src/pruebas/marco.ts), que usa Jest cuando corre bajo Jest y el ejecutor nativo en la integración. Las baterías de contrato (`src/pruebas/contrato/`) se ejecutan así sobre la memoria (Jest) y sobre PostgreSQL (nativo) sin duplicarse.
-- **Cobertura (2026-11-25):** el núcleo del negocio (dominio, aplicación, adaptadores de memoria y de seguridad) alcanza 98,3 % de líneas, 92,6 % de ramas y 98,0 % de funciones, con umbrales de 90/85/90 que hacen fallar `npm run test:cobertura` si bajan. Quedan fuera de esa medida los archivos que solo declaran tipos y los adaptadores de PostgreSQL y HTTP, que se verifican con las 364 pruebas de integración (cobertura nativa de la integración: 96,6 % de líneas y 88,9 % de ramas sobre el JavaScript compilado).
+- **Cobertura (2026-11-26):** el núcleo del negocio (dominio, aplicación, adaptadores de memoria y de seguridad) alcanza 98,1 % de líneas, 92,3 % de ramas y 98,0 % de funciones, con umbrales de 90/85/90 que hacen fallar `npm run test:cobertura` si bajan. Quedan fuera de esa medida los archivos que solo declaran tipos y los adaptadores de PostgreSQL y HTTP, que se verifican con las 364 pruebas de integración (cobertura nativa de la integración: 96,6 % de líneas y 88,9 % de ramas sobre el JavaScript compilado).
 - **Swagger UI:** con la API en marcha, `http://localhost:3000/docs` muestra el contrato [`docs/api/openapi.yaml`](../../docs/api/openapi.yaml) (Swagger UI autoalojado, sin cargar scripts de terceros). `OPENAPI_FILE` cambia el archivo; si no existe, `/docs` no se monta.
 - **Postman:** [`docs/api/sijass.postman_collection.json`](../../docs/api/sijass.postman_collection.json) se genera desde el contrato (`node scripts/generar-postman.mjs`; `--verificar` falla si está desactualizada y corre en CI). Se ejecuta con Newman: `npx newman run docs/api/sijass.postman_collection.json --env-var baseUrl=http://localhost:3000 --env-var documento=<DNI> --env-var clave=<clave>`.
 

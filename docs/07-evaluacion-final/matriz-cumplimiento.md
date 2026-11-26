@@ -169,7 +169,7 @@ Contraste detallado con el enunciado del Sprint 2 en [cumplimiento del Sprint 2]
 | Criterio | Aporte | Evidencia **local** | Pendiente visible |
 |---|---|---|---|
 | Criterio C03 | Capas verificables y decisiones nuevas (ADR-016 y ADR-017) | [SOLID y patrones en el código](../03-diseno-de-software/diseno-interno/solid-y-patrones-en-el-codigo.md) | Módulos con límites forzados |
-| Criterio C05 | **Jest** con reporte de cobertura (núcleo: 98,3 % de líneas, 92,6 % de ramas) y 462 unitarias; 366 de integración | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md#verificación-del-sprint-2-2026-11-26-en-local) | Ver el CI en verde |
+| Criterio C05 | **Jest** con reporte de cobertura (núcleo: 98,1 % de líneas, 92,3 % de ramas) y 470 unitarias; 380 de integración | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md#verificación-del-sprint-2-2026-11-26-en-local) | Ver el CI en verde |
 | Criterio C08 | Contrato OpenAPI de 35 operaciones con Swagger UI en `/docs` y colección de Postman ejecutada con Newman (35 peticiones, 0 fallos); capacidad medida | [Validación de atributos de calidad](validacion-atributos-de-calidad.md) | Escalado horizontal no medido |
 | Criterio C09 | Análisis con `EXPLAIN` sobre 2.000 asociados; el «N + 1» del padrón se corrigió (13,7 s → 0,24 s) | [Análisis de BD y caché](analisis-bd-y-cache.md) | Respaldo y crecimiento: solo propuesta |
 | Criterio C11 | Caché HTTP de estáticos inmutables y del catálogo de referencia; sin caché de datos de personas (ADR-016) | [Análisis](analisis-bd-y-cache.md#5-estrategia-de-caché-decisión-adr-016) | Sin CDN ni caché de servidor |
