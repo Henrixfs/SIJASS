@@ -6,13 +6,17 @@ export function formatearSoles(centimos: number): string {
   return formato.format(centimos / 100).replace(ESPACIO_DURO, ' ');
 }
 
+export function fechaPago(fecha: string) {
+  return new Date(fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Lima' });
+}
+
 /**
  * Convierte el texto que escribe una persona (`15`, `15.5`, `15,50`) en céntimos enteros sin
  * pasar por coma flotante. Devuelve `null` si no es un monto válido y positivo.
  */
 export function parsearSoles(texto: string): number | null {
-  const m = /^(\d{1,7})(?:[.,](\d{1,2}))?$/.exec(texto.trim());
+  const m = /^(\d{1,8})(?:[.,](\d{1,2}))?$/.exec(texto.trim());
   if (!m) return null;
   const centimos = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0') || '0');
-  return centimos > 0 ? centimos : null;
+  return centimos > 0 && centimos <= 1_000_000_000 ? centimos : null;
 }

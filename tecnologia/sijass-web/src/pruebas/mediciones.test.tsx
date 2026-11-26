@@ -1,9 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { beforeAll, describe, expect, test, vi } from 'vitest';
 import { App } from '../App';
 import { ClienteApi } from '../api/cliente';
+import { ingresarPorDni, respuestaYo } from './ayudas';
 import { ahoraEnLima, formatearInstante, parsearValor, tomadaEnLima } from '../lib/medicion';
+
+// Vite transforma los módulos diferidos al primer import. Esa preparación pertenece al setup de jsdom.
+beforeAll(async () => {
+  await Promise.all([import('../paginas/Personal'), import('../paginas/Mediciones')]);
+});
 
 const json = (estado: number, cuerpo?: unknown) =>
   new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status: estado, headers: { 'Content-Type': 'application/json' } });
@@ -23,6 +29,7 @@ function montar(rol: string, opciones: { reservorios?: unknown[]; mediciones?: u
     const cuerpo = init?.body ? JSON.parse(init.body as string) : undefined;
     llamadas.push({ metodo, ruta: r, cuerpo, cabeceras: (init?.headers ?? {}) as Record<string, string> });
     if (r === '/v1/auth/login') return json(200, { tokenAcceso: 'a', tokenRefresco: 'r', perfil: 'personal', rol });
+    if (r === '/v1/yo') return json(200, respuestaYo('personal', rol));
     if (r === '/v1/reservorios' && metodo === 'GET') return json(200, { reservorios: opciones.reservorios ?? [{ id: RES_ID, nombre: 'Reservorio Central' }] });
     if (r === '/v1/reservorios' && metodo === 'POST') return json(201, { id: 'nuevo', nombre: 'x', jassId: 'j' });
     if (r === '/v1/mediciones/catalogo') return json(200, catalogo);
@@ -36,11 +43,7 @@ function montar(rol: string, opciones: { reservorios?: unknown[]; mediciones?: u
   return { llamadas, usuario };
 }
 
-async function ingresar(usuario: ReturnType<typeof userEvent.setup>) {
-  await usuario.type(await screen.findByLabelText('Correo electrónico'), 'a@b.pe');
-  await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-de-prueba-123');
-  await usuario.click(screen.getByRole('button', { name: 'Ingresar' }));
-}
+const ingresar = (usuario: ReturnType<typeof userEvent.setup>) => ingresarPorDni(usuario);
 
 describe('conversión de lo que escribe la persona', () => {
   test.each([['0.65', 0.65], ['0,5', 0.5], ['1', 1], ['0', 0], [' 2.125 ', 2.125], ['999.999', 999.999]])('valor «%s» → %s', (t, v) => expect(parsearValor(t)).toBe(v));
@@ -65,6 +68,16 @@ describe('conversión de lo que escribe la persona', () => {
 });
 
 describe('interfaz de mediciones', () => {
+  test('el operador puede revisar el catálogo y abrir el formulario de campo desde el menú', async () => {
+    const { usuario } = montar('operador');
+    await ingresar(usuario);
+    await usuario.click(await screen.findByRole('link', { name: 'Reservorios' }));
+    expect(await screen.findByText('Reservorio Central')).toBeVisible();
+    await usuario.click(screen.getByRole('link', { name: 'Operaciones de campo' }));
+    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
+    expect(await screen.findByRole('form', { name: 'Registrar medición' })).toBeInTheDocument();
+  });
+
   test('el operador solo ve la pestaña Mediciones, con el formulario y el aviso de no dictamen', async () => {
     const { usuario } = montar('operador');
     await ingresar(usuario);
@@ -114,6 +127,7 @@ describe('interfaz de mediciones', () => {
     const peticion = vi.fn(async (ruta: RequestInfo | URL, init?: RequestInit) => {
       const r = String(ruta);
       if (r === '/v1/auth/login') return json(200, { tokenAcceso: 'a', tokenRefresco: 'r', perfil: 'personal', rol: 'operador' });
+      if (r === '/v1/yo') return json(200, respuestaYo('personal', 'operador'));
       if (r === '/v1/reservorios') return json(200, { reservorios: [{ id: RES_ID, nombre: 'Reservorio Central' }] });
       if (r === '/v1/mediciones/catalogo') return json(200, catalogo);
       if (r === `/v1/reservorios/${RES_ID}/mediciones`) return json(200, { mediciones: [] });
@@ -136,7 +150,7 @@ describe('interfaz de mediciones', () => {
     const { usuario, llamadas } = montar('consejo');
     await ingresar(usuario);
     await screen.findByRole('heading', { name: 'Asociados' }); // el consejo entra al padrón por defecto
-    await usuario.click(screen.getByRole('button', { name: 'Mediciones' }));
+    await usuario.click(screen.getByRole('link', { name: 'Mediciones' }));
     await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
     expect(await screen.findByText('0,65 mg/L')).toBeInTheDocument();
     expect(screen.queryByRole('form', { name: 'Registrar medición' })).not.toBeInTheDocument();
@@ -150,7 +164,7 @@ describe('interfaz de mediciones', () => {
     const { usuario } = montar('tesorero');
     await ingresar(usuario);
     await screen.findByRole('heading', { name: 'Asociados' });
-    await usuario.click(screen.getByRole('button', { name: 'Mediciones' }));
+    await usuario.click(screen.getByRole('link', { name: 'Mediciones' }));
     await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
     await screen.findByText('0,65 mg/L');
     expect(screen.queryByRole('form', { name: 'Registrar medición' })).not.toBeInTheDocument();

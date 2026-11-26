@@ -1,0 +1,49 @@
+/* Cambio de clave y entrega de claves temporales (s2a). */
+.pagina-clave { min-height: 100svh; max-width: none; margin: 0; padding: 24px 20px; display: grid; place-items: center; background: #f2f7fa; }
+.tarjeta-clave { width: min(100%, 30rem); padding: 28px 26px; background: #fff; border: 1px solid #e3edf2; border-radius: 28px; box-shadow: 0 18px 50px rgb(8 38 58 / 9%); color: #102b3b; }
+.tarjeta-clave .marca { display: inline-flex; align-items: center; gap: 10px; font: 800 1.5rem/1 var(--fuente-titulos); letter-spacing: -.03em; color: #102b3b; }
+.tarjeta-clave .marca-gota { display: inline-grid; place-items: center; width: 38px; height: 38px; color: #092f45; background: linear-gradient(145deg, #4feccd, #25bfa6); border-radius: 11px; }
+.sello-clave { display: grid; place-items: center; width: 48px; height: 48px; margin: 18px 0 6px; color: #006f69; background: #e3f6f1; border-radius: 14px; }
+.tarjeta-clave h1 { margin: 6px 0 6px; font: 800 2rem/1.1 var(--fuente-titulos); letter-spacing: -.04em; }
+.tarjeta-clave h1:focus-visible { outline: 3px solid #0b6bb0; outline-offset: 4px; border-radius: 6px; }
+.tarjeta-clave .suave { margin: 0 0 18px; color: #466174; }
+.formulario-clave { display: grid; gap: 16px; }
+.campo-clave-cambio { display: grid; gap: 6px; }
+.formulario-clave label { font-weight: 700; font-size: .9rem; color: #102b3b; }
+.formulario-clave input { height: 52px; font-size: 1.05rem; padding: 0 14px; border: 1px solid #587485; border-radius: 10px; font-weight: 400; }
+.formulario-clave input[aria-invalid='true'] { border-color: #9b314c; }
+.formulario-clave input:focus-visible { outline: 3px solid #0b6bb0; outline-offset: 2px; }
+.formulario-clave .ayuda-campo { font-weight: 400; color: #466174; font-size: .82rem; }
+.formulario-clave .error-campo { font-weight: 600; color: #9b314c; font-size: .86rem; }
+.mostrar-claves { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 44px; padding: 0 12px; background: none; border: 0; color: #006f69; font-weight: 700; cursor: pointer; }
+.pie-formulario-clave { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.pie-formulario-clave .primario { min-height: 48px; min-width: 10rem; background: #006f69; border-color: #006f69; color: #fff; border-radius: 11px; font-weight: 700; }
+.salir-clave { display: block; margin: 18px auto 0; min-height: 44px; background: none; border: 0; color: #466174; text-decoration: underline; cursor: pointer; }
+
+.error-campo { display: block; margin-top: 4px; color: #9b314c; font-size: .86rem; font-weight: 600; }
+
+/* Entrega de la clave temporal */
+.entrega-clave { display: grid; gap: 14px; }
+.entrega-clave p { margin: 0; }
+.clave-grande {
+  padding: 18px 12px; text-align: center; font: 800 clamp(1.5rem, 6vw, 2.1rem)/1.2 var(--fuente-titulos); letter-spacing: .02em;
+  color: #092f45; background: #e3f6f1; border: 2px dashed #25bfa6; border-radius: 16px; overflow-wrap: anywhere; user-select: all;
+}
+.acciones-clave { display: flex; gap: 12px; flex-wrap: wrap; }
+.acciones-clave button { flex: 1 1 9rem; }
+.tarjeta-impresa { display: none; }
+
+@media print {
+  body * { visibility: hidden !important; }
+  .tarjeta-impresa, .tarjeta-impresa * { visibility: visible !important; }
+  .tarjeta-impresa {
+    display: block; position: fixed; left: 0; top: 0; width: 90mm; padding: 6mm; border: 1px solid #000; border-radius: 4mm;
+    color: #000; background: #fff; font: 11pt/1.4 'Inter Tight', system-ui, sans-serif;
+  }
+  .tarjeta-impresa h3 { margin: 0 0 3mm; font: 800 14pt/1.1 'Manrope', system-ui, sans-serif; }
+  .tarjeta-impresa dl { margin: 0 0 3mm; }
+  .tarjeta-impresa dt { font-size: 9pt; text-transform: uppercase; letter-spacing: .06em; }
+  .tarjeta-impresa dd { margin: 0 0 2mm; font-weight: 700; }
+  .tarjeta-impresa .clave-impresa { font: 800 16pt/1.2 'Manrope', system-ui, sans-serif; padding: 2mm 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
+  .tarjeta-impresa p { font-size: 9pt; margin: 3mm 0 0; }
+}
