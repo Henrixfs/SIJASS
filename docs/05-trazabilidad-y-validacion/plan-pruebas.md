@@ -42,7 +42,7 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservori
 | Newman sobre la [colección de Postman](../api/sijass.postman_collection.json) (generada del contrato) contra la API local | 35 peticiones, 70 aserciones, 0 fallos |
 | k6 progresivo hasta 2.000 usuarios virtuales (local) | 86.450 solicitudes, 0 errores; p95 de lectura < 800 ms hasta ~200 usuarios virtuales; ver la [validación de atributos de calidad](../07-evaluacion-final/validacion-atributos-de-calidad.md) |
 
-Es evidencia **local**: el cambio no se ha enviado a GitHub y no tiene ejecución de CI. Prueba nueva del Sprint: `/docs` (Swagger UI), la caché HTTP del catálogo (`ETag`, `304` y errores en `no-store`) y la equivalencia del listado del padrón con el estado de cuenta individual.
+Es evidencia **local**; la de **GitHub Actions** se cita aparte: [PR #13](https://github.com/Henrixfs/SIJASS/pull/13), commit `3557c48`, [ejecución 45854454728](https://github.com/Henrixfs/SIJASS/actions/runs/45854454728): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)`, `Interfaz y E2E (navegador)` e `Imagen del contenedor` en verde (7 de 7). Un intento anterior del commit `6c37c99` ([ejecución 45853607502](https://github.com/Henrixfs/SIJASS/actions/runs/45853607502)) falló en una prueba de interfaz que no esperaba los datos de red; se corrigió en `3557c48`. Prueba nueva del Sprint: `/docs` (Swagger UI), la caché HTTP del catálogo (`ETag`, `304` y errores en `no-store`) y la equivalencia del listado del padrón con el estado de cuenta individual.
 
 ### Verificación de `s2a-acceso-dni-multi-jass` (2026-11-25, en local)
 
@@ -55,7 +55,7 @@ Es evidencia **local**: el cambio no se ha enviado a GitHub y no tiene ejecució
 | `npx playwright test -c playwright.responsive.config.ts` (API simulada) | 23 pruebas aprobadas: 15 de [`acceso.spec.ts`](../../tecnologia/e2e/responsive/acceso.spec.ts) (ingreso, cambio de clave y entrega de clave a 320, 360, 390, 768 y 1440 px) y 8 de la suite anterior; [capturas y medidas](../diseno/evidencia/s2a-acceso/README.md) |
 | `openspec validate s2a-acceso-dni-multi-jass --strict` | Válido |
 
-Es evidencia **local**: el cambio no se ha enviado a GitHub, así que **no hay ejecución de CI** que citar. No valida despliegue, rendimiento, PWA, sincronización ni RAG, y las medidas de accesibilidad son técnicas, **no** una prueba con personas.
+Es evidencia **local**; la ejecución de CI en GitHub Actions del mismo cambio se cita en la verificación del Sprint 2 (más arriba). No valida despliegue, rendimiento, PWA, sincronización ni RAG, y las medidas de accesibilidad son técnicas, **no** una prueba con personas.
 
 | PT | Prueba de `s2a` | Nivel |
 |---|---|---|

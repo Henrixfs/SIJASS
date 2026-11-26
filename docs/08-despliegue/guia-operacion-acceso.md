@@ -1,6 +1,6 @@
 # Guía de operación: accesos, JASS y claves
 
-**Estado:** prototipo verificado en local (2026-11-25), sin despliegue real. Describe cómo se opera el acceso por DNI que introduce `s2a-acceso-dni-multi-jass` ([propuesta](../../openspec/changes/s2a-acceso-dni-multi-jass/proposal.md)). Para el contenedor y lo que falta del despliegue, vea [despliegue y bloqueos](despliegue-y-bloqueos.md).
+**Estado:** prototipo verificado en local (2026-11-25), sin despliegue real. Describe cómo se opera el acceso por DNI que introduce `s2a-acceso-dni-multi-jass` ([propuesta](../../openspec/changes/archive/2026-11-26-s2a-acceso-dni-multi-jass/proposal.md)). Para el contenedor y lo que falta del despliegue, vea [despliegue y bloqueos](despliegue-y-bloqueos.md).
 
 ## 1. Cómo funciona, en una página
 
