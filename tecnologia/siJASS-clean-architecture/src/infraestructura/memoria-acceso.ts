@@ -152,6 +152,9 @@ class UsuariosMemoria implements RepositorioUsuarios {
   async buscarPorId(id: string): Promise<Usuario | undefined> {
     return this.e.usuarios.get(id);
   }
+  async buscarPorIdBloqueando(id: string): Promise<Usuario | undefined> {
+    return this.buscarPorId(id);
+  }
   async actualizarCredenciales(id: string, nuevas: CredencialesNuevas): Promise<void> {
     const u = this.e.usuarios.get(id);
     if (!u) throw new Error(`usuario inexistente: ${id}`);

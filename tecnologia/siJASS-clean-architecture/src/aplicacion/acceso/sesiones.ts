@@ -45,7 +45,9 @@ export interface SesionIniciada {
 type Fallo = {
   readonly fallo: ErrorNoAutenticado | ErrorCuentaBloqueada | ErrorAccesoDenegado | ErrorJassSuspendida | ErrorTipoDeAccesoDistinto;
 };
-type Exito = { readonly sesion: SesionIniciada };
+/** Sesión ya guardada pero aún sin token de acceso: ese token se emite solo después de confirmar la transacción. */
+type SesionPendiente = Omit<SesionIniciada, 'tokenAcceso'> & { readonly usuarioId: string; readonly ahora: Date };
+type Exito = { readonly sesion: SesionPendiente };
 
 /** `administrador` vale para el personal de una JASS y para la plataforma. */
 export function tipoDeAccesoDe(perfil: Perfil): TipoDeAcceso {
@@ -65,15 +67,18 @@ async function jassSuspendida(r: RepositoriosAcceso, membresia: Membresia): Prom
   return jass?.estado === 'suspendida';
 }
 
-/** Crea la sesión (refresco nuevo) y emite los tokens: lo comparten inicio, renovación y cambio de clave. */
-async function emitirSesion(
+/**
+ * Guarda la sesión (refresco nuevo): lo comparten inicio, renovación y cambio de clave. No emite
+ * el token de acceso: si la transacción se revierte, ningún token válido debe haber salido.
+ */
+async function crearSesion(
   d: DependenciasAcceso,
   r: RepositoriosAcceso,
   usuario: { id: string; debeCambiarContrasena: boolean },
   membresia: Membresia,
   familiaId: string,
   ahora: Date,
-): Promise<SesionIniciada> {
+): Promise<SesionPendiente> {
   const refresco = d.tokens.nuevoRefresco();
   await r.sesiones.crear({
     id: d.ids.nuevo(),
@@ -85,13 +90,20 @@ async function emitirSesion(
     revocadaEn: null,
   });
   return {
-    tokenAcceso: d.tokens.emitirAcceso(usuario.id, ahora),
+    usuarioId: usuario.id,
+    ahora,
     tokenRefresco: refresco.token,
     venceEnSegundos: VIGENCIA_ACCESO_S,
     perfil: membresia.perfil,
     rol: membresia.rol,
     debeCambiarContrasena: usuario.debeCambiarContrasena,
   };
+}
+
+/** Emite el token de acceso de una sesión ya confirmada. */
+function conTokenDeAcceso(d: DependenciasAcceso, pendiente: SesionPendiente): SesionIniciada {
+  const { usuarioId, ahora, ...resto } = pendiente;
+  return { tokenAcceso: d.tokens.emitirAcceso(usuarioId, ahora), ...resto };
 }
 
 /**
@@ -144,6 +156,8 @@ export class AutenticarUsuario {
       throw new ErrorNoAutenticado('credenciales-invalidas');
     }
 
+    // Descarte temprano de una cuenta ya bloqueada, sin pagar la derivación de la clave. La decisión
+    // que cuenta se toma de nuevo dentro de la transacción, con la fila de la cuenta bloqueada.
     if (usuario.bloqueadoHasta !== null && new Date(usuario.bloqueadoHasta).getTime() > ahora.getTime()) {
       await this.d.unidadDeTrabajo.ejecutar(async (r) => {
         const m = await r.membresias.activaDeUsuario(usuario.id);
@@ -155,20 +169,35 @@ export class AutenticarUsuario {
     const correcta = await verificarClave(this.d, usuario, contrasena);
 
     const resultado: Fallo | Exito = await this.d.unidadDeTrabajo.ejecutar(async (r): Promise<Fallo | Exito> => {
-      const membresia = await r.membresias.activaDeUsuario(usuario.id);
-      const actorAuditoria = membresia ? { jassId: membresia.jassId, usuarioId: usuario.id } : null;
+      const actual = await r.usuarios.buscarPorIdBloqueando(usuario.id);
+      const ahora = this.d.reloj.ahora();
+      if (!actual) {
+        await auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', detalle: { motivo: 'cuenta-desconocida' } }, ahora);
+        return { fallo: new ErrorNoAutenticado('credenciales-invalidas') };
+      }
+      const membresia = await r.membresias.activaDeUsuario(actual.id);
+      const actorAuditoria = membresia ? { jassId: membresia.jassId, usuarioId: actual.id } : null;
+      if (actual.bloqueadoHasta !== null && new Date(actual.bloqueadoHasta).getTime() > ahora.getTime()) {
+        await auditar(r, actorAuditoria, { accion: 'sesion.bloqueada', recurso: 'sesion', recursoId: actual.id }, ahora);
+        return { fallo: new ErrorCuentaBloqueada(actual.bloqueadoHasta) };
+      }
+      if (actual.hashContrasena !== usuario.hashContrasena) {
+        await auditar(r, actorAuditoria, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: actual.id, detalle: { motivo: 'credenciales' } }, ahora);
+        return { fallo: new ErrorNoAutenticado('credenciales-invalidas') };
+      }
+      if (actual.bloqueadoHasta !== null) await r.usuarios.reiniciarIntentos(actual.id);
 
-      if (!correcta || usuario.estado !== 'activo') {
+      if (!correcta || actual.estado !== 'activo') {
         const hasta = new Date(ahora.getTime() + BLOQUEO_MS).toISOString();
-        const estado = await r.usuarios.registrarFallo(usuario.id, MAX_INTENTOS_FALLIDOS, hasta);
-        await auditar(r, actorAuditoria, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: usuario.id, detalle: { motivo: 'credenciales' } }, ahora);
+        const estado = await r.usuarios.registrarFallo(actual.id, MAX_INTENTOS_FALLIDOS, hasta);
+        await auditar(r, actorAuditoria, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: actual.id, detalle: { motivo: 'credenciales' } }, ahora);
         if (estado.bloqueadoHasta !== null && estado.intentosFallidos >= MAX_INTENTOS_FALLIDOS) {
-          await auditar(r, actorAuditoria, { accion: 'sesion.bloqueada', recurso: 'sesion', recursoId: usuario.id, detalle: { hasta } }, ahora);
+          await auditar(r, actorAuditoria, { accion: 'sesion.bloqueada', recurso: 'sesion', recursoId: actual.id, detalle: { hasta } }, ahora);
         }
         return { fallo: new ErrorNoAutenticado('credenciales-invalidas') };
       }
       if (!membresia) {
-        await auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: usuario.id, detalle: { motivo: 'sin-membresia' } }, ahora);
+        await auditar(r, null, { accion: 'sesion.fallida', recurso: 'sesion', recursoId: actual.id, detalle: { motivo: 'sin-membresia' } }, ahora);
         return { fallo: new ErrorAccesoDenegado('sin-membresia') };
       }
       if (await jassSuspendida(r, membresia)) {
@@ -182,14 +211,14 @@ export class AutenticarUsuario {
         return { fallo: new ErrorTipoDeAccesoDistinto(tipoReal) };
       }
 
-      await r.usuarios.reiniciarIntentos(usuario.id);
-      const sesion = await emitirSesion(this.d, r, usuario, membresia, this.d.ids.nuevo(), ahora);
-      await auditar(r, actorAuditoria, { accion: 'sesion.iniciada', recurso: 'sesion', recursoId: usuario.id }, ahora);
+      await r.usuarios.reiniciarIntentos(actual.id);
+      const sesion = await crearSesion(this.d, r, actual, membresia, this.d.ids.nuevo(), ahora);
+      await auditar(r, actorAuditoria, { accion: 'sesion.iniciada', recurso: 'sesion', recursoId: actual.id }, ahora);
       return { sesion };
     }, { sistema: true });
 
     if ('fallo' in resultado) throw resultado.fallo;
-    return resultado.sesion;
+    return conTokenDeAcceso(this.d, resultado.sesion);
   }
 }
 
@@ -231,11 +260,11 @@ export class RenovarSesion {
         return { fallo: new ErrorNoAutenticado('sesion-invalida') };
       }
 
-      return { sesion: await emitirSesion(this.d, r, usuario, membresia, sesion.familiaId, ahora) };
+      return { sesion: await crearSesion(this.d, r, usuario, membresia, sesion.familiaId, ahora) };
     }, { sistema: true });
 
     if ('fallo' in resultado) throw resultado.fallo;
-    return resultado.sesion;
+    return conTokenDeAcceso(this.d, resultado.sesion);
   }
 }
 
@@ -338,15 +367,16 @@ export class CambiarContrasena {
 
     const nueva = validarContrasenaElegida(comando.contrasenaNueva, usuario.documento);
     const hash = await this.d.contrasenas.derivar(nueva);
-    return this.d.unidadDeTrabajo.ejecutar(async (r) => {
+    const sesion = await this.d.unidadDeTrabajo.ejecutar(async (r) => {
       const membresia = await r.membresias.activaDeUsuario(usuario.id);
       if (!membresia) throw new ErrorAccesoDenegado('membresia-inactiva');
       await r.usuarios.actualizarCredenciales(usuario.id, { hashContrasena: hash, claveGenerada: false, debeCambiarContrasena: false });
       await r.sesiones.revocarDeUsuario(usuario.id, ahora.toISOString());
-      const sesion = await emitirSesion(this.d, r, { id: usuario.id, debeCambiarContrasena: false }, membresia, this.d.ids.nuevo(), ahora);
+      const nueva = await crearSesion(this.d, r, { id: usuario.id, debeCambiarContrasena: false }, membresia, this.d.ids.nuevo(), ahora);
       await auditar(r, actor, { accion: 'clave.cambiada', recurso: 'usuario', recursoId: usuario.id }, ahora);
-      return sesion;
+      return nueva;
     }, contextoDe(actor));
+    return conTokenDeAcceso(this.d, sesion);
   }
 }
 

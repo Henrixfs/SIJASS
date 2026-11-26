@@ -5,7 +5,10 @@
  */
 import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
-import { ErrorDatoInvalido, ErrorNoAutenticado } from '../../dominio/errores.js';
+import { fork } from 'node:child_process';
+import { once } from 'node:events';
+import { ErrorCuentaBloqueada, ErrorDatoInvalido, ErrorNoAutenticado } from '../../dominio/errores.js';
+import { AutenticarUsuario } from '../../aplicacion/acceso/sesiones.js';
 import { UnidadDeTrabajoAccesoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
 import { CLAVE, crearEntorno, nuevaClave, sembrarEscenario, type Entorno } from '../entorno-acceso.js';
 import { crearPool } from './entorno.js';
@@ -109,6 +112,185 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
       await Promise.allSettled(Array.from({ length: 4 }, () => e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' })));
       const { rows } = await pool.query('SELECT intentos_fallidos FROM usuario WHERE id = $1', [esc.operadorA.usuarioId]);
       assert.equal(rows[0].intentos_fallidos, 4, `ronda ${ronda}: se perdió algún intento`);
+    }
+  });
+
+  test('un inicio correcto iniciado antes del bloqueo no abre sesión después de activarse', async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+    const esc = await sembrarEscenario(e);
+    for (let i = 0; i < 4; i++) {
+      await assert.rejects(e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+    }
+
+    let avisarInicio!: () => void;
+    let liberar!: () => void;
+    const inicioVerificacion = new Promise<void>((resolve) => { avisarInicio = resolve; });
+    const continuar = new Promise<void>((resolve) => { liberar = resolve; });
+    const original = e.dependencias.contrasenas;
+    const controlada = {
+      derivar: original.derivar.bind(original),
+      verificar: async (clave: string, hash: string): Promise<boolean> => {
+        avisarInicio();
+        await continuar;
+        return original.verificar(clave, hash);
+      },
+    };
+    const autenticador = new AutenticarUsuario({ ...e.dependencias, contrasenas: controlada });
+    const inicioCorrecto = autenticador.ejecutar({ documento: esc.operadorA.documento, contrasena: CLAVE });
+    try {
+      await inicioVerificacion;
+      await assert.rejects(e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      const { rows } = await pool.query('SELECT intentos_fallidos, bloqueado_hasta FROM usuario WHERE id = $1', [esc.operadorA.usuarioId]);
+      assert.equal(rows[0].intentos_fallidos, 5);
+      assert.ok(rows[0].bloqueado_hasta);
+    } finally {
+      liberar();
+    }
+    await assert.rejects(inicioCorrecto, ErrorCuentaBloqueada);
+    }
+  });
+
+  test('el bloqueo vigente prevalece aunque cambie el hash durante la verificación', async () => {
+    const esc = await sembrarEscenario(e);
+    const cuenta = esc.operadorA;
+    for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+    let avisar!: () => void;
+    let liberar!: () => void;
+    const inicio = new Promise<void>((resolve) => { avisar = resolve; });
+    const continuar = new Promise<void>((resolve) => { liberar = resolve; });
+    const original = e.dependencias.contrasenas;
+    const caso = new AutenticarUsuario({ ...e.dependencias, contrasenas: {
+      derivar: original.derivar.bind(original),
+      verificar: async (clave: string, hash: string): Promise<boolean> => {
+        avisar();
+        await continuar;
+        return original.verificar(clave, hash);
+      },
+    } });
+    const intento = caso.ejecutar({ documento: cuenta.documento, contrasena: CLAVE });
+    const rechazo = assert.rejects(intento, ErrorCuentaBloqueada);
+    await inicio;
+    try {
+      await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      const nuevoHash = await original.derivar('otra-clave-segura-123');
+      await pool.query('UPDATE usuario SET hash_contrasena = $1 WHERE id = $2', [nuevoHash, cuenta.usuarioId]);
+    } finally {
+      liberar();
+    }
+    await rechazo;
+    const { rows } = await pool.query('SELECT intentos_fallidos, bloqueado_hasta FROM usuario WHERE id = $1', [cuenta.usuarioId]);
+    assert.equal(rows[0].intentos_fallidos, 5);
+    assert.ok(rows[0].bloqueado_hasta);
+  });
+
+  test('bloquear una cuenta no impide autenticar otra cuenta', async () => {
+    const esc = await sembrarEscenario(e);
+    const cliente = await pool.connect();
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await cliente.query('BEGIN');
+      await cliente.query('SELECT id FROM usuario WHERE id = $1 FOR UPDATE', [esc.operadorA.usuarioId]);
+      const limite = new Promise<never>((_, reject) => { temporizador = setTimeout(() => reject(new Error('otra cuenta quedó bloqueada')), 10_000); });
+      const sesion = await Promise.race([e.casos.autenticar.ejecutar({ documento: esc.tesoreroB.documento, contrasena: CLAVE }), limite]);
+      assert.equal(sesion.rol, 'tesorero');
+    } finally {
+      if (temporizador) clearTimeout(temporizador);
+      await cliente.query('ROLLBACK');
+      cliente.release();
+    }
+  });
+
+  for (const cambio of ['hash', 'estado'] as const) {
+    test(`se rechaza el inicio si cambia ${cambio} durante la verificación`, async () => {
+      const esc = await sembrarEscenario(e);
+      let avisar!: () => void;
+      let liberar!: () => void;
+      const inicio = new Promise<void>((resolve) => { avisar = resolve; });
+      const continuar = new Promise<void>((resolve) => { liberar = resolve; });
+      const original = e.dependencias.contrasenas;
+      const contrasenas = {
+        derivar: original.derivar.bind(original),
+        verificar: async (clave: string, hash: string): Promise<boolean> => {
+          avisar();
+          await continuar;
+          return original.verificar(clave, hash);
+        },
+      };
+      const caso = new AutenticarUsuario({ ...e.dependencias, contrasenas });
+      const intento = caso.ejecutar({ documento: esc.operadorA.documento, contrasena: CLAVE });
+      const rechazo = assert.rejects(intento, ErrorNoAutenticado);
+      await inicio;
+      try {
+        if (cambio === 'hash') {
+          const nuevo = await original.derivar('otra-clave-segura-123');
+          await pool.query('UPDATE usuario SET hash_contrasena = $1 WHERE id = $2', [nuevo, esc.operadorA.usuarioId]);
+        } else {
+          await pool.query("UPDATE usuario SET estado = 'inactivo' WHERE id = $1", [esc.operadorA.usuarioId]);
+        }
+      } finally {
+        liberar();
+      }
+      await rechazo;
+    });
+  }
+
+  test('procesos independientes respetan el bloqueo sin afectar otra cuenta', async () => {
+    const esc = await sembrarEscenario(e);
+    const cuenta = esc.operadorA;
+    for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+    const ruta = new URL('./auxiliar-auth.js', import.meta.url);
+    const correcto = fork(ruta, [cuenta.documento, 'correcta'], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });
+    const cierreCorrecto = once(correcto, 'exit');
+    try {
+      assert.equal((await once(correcto, 'message'))[0], 'verificando');
+      const incorrecto = fork(ruta, [cuenta.documento, 'incorrecta'], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });
+      const cierreIncorrecto = once(incorrecto, 'exit');
+      assert.equal((await once(incorrecto, 'message'))[0], 'ErrorNoAutenticado');
+      await cierreIncorrecto;
+      const otra = await e.casos.autenticar.ejecutar({ documento: esc.tesoreroB.documento, contrasena: CLAVE });
+      assert.equal(otra.rol, 'tesorero');
+      const respuesta = once(correcto, 'message');
+      correcto.send('continuar');
+      assert.equal((await respuesta)[0], 'ErrorCuentaBloqueada');
+      await cierreCorrecto;
+      const { rows } = await pool.query('SELECT intentos_fallidos, bloqueado_hasta FROM usuario WHERE id = $1', [cuenta.usuarioId]);
+      assert.equal(rows[0].intentos_fallidos, 5);
+      assert.ok(rows[0].bloqueado_hasta);
+    } finally {
+      if (correcto.connected) correcto.send('continuar');
+    }
+  });
+
+  test('si el inicio correcto decide primero, el fallo posterior cuenta como primero', async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const esc = await sembrarEscenario(e);
+      for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      let iniciar!: () => void;
+      let liberar!: () => void;
+      const iniciado = new Promise<void>((resolve) => { iniciar = resolve; });
+      const continuar = new Promise<void>((resolve) => { liberar = resolve; });
+      const original = e.dependencias.contrasenas;
+      const contrasenas = {
+        derivar: original.derivar.bind(original),
+        verificar: async (clave: string, hash: string): Promise<boolean> => {
+          iniciar();
+          await continuar;
+          return original.verificar(clave, hash);
+        },
+      };
+      const caso = new AutenticarUsuario({ ...e.dependencias, contrasenas });
+      const fallo = caso.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' });
+      const rechazo = assert.rejects(fallo, ErrorNoAutenticado);
+      await iniciado;
+      try {
+      await e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: CLAVE });
+      } finally {
+        liberar();
+      }
+      await rechazo;
+      const { rows } = await pool.query('SELECT intentos_fallidos, bloqueado_hasta FROM usuario WHERE id = $1', [esc.operadorA.usuarioId]);
+      assert.equal(rows[0].intentos_fallidos, 1);
+      assert.equal(rows[0].bloqueado_hasta, null);
     }
   });
 });

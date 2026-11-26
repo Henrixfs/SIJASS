@@ -68,6 +68,8 @@ export interface RepositorioUsuarios {
   buscarPorDocumento(documento: string): Promise<Usuario | undefined>;
   buscarPorCorreo(correo: string): Promise<Usuario | undefined>;
   buscarPorId(id: string): Promise<Usuario | undefined>;
+  /** Serializa las decisiones de la cuenta hasta el fin de la unidad de trabajo. */
+  buscarPorIdBloqueando(id: string): Promise<Usuario | undefined>;
   /** Cambia la contraseña y las banderas, y además reinicia los intentos fallidos y el bloqueo. */
   actualizarCredenciales(id: string, nuevas: CredencialesNuevas): Promise<void>;
   /** `false` si la cuenta no existe. */

@@ -6,6 +6,7 @@
 import { before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { ErrorAccesoDenegado, ErrorCuentaBloqueada, ErrorNoAutenticado } from '../../dominio/errores.js';
+import { AutenticarUsuario } from '../../aplicacion/acceso/sesiones.js';
 import type { DecoradorRepositoriosAcceso, UnidadDeTrabajoAcceso } from '../../dominio/puertos-acceso.js';
 import { CLAVE, crearEntorno, sembrarEscenario, type Entorno, type Escenario, comoSistema, type UnidadDeTrabajoSistema } from '../entorno-acceso.js';
 
@@ -88,6 +89,45 @@ describe('acceso — inicio de sesión', () => {
     await e.casos.autenticar.ejecutar({ documento, contrasena: CLAVE });
     assert.equal((await uow.ejecutar((r) => r.usuarios.buscarPorId(esc.consejoA.usuarioId)))?.intentosFallidos, 0);
   });
+
+  test('el primer fallo tras vencer el bloqueo inicia un nuevo conteo', async () => {
+    const escenario = await sembrarEscenario(e);
+    const cuenta = escenario.operadorA;
+    for (let i = 0; i < 5; i++) await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+    e.reloj.avanzar(15 * 60_000 + 1);
+    await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+    const usuario = await uow.ejecutar((r) => r.usuarios.buscarPorId(cuenta.usuarioId));
+    assert.equal(usuario?.intentosFallidos, 1);
+    assert.equal(usuario?.bloqueadoHasta, null);
+    await e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: CLAVE });
+  });
+
+  for (const destino of ['sesion', 'auditoria'] as const) {
+    test(`fallo de ${destino} revierte el reinicio del contador y no devuelve tokens`, async () => {
+      const escenario = await sembrarEscenario(e);
+      const cuenta = escenario.operadorA;
+      await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      const fallida = crearEntorno(fabrica((r) => ({
+        ...r,
+        sesiones: destino === 'sesion' ? Object.assign(Object.create(r.sesiones) as typeof r.sesiones, { crear: async () => { throw new Error('fallo controlado'); } }) : r.sesiones,
+        auditoria: destino === 'auditoria' ? Object.assign(Object.create(r.auditoria) as typeof r.auditoria, { registrar: async () => { throw new Error('fallo controlado'); } }) : r.auditoria,
+      })), { reloj: e.reloj });
+      const tokens = fallida.dependencias.tokens;
+      const refresco = tokens.nuevoRefresco();
+      let emisiones = 0;
+      const caso = new AutenticarUsuario({ ...fallida.dependencias, tokens: {
+        nuevoRefresco: () => refresco,
+        emitirAcceso: (id, ahora) => { emisiones++; return tokens.emitirAcceso(id, ahora); },
+        verificarAcceso: tokens.verificarAcceso.bind(tokens),
+        hashDeRefresco: tokens.hashDeRefresco.bind(tokens),
+      } });
+      await assert.rejects(caso.ejecutar({ documento: cuenta.documento, contrasena: CLAVE }), /fallo controlado/);
+      const usuario = await uow.ejecutar((r) => r.usuarios.buscarPorId(cuenta.usuarioId));
+      assert.equal(usuario?.intentosFallidos, 1);
+      assert.equal(await uow.ejecutar((r) => r.sesiones.buscarPorHash(refresco.hash)), undefined);
+      assert.equal(emisiones, 0);
+    });
+  }
 
   test('la auditoría registra fallos y bloqueos sin contraseñas ni tokens', async () => {
     const delaJass = await eventos(esc.jassA);

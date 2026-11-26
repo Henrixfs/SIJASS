@@ -47,6 +47,10 @@ El sistema SHALL responder `fuera-de-alcance` a toda consulta que pida calcular,
 - **WHEN** el pedido de dosis usa mayúsculas, acentos o sinónimos como «dosificar», «cuántos gramos» o «calcular la dosis»
 - **THEN** el estado sigue siendo `fuera-de-alcance`
 
+#### Scenario: Evidencia recuperada con contenido de dosificación
+- **WHEN** una consulta sobre un procedimiento permitido coincide con páginas, referencias o citas que contienen instrucciones, cantidades o fórmulas de dosificación
+- **THEN** la respuesta y el catálogo omiten el contenido restringido, se conservan las citas permitidas y, si no hay evidencia segura para la consulta, se responde `sin-evidencia` sin citas
+
 ### Requirement: Corpus validado al cargar
 El sistema SHALL cargar el corpus desde un `manifiesto.json` y validarlo al arrancar: cada documento con identificador, título, versión, estado (`aprobado` o `ejemplo`), responsable y páginas numeradas desde 1, sin repetirse ni estar vacías. SHALL rechazar el arranque con un manifiesto inválido.
 
