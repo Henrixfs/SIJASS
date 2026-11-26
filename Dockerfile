@@ -22,7 +22,7 @@ CMD ["node", "node_modules/node-pg-migrate/bin/node-pg-migrate.js", "up", "-m", 
 
 # ---- Etapa final: la API con la interfaz, sin dependencias de desarrollo ----------------------
 FROM node:24-slim AS api
-ENV NODE_ENV=production PORT=3000 WEB_DIR=/app/web
+ENV NODE_ENV=production PORT=3000 WEB_DIR=/app/web OPENAPI_FILE=/app/openapi.yaml
 WORKDIR /app
 COPY --from=construir /src/tecnologia/siJASS-clean-architecture/package.json /src/tecnologia/siJASS-clean-architecture/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
@@ -31,6 +31,8 @@ COPY --from=construir /src/tecnologia/siJASS-clean-architecture/dist ./dist
 RUN rm -rf dist/pruebas
 COPY --from=construir /src/tecnologia/siJASS-clean-architecture/corpus-ejemplo ./corpus-ejemplo
 COPY --from=construir /src/tecnologia/sijass-web/dist ./web
+# Contrato OpenAPI que la API publica en /docs (Swagger UI).
+COPY docs/api/openapi.yaml ./openapi.yaml
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

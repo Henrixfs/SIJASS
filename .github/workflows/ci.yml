@@ -28,7 +28,23 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
-      - run: npm test
+      # Jest (ESM + ts-jest). En Node.js 24 se mide también la cobertura del núcleo del negocio,
+      # con umbrales mínimos (jest.config.mjs): si bajan, el job falla.
+      - name: Pruebas unitarias (Jest)
+        if: matrix.node != 24
+        run: npm test
+      - name: Pruebas unitarias (Jest) con cobertura
+        if: matrix.node == 24
+        run: npm run test:cobertura
+      - name: Conservar el reporte de cobertura
+        if: matrix.node == 24
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-backend
+          path: tecnologia/siJASS-clean-architecture/cobertura/
+          if-no-files-found: error
+      - name: La colección de Postman coincide con el contrato OpenAPI
+        run: node scripts/generar-postman.mjs --verificar
 
   documentacion:
     name: Documentación
@@ -122,8 +138,14 @@ jobs:
         run: |
           npm ci
           npm run lint
-          npm test
+          npm run test:cobertura
           npm run build
+      - name: Conservar el reporte de cobertura de la interfaz
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-web
+          path: tecnologia/sijass-web/cobertura/
+          if-no-files-found: error
       - name: E2E (instalar y ejecutar)
         working-directory: tecnologia/e2e
         run: |
