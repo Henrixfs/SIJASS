@@ -71,10 +71,16 @@ export function Ingreso({ expirada }: { expirada: boolean }) {
   const [visible, setVisible] = useState(false);
   const [estado, setEstado] = useState<Estado | null>(null);
   const [errorDocumento, setErrorDocumento] = useState<string | null>(null);
+  // Hacia dónde avanza el paso: «adelante» al elegir el tipo de acceso, «atras» al pulsar «Cambiar».
+  const [sentido, setSentido] = useState<'adelante' | 'atras'>('adelante');
+  // El primer paso no se anima al cargar (ya entra con la tarjeta): solo los cambios de paso.
+  const [navegado, setNavegado] = useState(false);
   const campoDocumento = useRef<HTMLInputElement>(null);
   const { enviando, ejecutar } = useEnvio();
 
   function elegir(nuevo: TipoDeAcceso) {
+    setSentido('adelante');
+    setNavegado(true);
     setTipo(nuevo);
     setEstado(null);
     window.setTimeout(() => campoDocumento.current?.focus(), 0);
@@ -133,7 +139,7 @@ export function Ingreso({ expirada }: { expirada: boolean }) {
           {expirada && !estado && tipo === null && <EstadoAcceso estado={{ tipo: 'error', titulo: 'Tu sesión expiró', detalle: 'Vuelve a ingresar para continuar.' }} cambiarTipo={elegir} />}
 
           {tipo === null ? (
-            <>
+            <div key="paso-tipo" className="paso-ingreso" data-sentido={navegado ? sentido : 'inicial'}>
               <p className="descripcion-ingreso">¿Cómo vas a entrar?</p>
               <div className="tipos-acceso" role="group" aria-label="¿Cómo vas a entrar?">
                 {TIPOS.map(({ id, titulo, detalle, Icono }) => (
@@ -143,12 +149,12 @@ export function Ingreso({ expirada }: { expirada: boolean }) {
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           ) : (
-            <>
+            <div key="paso-datos" className="paso-ingreso" data-sentido={navegado ? sentido : 'inicial'}>
               <p className="descripcion-ingreso">
                 <span className="tipo-elegido" data-testid="tipo-elegido">{NOMBRE_TIPO[tipo]}</span>
-                <button type="button" className="enlace-tipo" onClick={() => { setTipo(null); setEstado(null); }}>Cambiar</button>
+                <button type="button" className="enlace-tipo" onClick={() => { setSentido('atras'); setNavegado(true); setTipo(null); setEstado(null); }}>Cambiar</button>
               </p>
               <div className="campo-ingreso">
                 <label className="etiqueta-ingreso" htmlFor="documento-ingreso">Número de DNI</label>
@@ -174,7 +180,7 @@ export function Ingreso({ expirada }: { expirada: boolean }) {
               </div>
               {estado && <EstadoAcceso estado={estado} cambiarTipo={elegir} />}
               <button type="submit" className="primario boton-ingreso" disabled={enviando}>{enviando ? 'Ingresando…' : 'Ingresar'}</button>
-            </>
+            </div>
           )}
           <p className="ayuda-ingreso"><span>¿Necesitas ayuda?</span> <strong>Contacta a tu JASS.</strong></p>
         </form>

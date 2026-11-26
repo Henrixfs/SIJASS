@@ -11,5 +11,5 @@ export function IconoModulo({ id }: { id: string }) {
 }
 
 export function Marca() {
-  return <strong className="marca"><span className="marca-gota"><Droplet aria-hidden="true" size={24} /></span>SIJASS</strong>;
+  return <strong className="marca"><span className="marca-gota"><Droplet aria-hidden="true" size={24} /></span><span className="marca-texto">SIJASS</span></strong>;
 }

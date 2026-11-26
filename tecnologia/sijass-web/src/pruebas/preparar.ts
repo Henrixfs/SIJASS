@@ -8,5 +8,6 @@ configure({ asyncUtilTimeout: 4000 });
 afterEach(() => {
   cleanup();
   sessionStorage.clear();
+  localStorage.clear();
   window.history.replaceState(null, '', '/');
 });

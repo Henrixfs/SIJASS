@@ -107,7 +107,7 @@ button {
   background: var(--superficie);
   color: var(--texto);
   cursor: pointer;
-  transition: background-color var(--transicion), border-color var(--transicion);
+  transition: background-color var(--transicion), border-color var(--transicion), transform var(--duracion-pulsar) var(--curva);
 }
 button:hover:not(:disabled) {
   border-color: var(--primario);
@@ -420,6 +420,7 @@ dialog::backdrop { background: rgb(8 38 58 / 62%); }
   dialog { width: min(calc(100% - 32px), 510px); }
   .pie-dialogo > button { flex: 1 1 100%; }
 }
+/* Reducir movimiento: los botones conservan el cambio de color y no se hunden al pulsar. */
 @media (prefers-reduced-motion: reduce) {
-  :root { --transicion: 0ms; }
+  button { transition: background-color var(--transicion), border-color var(--transicion); }
 }

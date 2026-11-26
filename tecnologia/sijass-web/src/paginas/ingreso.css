@@ -9,6 +9,7 @@
   --ing-suave: #466174;
   --ing-borde: #587485;
   --ing-linea: #d8e6ec;
+  --duracion-paso: 220ms;
   display: grid;
   grid-template-columns: minmax(0, 642fr) minmax(0, 798fr);
   min-height: 100svh;
@@ -39,7 +40,8 @@
   width: 100%;
   padding: 62px 62px 0;
 }
-.ondas { position: absolute; z-index: 0; inset: auto 0 0 0; width: 100%; height: 38%; min-height: 220px; pointer-events: none; }
+/* Ondas lentas: se ensanchan 40 px por lado para que el desplazamiento nunca deje ver su borde. */
+.ondas { position: absolute; z-index: 0; inset: auto auto 0 -40px; width: calc(100% + 80px); height: 38%; min-height: 220px; pointer-events: none; animation: deriva 16s ease-in-out infinite alternate; }
 .firma-ingreso { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: none; padding: 0; border-radius: 0; }
 .firma-ingreso > span { color: #d3e7ee; font-size: .95rem; margin-left: 2px; }
 .ingreso .marca { display: inline-flex; align-items: center; gap: 10px; font: 800 1.7rem/1 var(--fuente-titulos); letter-spacing: -.03em; color: #fff; }
@@ -65,7 +67,17 @@
   border: 1px solid #e3edf2;
   border-radius: 28px;
   box-shadow: 0 18px 50px rgb(8 38 58 / 9%);
+  animation: entrar-ingreso var(--duracion-tarjeta) var(--curva) backwards;
 }
+/* Cada paso (tipo de acceso → DNI y clave) entra desde el lado hacia el que avanza la persona. */
+.paso-ingreso { animation: paso-adelante var(--duracion-paso) var(--curva) backwards; }
+.paso-ingreso[data-sentido='atras'] { animation-name: paso-atras; }
+/* El primer paso ya entra con la tarjeta: animarlo también sería una doble entrada. */
+.paso-ingreso[data-sentido='inicial'] { animation: none; }
+@keyframes entrar-ingreso { from { opacity: 0; transform: translateY(10px); } }
+@keyframes paso-adelante { from { opacity: 0; transform: translateX(16px); } }
+@keyframes paso-atras { from { opacity: 0; transform: translateX(-16px); } }
+@keyframes aparecer-estado { from { opacity: 0; transform: translateY(-4px); } }
 .sello-ingreso { display: inline-grid; place-items: center; width: 48px; height: 48px; margin-bottom: 22px; color: var(--ing-primario); background: #e3f6f1; border-radius: 14px; }
 .ingreso h1 { margin: 0; font: 800 2.05rem/1.1 var(--fuente-titulos); letter-spacing: -.04em; color: var(--ing-texto); }
 .descripcion-ingreso { margin: 10px 0 22px; color: var(--ing-suave); font-size: .95rem; }
@@ -84,15 +96,15 @@
   position: absolute; top: 1px; right: 1px; display: grid; place-items: center;
   width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--ing-suave);
 }
-.ingreso .ver-clave:hover:not(:disabled) { background: #eef5f8; }
+.ingreso .ver-clave { transition: background-color var(--duracion-fundido) var(--curva); }
 
 /* Tipo de acceso: dos botones grandes (asociado / administrador) */
 .tipos-acceso { display: grid; gap: 14px; margin: 0 0 22px; }
 .ingreso .tipo-acceso {
   display: flex; align-items: center; gap: 16px; width: 100%; min-height: 84px; padding: 16px 18px; text-align: left; cursor: pointer;
   background: #fff; border: 2px solid var(--ing-borde); border-radius: 18px; color: var(--ing-texto); font: inherit;
+  transition: border-color var(--duracion-fundido) var(--curva), background-color var(--duracion-fundido) var(--curva), transform var(--duracion-pulsar) var(--curva);
 }
-.ingreso .tipo-acceso:hover { border-color: var(--ing-primario); background: #f3faf9; }
 .ingreso .tipo-acceso:focus-visible { outline: 3px solid #0b6bb0; outline-offset: 3px; }
 .tipo-icono { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; background: #e3f6f1; color: var(--ing-primario); }
 .tipo-texto { display: grid; gap: 2px; }
@@ -107,7 +119,7 @@
 .ingreso .campo-clave input { padding-right: 56px; }
 
 /* Estados de acceso */
-.estado-acceso { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 18px; padding: 12px 14px; border-radius: 12px; font-size: .84rem; line-height: 1.35; }
+.estado-acceso { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 18px; padding: 12px 14px; border-radius: 12px; font-size: .84rem; line-height: 1.35; animation: aparecer-estado var(--duracion-pagina) var(--curva); }
 .estado-acceso strong { display: block; font-size: .9rem; }
 .estado-acceso span:not(.estado-icono) { display: block; margin-top: 2px; }
 .estado-acceso .enlace-tipo { margin: 4px 0 0; padding: 0; color: inherit; }
@@ -118,7 +130,7 @@
 .estado-acceso.exito { background: #e1f5ed; color: #116457; }
 
 .ingreso .boton-ingreso { display: flex; justify-content: center; align-items: center; width: 100%; height: 48px; margin-top: 4px; font: 700 .95rem 'Inter Tight', system-ui, sans-serif; background: var(--ing-primario); border-color: var(--ing-primario); color: #fff; border-radius: 11px; }
-.ingreso .boton-ingreso:hover:not(:disabled) { background: #00544f; }
+.ingreso .boton-ingreso { transition: background-color var(--duracion-fundido) var(--curva), border-color var(--duracion-fundido) var(--curva), transform var(--duracion-pulsar) var(--curva); }
 .ingreso .boton-ingreso:disabled { background: #5d8f8c; border-color: #5d8f8c; color: #fff; cursor: progress; }
 .ayuda-ingreso { margin: 22px 0 0; padding-top: 18px; border-top: 1px solid var(--ing-linea); text-align: center; font-size: .88rem; color: var(--ing-suave); }
 .ayuda-ingreso strong { color: var(--ing-primario); font-weight: 600; }
@@ -141,4 +153,19 @@
   .ingreso h1 { font-size: 2rem; }
   .descripcion-ingreso { margin-bottom: 18px; }
 }
-@media (prefers-reduced-motion: reduce) { .ingreso * { transition: none !important; } }
+/* Solo con puntero fino: en una pantalla táctil el color de «pasar el puntero» no debe quedarse pegado. */
+@media (hover: hover) and (pointer: fine) {
+  .ingreso .ver-clave:hover:not(:disabled) { background: #eef5f8; }
+  .ingreso .tipo-acceso:hover { border-color: var(--ing-primario); background: #f3faf9; }
+  .ingreso .boton-ingreso:hover:not(:disabled) { background: #00544f; }
+}
+
+/* Reducir movimiento: sin desplazamiento ni ondas; las entradas quedan en un fundido de 120 ms como máximo. */
+@media (prefers-reduced-motion: reduce) {
+  .ingreso { --duracion-paso: 120ms; }
+  .ondas { animation: none; }
+  @keyframes entrar-ingreso { from { opacity: 0; } }
+  @keyframes paso-adelante { from { opacity: 0; } }
+  @keyframes paso-atras { from { opacity: 0; } }
+  @keyframes aparecer-estado { from { opacity: 0; } }
+}

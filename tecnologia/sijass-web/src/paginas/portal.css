@@ -53,20 +53,29 @@
 .portal-monto, .portal-monto span { display: inline !important; color: var(--po-texto) !important; font-size: inherit !important; }
 .portal-monto { font: 800 2rem/1.1 var(--fuente-titulos); letter-spacing: -.03em; }
 .portal .primario { background: var(--po-primario); border-color: var(--po-primario); color: #fff; border-radius: 12px; font-weight: 700; }
-.portal .primario:hover:not(:disabled) { background: #00544f; }
+
+/* Entrada del inicio y de cada pantalla de familias: los bloques aparecen con 40 ms de diferencia (tope de 6 pasos). */
+.portal #portal-principal > * {
+  animation: entrar-tarjeta var(--duracion-tarjeta) var(--curva) backwards;
+  animation-delay: calc(min(var(--i, 0), 6) * var(--paso-escalon));
+}
+.portal #portal-principal > :nth-child(1) { --i: 0; }
+.portal #portal-principal > :nth-child(2) { --i: 1; }
+.portal #portal-principal > :nth-child(3) { --i: 2; }
+.portal #portal-principal > :nth-child(4) { --i: 3; }
+.portal #portal-principal > :nth-child(5) { --i: 4; }
+.portal #portal-principal > :nth-child(n+6) { --i: 5; }
 
 /* Accesos rápidos */
 .portal-accesos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.portal-acceso { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; padding: 14px 6px; min-height: 44px; text-decoration: none; color: var(--po-texto); font-size: .86rem; font-weight: 700; background: #fff; border: 1px solid var(--po-linea); border-radius: 16px; }
-.portal-acceso:hover { border-color: var(--po-primario); }
+.portal-acceso { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; padding: 14px 6px; min-height: 44px; text-decoration: none; color: var(--po-texto); font-size: .86rem; font-weight: 700; background: #fff; border: 1px solid var(--po-linea); border-radius: 16px; transition: border-color var(--duracion-fundido) var(--curva); }
 
 /* Listas */
 .portal-lista { list-style: none; margin: 0; padding: 0; background: #fff; border: 1px solid var(--po-linea); border-radius: 20px; box-shadow: 0 8px 26px rgb(8 38 58 / 6%); }
 .portal-lista > li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
 .portal-lista > li + li { border-top: 1px solid var(--po-linea); }
 .portal-lista > li:has(> .portal-fila-boton) { padding: 0; }
-.portal-fila-boton { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 14px 16px; cursor: pointer; border-radius: inherit; }
-.portal-fila-boton:hover { background: #f6fafc; }
+.portal-fila-boton { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 14px 16px; cursor: pointer; border-radius: inherit; transition: background-color var(--duracion-fundido) var(--curva); }
 .portal-fila-boton:focus-visible { outline: 3px solid #0b6bb0; outline-offset: -3px; }
 .portal-flecha { flex: none; color: var(--po-suave); }
 .portal-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -82,8 +91,7 @@
 .portal-fila-titulo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
 .portal-fila-titulo h2 { margin: 0; }
 .portal-contador { color: var(--po-suave); font-size: .8rem; font-weight: 600; }
-.portal-boton-enlace { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--po-linea); background: #fff; color: var(--po-texto); font-weight: 700; text-decoration: none; }
-.portal-boton-enlace:hover { border-color: var(--po-primario); }
+.portal-boton-enlace { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--po-linea); background: #fff; color: var(--po-texto); font-weight: 700; text-decoration: none; transition: border-color var(--duracion-fundido) var(--curva); }
 
 /* Saldo (Estado de pagos) */
 .portal-saldo { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 24px; color: #fff; background: linear-gradient(150deg, #092f45, #0b4a55 70%, #0f5b62); }
@@ -105,7 +113,6 @@
 .portal-datos dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
 .portal-datos dd.aviso { color: #80500b; }
 .portal-salir { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 16px; border: 0; border-radius: 14px; background: #fbeaf0; color: #9b314c; font-weight: 700; justify-content: flex-start; }
-.portal-salir:hover:not(:disabled) { background: #f6d9e3; }
 
 /* Filtros */
 .portal-filtros { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -134,4 +141,16 @@
 .portal-menu a.activa { color: #0b6b5f; font-weight: 700; }
 .portal-menu a.activa .portal-nav-icono { background: #d8f3ea; }
 .portal-menu a:focus-visible, .portal a:focus-visible, .portal button:focus-visible { outline: 3px solid #0b6bb0; outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .portal * { transition: none !important; animation: none !important; } }
+/* Solo con puntero fino: en una pantalla táctil el color de «pasar el puntero» no debe quedarse pegado. */
+@media (hover: hover) and (pointer: fine) {
+  .portal .primario:hover:not(:disabled) { background: #00544f; }
+  .portal-acceso:hover, .portal-boton-enlace:hover { border-color: var(--po-primario); }
+  .portal-fila-boton:hover { background: #f6fafc; }
+  .portal-salir:hover:not(:disabled) { background: #f6d9e3; }
+}
+
+/* Reducir movimiento: las entradas quedan en un fundido de 120 ms sin escalonar (variables y fotogramas de
+   premium.css); los cambios de color se conservan. */
+@media (prefers-reduced-motion: reduce) {
+  .portal #portal-principal > * { animation-delay: 0s; }
+}

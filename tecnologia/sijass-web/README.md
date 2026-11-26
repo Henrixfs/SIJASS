@@ -22,6 +22,7 @@ npm run build      # genera dist/, que la API puede servir con WEB_DIR=<ruta a d
 - El token de acceso vive **solo en memoria**; el de refresco, en `sessionStorage` (por pestaña). Un `401` provoca una única renovación compartida.
 - Cada intento de pago lleva una `Idempotency-Key`; un reintento del mismo envío la conserva y cualquier cambio de contenido genera otra.
 - La guardia de pantallas por perfil es solo una comodidad: **la autorización real es siempre del servidor**.
+- **El movimiento tiene presupuesto**: nada pasa de 300 ms, solo se animan `transform`, `opacity` y colores (más la columna del panel lateral, única excepción documentada) y «reducir movimiento» deja solo fundidos de 120 ms. Una prueba (`src/pruebas/movimiento.test.ts`) lo vigila sobre las hojas de estilo; el panel lateral del personal se pliega a una franja de iconos desde 1024 px y la elección se recuerda en el navegador.
 
 ## Limitaciones
 

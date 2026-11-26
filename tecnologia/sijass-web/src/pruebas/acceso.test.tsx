@@ -433,3 +433,128 @@ describe('padrón — estado del acceso', () => {
 });
 
 export type { Usuario };
+
+describe('movimiento: panel lateral plegable (spec movimiento-de-interfaz)', () => {
+  async function entrarComoConsejo() {
+    const { usuario } = montar(como('personal', 'consejo'));
+    await ingresarPorDni(usuario);
+    await screen.findByTestId('nombre-jass');
+    return usuario;
+  }
+  const marco = () => document.querySelector('.marco-personal') as HTMLElement;
+  const navegacion = () => within(screen.getByRole('navigation', { name: 'Secciones del personal' }));
+
+  test('abre desplegado y el botón ofrece plegar, con su estado y el elemento que controla', async () => {
+    await entrarComoConsejo();
+    expect(marco()).toHaveAttribute('data-plegado', 'false');
+    const boton = screen.getByRole('button', { name: 'Plegar panel lateral' });
+    expect(boton).toHaveAttribute('aria-expanded', 'true');
+    expect(boton).toHaveAttribute('aria-controls', 'secciones-personal');
+    expect(document.getElementById('secciones-personal')).not.toBeNull();
+  });
+
+  test('plegar y desplegar cambian el estado y el nombre del botón, y la elección se recuerda', async () => {
+    const usuario = await entrarComoConsejo();
+    await usuario.click(screen.getByRole('button', { name: 'Plegar panel lateral' }));
+    expect(marco()).toHaveAttribute('data-plegado', 'true');
+    const boton = screen.getByRole('button', { name: 'Desplegar panel lateral' });
+    expect(boton).toHaveAttribute('aria-expanded', 'false');
+    expect(window.localStorage.getItem('sijass.panel-plegado')).toBe('1');
+    await usuario.click(boton);
+    expect(marco()).toHaveAttribute('data-plegado', 'false');
+    expect(window.localStorage.getItem('sijass.panel-plegado')).toBeNull();
+  });
+
+  test('plegado, cada enlace conserva su nombre accesible y lo ofrece al pasar el puntero; desplegado no lleva título', async () => {
+    const usuario = await entrarComoConsejo();
+    const enlaces = () => navegacion().getAllByRole('link');
+    expect(enlaces().length).toBeGreaterThan(3);
+    for (const enlace of enlaces()) expect(enlace).not.toHaveAttribute('title');
+    await usuario.click(screen.getByRole('button', { name: 'Plegar panel lateral' }));
+    for (const enlace of enlaces()) {
+      const nombre = enlace.getAttribute('aria-label') ?? enlace.textContent;
+      expect(nombre).toBeTruthy();
+      expect(enlace).toHaveAttribute('title', nombre as string);
+    }
+    expect(navegacion().getByRole('link', { name: 'Resumen' })).toBeVisible();
+    expect(screen.getByTestId('nombre-jass')).toHaveTextContent('JASS San Miguel');
+  });
+
+  test('la preferencia guardada abre el panel ya plegado', async () => {
+    window.localStorage.setItem('sijass.panel-plegado', '1');
+    await entrarComoConsejo();
+    expect(marco()).toHaveAttribute('data-plegado', 'true');
+    expect(screen.getByRole('button', { name: 'Desplegar panel lateral' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('la transición se activa después del primer pintado, no al cargar', async () => {
+    window.localStorage.setItem('sijass.panel-plegado', '1');
+    await entrarComoConsejo();
+    // `data-listo` aparece tras el primer cuadro: antes de él, el ancho no se anima.
+    await waitFor(() => expect(marco()).toHaveAttribute('data-listo', 'true'));
+  });
+
+  test('sin almacenamiento disponible el panel sigue funcionando y abre desplegado', async () => {
+    const leer = Storage.prototype.getItem;
+    const escribir = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, clave: string) {
+      if (this === window.localStorage) throw new DOMException('bloqueado', 'SecurityError');
+      return leer.call(this, clave);
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, clave: string, valor: string) {
+      if (this === window.localStorage) throw new DOMException('bloqueado', 'SecurityError');
+      escribir.call(this, clave, valor);
+    });
+    try {
+      const usuario = await entrarComoConsejo();
+      expect(marco()).toHaveAttribute('data-plegado', 'false');
+      await usuario.click(screen.getByRole('button', { name: 'Plegar panel lateral' }));
+      expect(marco()).toHaveAttribute('data-plegado', 'true');
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  test('solo el Resumen usa la entrada escalonada de tarjetas; el resto de secciones entra con la animación breve', async () => {
+    const usuario = await entrarComoConsejo();
+    await usuario.click(navegacion().getByRole('link', { name: 'Resumen' }));
+    await waitFor(() => expect(document.querySelector('.pagina-personal.pagina-inicio')).not.toBeNull());
+    await usuario.click(navegacion().getByRole('link', { name: 'Mi perfil' }));
+    await waitFor(() => expect(document.querySelector('.pagina-personal.pagina-inicio')).toBeNull());
+    expect(document.querySelector('.pagina-personal')).not.toBeNull();
+  });
+});
+
+describe('movimiento: pasos del ingreso sin perder el foco (spec movimiento-de-interfaz)', () => {
+  test('al cargar, el primer paso no se anima por separado (ya entra con la tarjeta)', async () => {
+    montar(() => undefined, '/ingresar');
+    await screen.findByRole('button', { name: /Soy asociado/ });
+    expect(document.querySelector('.paso-ingreso')).toHaveAttribute('data-sentido', 'inicial');
+  });
+
+  test('al elegir el tipo, el paso del DNI entra hacia adelante y el campo del DNI recibe el foco', async () => {
+    const { usuario } = montar(() => undefined, '/ingresar');
+    await usuario.click(await screen.findByRole('button', { name: /Soy asociado/ }));
+    expect(document.querySelector('.paso-ingreso')).toHaveAttribute('data-sentido', 'adelante');
+    await waitFor(() => expect(screen.getByLabelText('Número de DNI')).toHaveFocus());
+  });
+
+  test('«Cambiar» devuelve el paso anterior con el sentido contrario y sus dos botones', async () => {
+    const { usuario } = montar(() => undefined, '/ingresar');
+    await usuario.click(await screen.findByRole('button', { name: /Soy asociado/ }));
+    await usuario.click(screen.getByRole('button', { name: 'Cambiar' }));
+    expect(document.querySelector('.paso-ingreso')).toHaveAttribute('data-sentido', 'atras');
+    expect(screen.getByRole('button', { name: /Soy asociado/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Soy administrador/ })).toBeVisible();
+  });
+
+  test('cambiar de tipo desde el aviso no repite la animación del paso (misma envoltura) y el aviso sigue siendo una alerta', async () => {
+    const { usuario } = montar((_m, r) => (r === '/v1/auth/login' ? json(409, { codigo: 'tipo-de-acceso-distinto', mensaje: 'x', tipoReal: 'asociado' }) : undefined));
+    await ingresarPorDni(usuario, 'administrador');
+    const aviso = await screen.findByTestId('error-ingreso');
+    expect(aviso).toHaveAttribute('role', 'alert');
+    const antes = document.querySelector('.paso-ingreso');
+    await usuario.click(within(aviso).getByRole('button', { name: 'Usar «Soy asociado»' }));
+    expect(document.querySelector('.paso-ingreso')).toBe(antes);
+  });
+});

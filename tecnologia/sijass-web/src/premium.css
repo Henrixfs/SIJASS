@@ -17,12 +17,20 @@
   --duracion-entrada: 280ms;
   --curva: cubic-bezier(.2,.75,.25,1);
   --transicion: var(--duracion-corta) var(--curva);
+  /* Presupuesto de movimiento (openspec ui-movimiento-panel-plegable): nada pasa de 300 ms. */
+  --duracion-pagina: 180ms;
+  --duracion-panel: 220ms;
+  --duracion-pulsar: 140ms;
+  --duracion-fundido: 120ms;
+  --duracion-tarjeta: 280ms;
+  --paso-escalon: 40ms;
+  --curva-mover: cubic-bezier(0.77, 0, 0.175, 1);
 }
 h1 { font-size: clamp(1.85rem, 3vw, 3rem); letter-spacing: -.055em; }
 h2 { letter-spacing: -.035em; }
 button { font-weight: 600; }
 button svg, a svg { vertical-align: middle; flex-shrink: 0; }
-button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+button:active:not(:disabled) { transform: scale(.97); box-shadow: none; }
 input, textarea, select { border-radius: 8px; }
 input::placeholder, textarea::placeholder { color: #526d70; font-weight: 400; }
 input:focus, textarea:focus, select:focus { outline: 2px solid var(--primario); outline-offset: 2px; }
@@ -30,7 +38,7 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--primario); 
 .marca-gota { display: inline-grid; place-items: center; width: 36px; height: 36px; background: #c9f0dd; color: var(--marino); border-radius: 13px 13px 13px 3px; }
 .icono-destino { display: inline-grid; place-items: center; color: var(--primario); background: var(--menta); border-radius: 12px; }
 .barra { min-height: 68px; padding-inline: clamp(14px, 3vw, 48px); }
-.pagina-personal { animation: entrar var(--duracion-entrada) var(--curva); }
+.pagina-personal { animation: entrar-pagina var(--duracion-pagina) var(--curva); }
 .pagina-personal h1:first-child, .pagina-personal section:first-child > h1:first-child { margin-top: 0; }
 .pagina-personal h1 { margin-bottom: 1rem; }
 .tarjeta { box-shadow: none; }
@@ -83,8 +91,14 @@ td[colspan] { padding: 1.6rem; text-align: center; white-space: normal; }
 dialog[open], .lateral nav[data-abierto='true'] { animation: entrar var(--duracion-entrada) var(--curva); }
 dialog .ficha { padding-block: 12px; }
 @keyframes entrar { from { opacity: .45; transform: translateY(5px); } }
+@keyframes entrar-pagina { from { opacity: .4; transform: translateY(4px); } }
+@keyframes entrar-tarjeta { from { opacity: 0; transform: translateY(6px); } }
 @keyframes trazar { from { transform: scaleY(.05); } }
 @keyframes cargar { to { opacity: .35; } }
+/* Ambiente muy lento (ondas del ingreso y del Resumen): solo `transform`, ciclos de 16 s o más. */
+@keyframes deriva { from { transform: translateX(-20px); } to { transform: translateX(20px); } }
+/* Punto de estado del servicio: late con un fundido, sin moverse. */
+@keyframes latido { 50% { opacity: .35; } }
 @media (max-width: 1023px) {
   .barra { min-height: 54px; }
 }
@@ -119,7 +133,12 @@ dialog .ficha { padding-block: 12px; }
   .tabla-campo td:nth-child(5) { grid-row: 1; grid-column: 2; }
   .etiqueta-campo { display: inline; color: var(--suave); font-weight: 600; }
 }
+/* Reducir movimiento = menos y más suave: sin desplazamiento, escala ni escalonado; solo fundidos de 120 ms. */
 @media (prefers-reduced-motion: reduce) {
-  :root { --duracion-entrada: 0ms; --duracion-corta: 0ms; }
-  *, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; }
+  :root { --duracion-entrada: 120ms; --duracion-pagina: 120ms; --duracion-tarjeta: 120ms; --paso-escalon: 0ms; }
+  @keyframes entrar { from { opacity: .45; } }
+  @keyframes entrar-pagina { from { opacity: .4; } }
+  @keyframes entrar-tarjeta { from { opacity: 0; } }
+  @keyframes trazar { from { opacity: .3; } }
+  button:active:not(:disabled) { transform: none; }
 }

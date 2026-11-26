@@ -1,4 +1,5 @@
-/* Panel del personal · Penpot «02 · Dashboard web» (1440 px): barra lateral de 240 px, cabecera y resumen. */
+/* Panel del personal · Penpot «02 · Dashboard web» (1440 px): barra lateral de 240 px, cabecera y resumen.
+   Movimiento: openspec `ui-movimiento-panel-plegable` (panel plegable, entrada escalonada y ambiente del Resumen). */
 .marco-personal {
   --pe-lienzo: #f2f7fa;
   --pe-marino: #092f45;
@@ -8,12 +9,16 @@
   --pe-suave: #466174;
   --pe-linea: #e3edf2;
   --pe-turquesa: #44e0c4;
+  --ancho-lateral: 240px;
   display: grid;
   min-height: 100svh;
-  grid-template: 'lateral cabecera' auto 'lateral contenido' 1fr / 240px minmax(0, 1fr);
+  grid-template: 'lateral cabecera' auto 'lateral contenido' 1fr / var(--ancho-lateral) minmax(0, 1fr);
   background: var(--pe-lienzo);
   color: var(--pe-texto);
 }
+/* La columna es una propiedad de diseño (no de compositor): excepción documentada en el diseño D4. Se
+   activa tras el primer pintado (`data-listo`) para que la página no se pliegue sola al cargar. */
+.marco-personal[data-listo='true'] { transition: grid-template-columns var(--duracion-panel) var(--curva-mover); }
 
 /* Barra lateral */
 .lateral {
@@ -21,6 +26,7 @@
   position: sticky;
   top: 0;
   height: 100svh;
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -30,28 +36,39 @@
   background: linear-gradient(180deg, #092f45, #0a2c40);
 }
 .lateral-marca { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.lateral a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; color: #d3e7ee; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: .95rem; }
+.lateral a { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; overflow: hidden; white-space: nowrap; color: #d3e7ee; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: .95rem; }
 .lateral .marca { display: inline-flex; align-items: center; gap: 10px; font: 800 1.45rem/1 var(--fuente-titulos); letter-spacing: -.03em; color: #fff; }
-.lateral .lateral-marca > a { padding: 0; min-height: 0; }
-.lateral .marca-gota { display: inline-grid; place-items: center; width: 38px; height: 38px; color: var(--pe-marino); background: linear-gradient(145deg, #4feccd, #25bfa6); border-radius: 11px; }
-.lateral-lema { margin: -6px 0 0 2px; font-size: .78rem; color: #9fb9c6; }
-.lateral-jass { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid rgb(255 255 255 / 14%); border-radius: 14px; background: rgb(255 255 255 / 5%); }
+.lateral .lateral-marca > a { padding: 0 0 0 3px; min-height: 0; }
+.lateral .marca-gota { display: inline-grid; place-items: center; flex: none; width: 38px; height: 38px; color: var(--pe-marino); background: linear-gradient(145deg, #4feccd, #25bfa6); border-radius: 11px; }
+.lateral-lema { margin: -6px 0 0 2px; font-size: .78rem; color: #9fb9c6; white-space: nowrap; }
+.lateral-jass { display: flex; align-items: center; gap: 12px; padding: 12px; overflow: hidden; border: 1px solid rgb(255 255 255 / 14%); border-radius: 14px; background: rgb(255 255 255 / 5%); transition: background-color var(--duracion-fundido) var(--curva), border-color var(--duracion-fundido) var(--curva); }
 .lateral-jass strong, .lateral-usuario strong { display: block; color: #fff; font-size: .92rem; }
 .lateral-jass small, .lateral-usuario small { display: block; color: #9fb9c6; font-size: .76rem; font-weight: 400; }
-.lateral-jass-icono { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: rgb(79 236 205 / 14%); color: var(--pe-turquesa); }
+.lateral-jass-icono { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: rgb(79 236 205 / 14%); color: var(--pe-turquesa); }
 .lateral nav { display: flex; flex-direction: column; gap: 18px; flex: 1; }
 .lateral-grupo { display: grid; gap: 2px; align-content: start; }
-.lateral-grupo-titulo { margin: 6px 12px 6px; font: 700 .68rem/1 'Inter Tight', system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #8fb0bf; }
+.lateral-grupo-titulo { margin: 6px 12px 6px; font: 700 .68rem/1 'Inter Tight', system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #8fb0bf; white-space: nowrap; }
 .lateral nav a svg { color: #8fd8cb; }
-.lateral nav a:hover { background: rgb(255 255 255 / 6%); color: #fff; }
-.lateral nav a[aria-current='page'] { color: #fff; background: #0e4558; box-shadow: inset 3px 0 var(--pe-turquesa); }
+.lateral nav a { transition: background-color var(--duracion-fundido) var(--curva), color var(--duracion-fundido) var(--curva); }
+.lateral nav a[aria-current='page'] { color: #fff; background: #0e4558; }
+/* Indicador de la sección actual: una barra que crece desde el centro (transform y opacity; nunca parte de cero). */
+.lateral nav a::before { content: ''; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0; background: var(--pe-turquesa); opacity: 0; transform: scaleY(.25); transition: transform var(--duracion-fundido) var(--curva), opacity var(--duracion-fundido) var(--curva); }
+.lateral nav a[aria-current='page']::before { opacity: 1; transform: scaleY(1); }
 .lateral-cuenta { margin-top: auto; padding-top: 14px; border-top: 1px solid rgb(255 255 255 / 12%); }
 .lateral-usuario { gap: 12px; }
-.lateral-usuario > span:nth-child(2) { flex: 1; min-width: 0; }
+.lateral-usuario > .lateral-texto { flex: 1; min-width: 0; }
 .lateral-usuario > svg:last-child { color: #8fb0bf; }
+.lateral-usuario strong, .lateral-usuario small { overflow: hidden; text-overflow: ellipsis; }
 .avatar-rol { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #1b6b6d; color: #c8f4ea; font-size: .8rem; font-weight: 800; letter-spacing: .04em; }
 .lateral a:focus-visible, .lateral button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .abrir-menu { display: none; }
+
+/* Textos del panel: se desvanecen al plegarlo (siguen en el árbol de accesibilidad: no se usa display: none). */
+.lateral-texto, .lateral-lema, .lateral-grupo-titulo, .lateral-flecha, .marca-texto { transition: opacity var(--duracion-fundido) var(--curva); }
+
+/* Botón para plegar o desplegar (solo escritorio) */
+.plegar-panel { display: none; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 8px 12px; overflow: hidden; white-space: nowrap; color: #d3e7ee; background: transparent; border: 0; border-radius: 12px; font-weight: 600; font-size: .95rem; text-align: left; transition: background-color var(--duracion-fundido) var(--curva), color var(--duracion-fundido) var(--curva), transform var(--duracion-pulsar) var(--curva); }
+.plegar-panel svg { color: #8fd8cb; }
 
 /* Cabecera */
 .cabecera-personal { grid-area: cabecera; display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 12px 32px; background: #fff; border-bottom: 1px solid var(--pe-linea); }
@@ -73,13 +90,13 @@
 .resumen .suave { margin: 6px 0 0; color: var(--pe-suave); }
 .chip-periodo { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; background: #fff; border: 1px solid var(--pe-linea); border-radius: 12px; font-weight: 600; }
 .resumen-hero { position: relative; isolation: isolate; overflow: hidden; padding: 28px 30px; border-radius: 22px; color: #fff; background: linear-gradient(120deg, #092f45, #0a4350 62%, #0f5b62); }
-.resumen-hero .hero-ondas { position: absolute; z-index: -1; right: 0; bottom: 0; width: 62%; height: 100%; }
+/* Ambiente discreto (D7b): las ondas derivan muy despacio; el svg se ensancha para que su borde nunca quede a la vista. */
+.resumen-hero .hero-ondas { position: absolute; z-index: -1; right: -40px; bottom: 0; width: calc(62% + 80px); height: 100%; animation: deriva 18s ease-in-out infinite alternate; }
 .hero-etiqueta { display: inline-flex; align-items: center; gap: 8px; font: 700 .7rem/1 'Inter Tight', system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; color: #8ef0dc; }
-.hero-etiqueta::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--pe-turquesa); }
+.hero-etiqueta::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--pe-turquesa); animation: latido 2.4s ease-in-out infinite; }
 .resumen-hero h2 { margin: 12px 0 6px; font-size: clamp(1.6rem, 2.6vw, 2.2rem); color: #fff; max-width: 18em; }
 .resumen-hero p { margin: 0 0 18px; color: #d3e7ee; max-width: 36em; }
-.hero-boton { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; background: #4feccd; color: #062a35; border-radius: 12px; font-weight: 700; text-decoration: none; }
-.hero-boton:hover { background: #7bf3dc; }
+.hero-boton { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; background: #4feccd; color: #062a35; border-radius: 12px; font-weight: 700; text-decoration: none; transition: background-color var(--duracion-fundido) var(--curva); }
 .hero-boton:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
 .indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr)); gap: 16px; }
@@ -116,13 +133,44 @@
 .resumen-esqueleto .esqueleto { display: block; height: 18px; border-radius: 8px; background: #e3edf2; }
 .resumen-pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--pe-suave); font-size: .82rem; }
 
+/* Entrada del Resumen (D5): una sola entrada por contenedor. El contenedor no se anima y cada bloque entra con
+   40 ms de diferencia (tope de 6 pasos: el último termina antes de 600 ms). Las tarjetas que solo informan no
+   se mueven al pasar el puntero. */
+.pagina-personal.pagina-inicio { animation: none; }
+.resumen-cabecera, .resumen-hero, .indicadores > *, .resumen-columnas > *, .resumen-pie {
+  animation: entrar-tarjeta var(--duracion-tarjeta) var(--curva) backwards;
+  animation-delay: calc(min(var(--i, 0), 6) * var(--paso-escalon));
+}
+.resumen-cabecera { --i: 0; }
+.resumen-hero { --i: 1; }
+.indicadores > :nth-child(1) { --i: 2; }
+.indicadores > :nth-child(2) { --i: 3; }
+.indicadores > :nth-child(3) { --i: 4; }
+.indicadores > :nth-child(n+4) { --i: 5; }
+.resumen-columnas > *, .resumen-pie { --i: 6; }
+
+/* Escritorio (1024 px o más): el panel se pliega a una franja de iconos de 76 px. */
+@media (width >= 1024px) {
+  .plegar-panel { display: flex; }
+  .marco-personal[data-plegado='true'] { --ancho-lateral: 76px; }
+  .marco-personal[data-plegado='true'] :is(.lateral-texto, .lateral-lema, .lateral-grupo-titulo, .lateral-flecha, .marca-texto) { opacity: 0; }
+  .marco-personal[data-plegado='true'] .lateral-jass { padding-inline: 3px; background: transparent; border-color: transparent; }
+  .marco-personal[data-plegado='true'] .lateral-usuario { padding-inline: 3px; }
+}
+
+/* Solo con puntero fino: en una pantalla táctil el color de «pasar el puntero» no debe quedarse pegado. */
+@media (hover: hover) and (pointer: fine) {
+  .lateral nav a:not([aria-current='page']):hover, .plegar-panel:hover { background: rgb(255 255 255 / 6%); color: #fff; }
+  .hero-boton:hover { background: #7bf3dc; }
+  .abrir-menu:hover:not(:disabled) { background: #14586d; }
+}
+
 /* Tablet y móvil: la barra lateral se pliega */
 @media (width < 1024px) {
   .marco-personal { grid-template: 'lateral' auto 'cabecera' auto 'contenido' 1fr / minmax(0, 1fr); }
   .lateral { position: relative; top: auto; height: auto; flex-direction: column; gap: 10px; padding: 10px 16px; }
   .lateral-lema, .lateral-jass { display: none; }
   .abrir-menu { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; color: #fff; background: #0e4558; border-color: transparent; border-radius: 12px; }
-  .abrir-menu:hover:not(:disabled) { background: #14586d; }
   .lateral nav { display: none; padding-bottom: 8px; }
   .lateral nav[data-abierto='true'] { display: flex; }
   .cabecera-personal { padding: 10px 16px; min-height: 64px; flex-wrap: wrap; }
@@ -134,4 +182,12 @@
   .resumen h1 { font-size: 1.7rem; }
   .resumen-hero { padding: 22px 18px; }
 }
-@media (prefers-reduced-motion: reduce) { .marco-personal * { transition: none !important; animation: none !important; } }
+
+/* Reducir movimiento: sin desplazamiento ni escala (las entradas quedan en un fundido de 120 ms por las
+   variables y los fotogramas de premium.css), el panel cambia de ancho sin transición y el ambiente se detiene.
+   Los cambios de color y de opacidad se conservan: ayudan a entender y no mueven nada. */
+@media (prefers-reduced-motion: reduce) {
+  .marco-personal[data-listo='true'] { transition: none; }
+  .resumen-hero .hero-ondas, .hero-etiqueta::before { animation: none; }
+  .lateral nav a::before { transform: none; }
+}
