@@ -18,11 +18,15 @@ El sistema SHALL usar movimiento solo para dar retroalimentación, mostrar de d�
 - **THEN** la navegación no espera ninguna animación de salida y los valores de las tablas no se desplazan
 
 ### Requirement: Reducir el movimiento significa menos y más suave
-El sistema SHALL, cuando el navegador pida reducir el movimiento, eliminar todo desplazamiento, escala y animación continua, y SHALL conservar solo fundidos de 120 ms como máximo en las entradas de página, tarjetas, pasos del ingreso y avisos de estado.
+El sistema SHALL, cuando el navegador pida reducir el movimiento, eliminar todo desplazamiento, escala y animación continua, y SHALL conservar solo fundidos de 120 ms como máximo en las entradas de página, tarjetas, pasos del ingreso y avisos de estado, además de los cambios de color.
 
 #### Scenario: Preferencia de reducir movimiento
 - **WHEN** el navegador pide reducir el movimiento y se abre el Resumen
 - **THEN** las tarjetas aparecen con un fundido de 120 ms como máximo, sin escalonar, sin desplazarse y sin escala al pulsar
+
+#### Scenario: Colores con movimiento reducido
+- **WHEN** el navegador pide reducir el movimiento y la persona pasa el puntero o pulsa un botón
+- **THEN** el botón conserva su cambio de color, no se hunde y no cambia de tamaño
 
 #### Scenario: Ondas y panel con movimiento reducido
 - **WHEN** el navegador pide reducir el movimiento y se muestra el ingreso o se pliega el panel
@@ -83,6 +87,10 @@ El sistema SHALL hundir ligeramente un botón habilitado al pulsarlo (escala de 
 
 ### Requirement: Entrada y pasos del ingreso
 El sistema SHALL animar en el ingreso la entrada de la tarjeta (fundido y 10 px de desplazamiento en 300 ms como máximo), el cambio entre el paso «tipo de acceso» y el paso «DNI y clave» (desplazamiento horizontal de 16 px como máximo en 220 ms como máximo) y la aparición de los avisos de estado (fundido de 180 ms como máximo).
+
+#### Scenario: Primer paso al cargar
+- **WHEN** se abre el ingreso
+- **THEN** la tarjeta entra con su animación y el paso «tipo de acceso» no se desplaza por separado
 
 #### Scenario: Elegir el tipo de acceso
 - **WHEN** la persona elige «Soy asociado»

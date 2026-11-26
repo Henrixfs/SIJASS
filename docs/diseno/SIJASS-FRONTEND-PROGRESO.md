@@ -76,7 +76,8 @@ La pantalla de ingreso se simplificó para personas sin estudios: dos botones gr
 |---|---|
 | Interfaz | `npm run lint`, `tsc -b`, `npm test` y `npm run build` en código 0; 147 pruebas Vitest en 7 archivos, 24 de ellas del acceso por DNI |
 | E2E real | 14 pruebas aprobadas (API, PostgreSQL y Chrome): los tres flujos anteriores adaptados y cinco recorridos de acceso |
-| Pantallas | 23 pruebas aprobadas con la API simulada, 15 de ellas del ingreso, el cambio y la entrega de clave a 320, 360, 390, 768 y 1440 px. Sin desbordamiento, objetivos de al menos 44 px, contraste mínimo de 5,70:1 y recorrido por teclado. [Capturas y medidas](evidencia/s2a-acceso/README.md) |
+| Pantallas | 23 pruebas aprobadas con la API simulada, 15 de ellas del ingreso, el cambio y la entrega de clave a 320, 360, 390, 768 y 1440 px. Sin desbordamiento, objetivos de al menos 44 px, contraste mínimo de 5,70:1 y recorrido por teclado. [Capturas y medidas](evidencia/s2a-acceso/README.md) |
+| Movimiento (`ui-movimiento-panel-plegable`, 2026-11-26) | Panel lateral plegable a franja de iconos (se recuerda), entrada de páginas de 180 ms sin salida, Resumen escalonado, botones que se hunden, ingreso con pasos y ondas lentas, y movimiento reducido = solo fundidos. 181 pruebas Vitest (34 de movimiento, panel y ingreso, entre ellas la guardia de las hojas de estilo), 14 pruebas de movimiento en Chrome real que leen lo que el navegador aplica, 37 de pantallas en total y los 14 E2E. Evidencia y límites (no se midió la sensación ni un teléfono de gama baja) en [`evidencia/movimiento`](evidencia/movimiento/README.md). |
 
 ```powershell
 Push-Location tecnologia/e2e
