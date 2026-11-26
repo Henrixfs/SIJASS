@@ -166,7 +166,8 @@ describe('interfaz — ingreso y guardia por perfil', () => {
     const { usuario } = montar(portalCompleto(pagosMuestra));
     await ingresar(usuario);
     expect(await screen.findByRole('heading', { name: /Hola, Elena/ })).toBeVisible();
-    const cuota = screen.getByRole('region', { name: 'Cuota pendiente' });
+    // La cuota llega por red después del saludo: se espera la región en vez de suponer que ya está.
+    const cuota = await screen.findByRole('region', { name: 'Cuota pendiente' });
     expect(within(cuota).getByText('Cuota de noviembre')).toBeVisible();
     expect(within(cuota).getByText('S/ 18.00')).toBeVisible();
     await usuario.click(within(cuota).getByRole('button', { name: 'Ver cuota' }));

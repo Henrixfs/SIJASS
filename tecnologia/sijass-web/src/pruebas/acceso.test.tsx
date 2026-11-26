@@ -333,7 +333,8 @@ describe('área de plataforma', () => {
     const { usuario, llamadas } = montar(plataforma());
     await ingresarPorDni(usuario);
     expect(await screen.findByRole('heading', { name: 'JASS' })).toBeVisible();
-    expect(screen.getByTestId('fila-jass-JASS Quinua')).toHaveTextContent('Quinua, Huamanga, Ayacucho');
+    // La lista llega por red: se espera la fila en vez de suponer que ya está (en CI el encabezado aparece antes que los datos).
+    expect(await screen.findByTestId('fila-jass-JASS Quinua')).toHaveTextContent('Quinua, Huamanga, Ayacucho');
     expect(screen.getByTestId('fila-jass-JASS Tambo')).toHaveTextContent('Suspendida');
     for (const enlace of ['Asociados', 'Cuotas y pagos', 'Mediciones', 'Reservorios']) expect(screen.queryByRole('link', { name: enlace })).toBeNull();
     expect(llamadas.some((l) => /\/v1\/(asociados|cuotas|pagos|reservorios|mediciones)/.test(l.ruta))).toBe(false);
