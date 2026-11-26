@@ -1,6 +1,7 @@
 import { useCallback, useState, type FormEvent } from 'react';
 import { mensajeDeError, useApp } from '../contexto';
-import { useCarga } from '../hooks';
+import { useCarga, useEnvio } from '../hooks';
+import { Aviso, Boton, Carga, ErrorConsulta, SinPermiso } from '../ui';
 
 interface Cita {
   documentoId: string;
@@ -34,20 +35,24 @@ export function Asistente() {
   const [pregunta, setPregunta] = useState('');
   const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [consultando, setConsultando] = useState(false);
+  const { enviando: consultando, ejecutar } = useEnvio();
 
   async function consultar(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setConsultando(true);
-    try {
-      setRespuesta(await api.solicitar<Respuesta>('POST', '/v1/asistente/consultas', { pregunta }));
-    } catch (err) {
-      setRespuesta(null);
-      setError(mensajeDeError(err));
-    } finally {
-      setConsultando(false);
+    const texto = pregunta.trim();
+    if (!texto) {
+      setError('Escriba una pregunta para consultar.');
+      return;
     }
+    await ejecutar(async () => {
+      setError(null);
+      setRespuesta(null);
+      try {
+        setRespuesta(await api.solicitar<Respuesta>('POST', '/v1/asistente/consultas', { pregunta: texto }));
+      } catch (err) {
+        setError(mensajeDeError(err));
+      }
+    });
   }
 
   const esEjemplo = (documentos.datos?.corpus ?? respuesta?.corpus) === 'ejemplo';
@@ -66,18 +71,18 @@ export function Asistente() {
       <form className="tarjeta" onSubmit={consultar} aria-label="Consultar al asistente">
         <label>
           Su pregunta
-          <textarea name="pregunta" required maxLength={500} rows={3} value={pregunta} onChange={(e) => setPregunta(e.target.value)} placeholder="Por ejemplo: ¿Cómo se hace la lectura con el comparador DPD?" />
+          <textarea name="pregunta" required maxLength={500} rows={3} value={pregunta} disabled={consultando} onChange={(e) => setPregunta(e.target.value)} placeholder="Por ejemplo: ¿Cómo se hace la lectura con el comparador DPD?" />
         </label>
-        <button type="submit" className="primario" disabled={consultando}>
+        <div className="pie-consulta"><small className="suave">{pregunta.length} / 500</small>
+        <Boton type="submit" variante="primario" disabled={consultando}>
           {consultando ? 'Consultando…' : 'Consultar'}
-        </button>
+        </Boton></div>
       </form>
 
-      {error && (
-        <p role="alert" className="error" data-testid="aviso-error">
-          {error}
-        </p>
-      )}
+      {error && <Aviso tipo="error">{error}</Aviso>}
+      {consultando && <Carga />}
+      {documentos.error && <ErrorConsulta error={documentos.error} recargar={documentos.recargar} />}
+      {documentos.prohibido && <SinPermiso />}
 
       {respuesta && (
         <article className="respuesta" aria-live="polite" data-testid="respuesta" data-estado={respuesta.estado}>

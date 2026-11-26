@@ -7,7 +7,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { validarManifiesto } from '../../dominio/asistente/corpus.js';
 import { SECRETO_PRUEBAS } from '../entorno-acceso.js';
@@ -204,10 +204,10 @@ describe('API — límite sanitario en las citas y aislamiento entre JASS', () =
       assert.ok(respuesta.cuerpo.respuesta.includes(respuesta.cuerpo.citas[0].fragmento));
       assert.doesNotMatch(respuesta.texto, /MARCADOR_/);
 
-      const consultaAjena = await preguntar(m, token, 'identidad de ' + otra.correo);
+      const consultaAjena = await preguntar(m, token, 'identidad de ' + otra.documento);
       assert.equal(consultaAjena.estado, 200);
       assert.equal(consultaAjena.cuerpo.estado, 'sin-evidencia');
-      assert.ok(!consultaAjena.texto.includes(otra.correo) && !consultaAjena.texto.includes(otra.usuarioId));
+      assert.ok(!consultaAjena.texto.includes(otra.documento) && !consultaAjena.texto.includes(otra.usuarioId));
 
       const { rows } = await pool.query(
         "SELECT jass_id, detalle FROM evento_auditoria WHERE actor_id = $1 AND accion = 'asistente.consulta'",
@@ -216,7 +216,7 @@ describe('API — límite sanitario en las citas y aislamiento entre JASS', () =
       assert.ok(rows.length >= 2);
       assert.ok(rows.every((fila) => fila.jass_id === jassId));
       assert.ok(rows.some((fila) => fila.detalle.estado === 'respondida' && fila.detalle.citas === 1));
-      assert.ok(!JSON.stringify(rows).includes(otra.correo));
+      assert.ok(!JSON.stringify(rows).includes(otra.documento));
     }
   });
 

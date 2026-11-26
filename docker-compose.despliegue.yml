@@ -36,6 +36,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET (32 bytes o más)}
       DATABASE_URL: postgres://${SIJASS_DB_USUARIO:-sijass}:${SIJASS_DB_CLAVE}@postgres:5432/${SIJASS_DB_NOMBRE:-sijass}
       PORT: "3000"
+      # Poner TRUST_PROXY=1 SOLO detrás del proxy HTTPS (perfil `https`) y sin publicar el puerto 3000:
+      # así el límite de intentos fallidos cuenta por la dirección real y no por la del proxy.
+      TRUST_PROXY: ${TRUST_PROXY:-}
       # ASISTENTE_CORPUS_DIR: /corpus   # al incorporar el corpus aprobado (montar un volumen de solo lectura)
     depends_on:
       migrar: { condition: service_completed_successfully }

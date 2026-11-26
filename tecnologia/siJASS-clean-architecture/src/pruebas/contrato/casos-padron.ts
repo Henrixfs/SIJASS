@@ -2,11 +2,11 @@
  * Casos de uso de padrón, cuotas, pagos y portal (tarea 2.3, specs `cuotas-y-pagos`,
  * `portal-asociado` y `auditoria-eventos`). Misma batería sobre la memoria y sobre PostgreSQL.
  */
-import { before, describe, test } from 'node:test';
+import { before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { ErrorAccesoDenegado, ErrorConflicto, ErrorDatoInvalido } from '../../dominio/errores.js';
 import type { UnidadDeTrabajoAcceso } from '../../dominio/puertos-acceso.js';
-import { crearEntorno, nuevaClave, sembrarEscenario, type Entorno, type Escenario } from '../entorno-acceso.js';
+import { actorDe, crearEntorno, nuevaClave, nuevoDni, sembrarEscenario, type Entorno, type Escenario, comoSistema, type UnidadDeTrabajoSistema } from '../entorno-acceso.js';
 import type { FabricaUnidadDeTrabajoAcceso } from './casos-acceso.js';
 
 const codigo = (c: string, tipo: abstract new (...a: never[]) => Error = ErrorDatoInvalido) => (err: unknown) => {
@@ -17,14 +17,16 @@ const codigo = (c: string, tipo: abstract new (...a: never[]) => Error = ErrorDa
 
 export function suitePadron(fabrica: FabricaUnidadDeTrabajoAcceso): void {
 describe('padrón, cuotas y pagos', () => {
-  let uow: UnidadDeTrabajoAcceso;
+  let base: UnidadDeTrabajoAcceso;
+  let uow: UnidadDeTrabajoSistema;
   let e: Entorno;
   let esc: Escenario;
   let cuotaA1: string;
 
   before(async () => {
-    uow = fabrica();
-    e = crearEntorno(uow);
+    base = fabrica();
+    uow = comoSistema(base);
+    e = crearEntorno(base);
     esc = await sembrarEscenario(e);
     const r = await e.casos.generarCuotas.ejecutar(esc.tesoreroA.actor, { periodo: '2026-11', importeCentimos: 1500 });
     assert.deepEqual(r, { creadas: 2, existentes: 0 });
@@ -289,12 +291,24 @@ describe('padrón, cuotas y pagos', () => {
     });
 
     test('asociado dado de baja: sigue viendo su historial', async () => {
-      const x = await e.casos.registrarAsociado.ejecutar(esc.tesoreroA.actor, { nombre: 'Con Cuenta', documento: 'CTA-0001' });
-      await e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, x.id, { correo: `cuenta.${x.id.slice(0, 6)}@prueba.pe`, contrasena: 'Clave-de-prueba-123' });
-      const s = await e.casos.autenticar.ejecutar({ correo: `cuenta.${x.id.slice(0, 6)}@prueba.pe`, contrasena: 'Clave-de-prueba-123' });
-      const actor = await e.casos.autorizar.ejecutar(s.tokenAcceso);
+      const documento = nuevoDni();
+      const x = await e.casos.registrarAsociado.ejecutar(esc.tesoreroA.actor, { nombre: 'Con Cuenta', documento });
+      const { claveTemporal } = await e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, x.id);
+      const { actor } = await actorDe(e, documento, claveTemporal);
       await e.casos.darDeBaja.ejecutar(esc.tesoreroA.actor, x.id);
       assert.equal((await e.casos.portal.ejecutar(actor)).asociado.estado, 'baja');
+    });
+
+    test('el listado del padrón (una consulta por JASS) calcula cada saldo igual que el estado de cuenta individual', async () => {
+      const lista = await e.casos.listarAsociados.ejecutar(esc.tesoreroA.actor);
+      assert.ok(lista.length >= 2, 'hay varios asociados con cuotas, pagos y reversas');
+      assert.ok(lista.some((f) => f.saldoCentimos !== 0), 'al menos uno con saldo');
+      for (const fila of lista) {
+        const cuenta = await e.casos.estadoDeCuenta.ejecutar(esc.tesoreroA.actor, fila.id);
+        assert.equal(fila.saldoCentimos, cuenta.saldoCentimos, `saldo de ${fila.documento}`);
+      }
+      // Solo aparecen los asociados de la JASS del actor.
+      assert.ok(lista.every((f) => f.id !== esc.asociadoB1.id));
     });
   });
 
@@ -306,7 +320,7 @@ describe('padrón, cuotas y pagos', () => {
       { nombre: 'darDeBaja', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.darDeBaja.ejecutar(a, desconocido) },
       { nombre: 'listarAsociados', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.listarAsociados.ejecutar(a) },
       { nombre: 'estadoDeCuenta', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.estadoDeCuenta.ejecutar(a, desconocido) },
-      { nombre: 'crearAcceso', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.crearAcceso.ejecutar(a, desconocido, { correo: 'x@y.pe', contrasena: 'Clave-de-prueba-123' }) },
+      { nombre: 'crearAcceso', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.crearAcceso.ejecutar(a, desconocido) },
       { nombre: 'generarCuotas', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.generarCuotas.ejecutar(a, { periodo: 'mal', importeCentimos: 1 }) },
       { nombre: 'registrarPago', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.registrarPago.ejecutar(a, { cuotaId: undefined, importeCentimos: undefined, comprobante: undefined }, undefined) },
       { nombre: 'reversarPago', permitidos: ['consejo', 'tesorero'], intento: (a) => e.casos.reversarPago.ejecutar(a, desconocido, { motivo: 'x' }) },
@@ -336,20 +350,31 @@ describe('padrón, cuotas y pagos', () => {
   });
 
   describe('cuentas de acceso de asociados', () => {
-    test('correo repetido → conflicto; contraseña débil o correo inválido → 422; asociado ajeno → denegado', async () => {
-      const x = await e.casos.registrarAsociado.ejecutar(esc.tesoreroA.actor, { nombre: 'Sin Cuenta', documento: 'SIN-0001' });
-      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, x.id, { correo: esc.asociadoA1.cuenta.correo, contrasena: 'Clave-de-prueba-123' }), codigo('correo-duplicado', ErrorConflicto));
-      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, x.id, { correo: 'nuevo@prueba.pe', contrasena: 'corta' }), codigo('contrasena-invalida'));
-      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, x.id, { correo: 'no-es-correo', contrasena: 'Clave-de-prueba-123' }), codigo('correo-invalido'));
-      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroB.actor, x.id, { correo: 'nuevo@prueba.pe', contrasena: 'Clave-de-prueba-123' }), ErrorAccesoDenegado);
-      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.operadorA.actor, x.id, { correo: 'nuevo@prueba.pe', contrasena: 'Clave-de-prueba-123' }), ErrorAccesoDenegado);
+    test('clave generada solo en la respuesta; documento que no es DNI → 422; baja, ajeno y sin permiso → rechazo', async () => {
+      const dni = nuevoDni();
+      const x = await e.casos.registrarAsociado.ejecutar(esc.tesoreroA.actor, { nombre: 'Sin Cuenta', documento: dni });
+      const y = await e.casos.registrarAsociado.ejecutar(esc.tesoreroA.actor, { nombre: 'Documento Raro', documento: 'CE-0001' });
+      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, y.id), codigo('documento-no-es-dni'));
+      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroB.actor, x.id), ErrorAccesoDenegado);
+      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.operadorA.actor, x.id), ErrorAccesoDenegado);
+      const r = await e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, x.id);
+      assert.match(r.claveTemporal, /^[a-z]+-[a-z]+-[a-z]+$/);
+      const guardado = await uow.ejecutar((repos) => repos.usuarios.buscarPorId(r.usuarioId));
+      assert.equal(guardado?.documento, dni);
+      assert.equal(guardado?.claveGenerada, true);
+      assert.equal(guardado?.debeCambiarContrasena, false, 'una familia puede conservar la clave de tres palabras');
+      assert.ok(!JSON.stringify(guardado).includes(r.claveTemporal), 'solo se guarda la derivación');
     });
 
-    test('un asociado ya con cuenta no admite una segunda cuenta activa', async () => {
-      await assert.rejects(
-        e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, esc.asociadoA1.id, { correo: 'segunda@prueba.pe', contrasena: 'Clave-de-prueba-123' }),
-        codigo('asociado-con-cuenta', ErrorConflicto),
-      );
+    test('un documento con acceso en otra JASS → conflicto genérico; un asociado con cuenta no admite otra', async () => {
+      const ajeno = await e.casos.registrarAsociado.ejecutar(esc.tesoreroB.actor, { nombre: 'Mismo DNI', documento: esc.asociadoA1.cuenta.documento });
+      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroB.actor, ajeno.id), (err: unknown) => {
+        assert.ok(err instanceof ErrorConflicto);
+        assert.equal(err.codigo, 'documento-con-acceso');
+        assert.ok(!/JASS A/.test(err.message), 'no revela la JASS del otro acceso');
+        return true;
+      });
+      await assert.rejects(e.casos.crearAcceso.ejecutar(esc.tesoreroA.actor, esc.asociadoA1.id), codigo('asociado-con-cuenta', ErrorConflicto));
     });
   });
 });

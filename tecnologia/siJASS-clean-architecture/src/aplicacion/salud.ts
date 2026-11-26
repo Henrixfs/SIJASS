@@ -25,7 +25,7 @@ export class ConsultarSalud {
       const limite = new Promise<never>((_, rechazar) => {
         temporizador = setTimeout(() => rechazar(new Error('tiempo agotado')), LIMITE_MS);
       });
-      await Promise.race([this.unidadDeTrabajo.ejecutar((r) => r.jass.existe(ID_SONDA)), limite]);
+      await Promise.race([this.unidadDeTrabajo.ejecutar((r) => r.jass.existe(ID_SONDA), { sistema: true }), limite]);
       return { estado: 'ok', base: 'ok' };
     } catch (error) {
       this.registrar(`sonda de salud: la base no responde (${error instanceof Error ? error.name : 'error'})`);

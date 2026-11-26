@@ -29,6 +29,40 @@ El archivo `dominio.test.ts` (cinco pruebas sobre el modelo heredado) se retiró
 
 PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservorios y mediciones (`s1c`, ver abajo).
 
+### Verificación del Sprint 2 (2026-11-26, en local)
+
+| Comprobación | Resultado |
+|---|---|
+| `npm run lint`, `npm run build` y `npm test` (**Jest**, ESM + ts-jest) en `tecnologia/siJASS-clean-architecture/` | Código 0; 470 pruebas unitarias en 19 suites; la comprobación cruzada con el ejecutor nativo (`npm run test:nativo`) también pasa 470 |
+| `npm run test:cobertura` (Jest, V8) | Núcleo del negocio (dominio, aplicación, adaptadores de memoria y seguridad): 98,1 % de líneas, 92,3 % de ramas y 98,0 % de funciones; umbrales 90/85/90 |
+| `npm run test:integration` contra PostgreSQL 16 sobre una base limpia (ejecutor nativo) | Código 0; 380 pruebas, 0 fallos; la cobertura nativa de la integración (HTTP y PostgreSQL) fue de 96,6 % de líneas y 88,9 % de ramas en la medición del 2026-11-25 |
+| Interfaz: `npm run lint`, `tsc -b`, `npm run test:cobertura`, `npm run build` | Código 0; 147 pruebas, 88,5 % de líneas |
+| `npx playwright test` (Chrome, API real y PostgreSQL) | 14 pruebas aprobadas |
+| `npx playwright test -c playwright.responsive.config.ts` | 23 pruebas aprobadas |
+| Newman sobre la [colección de Postman](../api/sijass.postman_collection.json) (generada del contrato) contra la API local | 35 peticiones, 70 aserciones, 0 fallos |
+| k6 progresivo hasta 2.000 usuarios virtuales (local) | 86.450 solicitudes, 0 errores; p95 de lectura < 800 ms hasta ~200 usuarios virtuales; ver la [validación de atributos de calidad](../07-evaluacion-final/validacion-atributos-de-calidad.md) |
+
+Es evidencia **local**: el cambio no se ha enviado a GitHub y no tiene ejecución de CI. Prueba nueva del Sprint: `/docs` (Swagger UI), la caché HTTP del catálogo (`ETag`, `304` y errores en `no-store`) y la equivalencia del listado del padrón con el estado de cuenta individual.
+
+### Verificación de `s2a-acceso-dni-multi-jass` (2026-11-25, en local)
+
+| Comprobación | Resultado |
+|---|---|
+| `npm run lint`, `npm run build` y `npm test` en `tecnologia/siJASS-clean-architecture/` | Código 0; 456 pruebas unitarias, 0 fallos |
+| `npm run migrar`, `npm run migrar:revertir -- 5` y `npm run migrar` sobre una base nueva; después `npm run test:integration` contra PostgreSQL 16 en Docker sobre otra base limpia y migrada | Código 0; revertir las cinco migraciones deja el esquema vacío y volver a aplicarlas registra las cinco; 364 pruebas de integración, 0 fallos (esquema `0004`, seguridad por filas `0005`, identidad por HTTP y matriz de aislamiento incluidos) |
+| `npm run lint`, `tsc -b`, `npm test` y `npm run build` en `tecnologia/sijass-web/` | Código 0; 147 pruebas de interfaz en 7 archivos |
+| `npx playwright test` en `tecnologia/e2e/` (Chrome del sistema, API real y PostgreSQL con la base recreada) | 14 pruebas aprobadas: los tres flujos anteriores adaptados a DNI y tipo, más los cinco de [`flujo-acceso.spec.ts`](../../tecnologia/e2e/pruebas/flujo-acceso.spec.ts) |
+| `npx playwright test -c playwright.responsive.config.ts` (API simulada) | 23 pruebas aprobadas: 15 de [`acceso.spec.ts`](../../tecnologia/e2e/responsive/acceso.spec.ts) (ingreso, cambio de clave y entrega de clave a 320, 360, 390, 768 y 1440 px) y 8 de la suite anterior; [capturas y medidas](../diseno/evidencia/s2a-acceso/README.md) |
+| `openspec validate s2a-acceso-dni-multi-jass --strict` | Válido |
+
+Es evidencia **local**: el cambio no se ha enviado a GitHub, así que **no hay ejecución de CI** que citar. No valida despliegue, rendimiento, PWA, sincronización ni RAG, y las medidas de accesibilidad son técnicas, **no** una prueba con personas.
+
+| PT | Prueba de `s2a` | Nivel |
+|---|---|---|
+| PT26 | Identidad por DNI: [`casos-identidad.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-identidad.ts) sobre memoria y PostgreSQL, [`api-identidad.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-identidad.test.ts) por HTTP y [`flujo-acceso.spec.ts`](../../tecnologia/e2e/pruebas/flujo-acceso.spec.ts) en navegador | Seguridad / E2E |
+| PT27 | Aislamiento multi-JASS en la base: [`casos-aislamiento.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-aislamiento.ts) y [`aislamiento-filas.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/aislamiento-filas.test.ts), con consultas directas bajo el rol `sijass_app` | Seguridad |
+| PT28 | Adaptación del ingreso, el cambio de clave y la entrega de clave: [`acceso.spec.ts`](../../tecnologia/e2e/responsive/acceso.spec.ts) | Interfaz |
+
 ### Verificación de `s1e-despliegue-evidencia` (2026-11-20)
 
 | Entorno | Comprobación | Resultado |
@@ -105,7 +139,7 @@ Esta tabla es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI 
 | PT10 | Integración | Corregir una medición; corregir sobre una revisión desactualizada | Conserva original, nuevo valor, motivo, actor y fecha; la segunda devuelve `conflict` | RF08, RF11 | Pendiente |
 | PT11 | Integración | Falla entre la reserva del `operationId` y la escritura de la medición | Reversión completa; ni `accepted` falso ni pérdida silenciosa | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
 | PT12 | Integración | Mismo `operationId` con contenido distinto | `conflict` sin sobrescritura | RF10, RNF04 | Prototipo (automatizada en CI: [registro-idempotente.ts](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/registro-idempotente.ts), [CI](https://github.com/Henrixfs/SIJASS/actions/runs/43899642952)) |
-| PT13 | Seguridad | Usuario de la JASS A accede a datos de la JASS B (mediciones, asociados, reservorios, reportes) | Denegación sin filtrar datos | RF01–RF03, RF11, RNF05 | Prototipo para asociados, cuotas, pagos y portal (verificado en local, `s1b`: [matriz de aislamiento HTTP](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-aislamiento.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-pagos.spec.ts)); mediciones y reservorios por HTTP verificados en local con `s1c` ([matriz de aislamiento de mediciones](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-mediciones.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-mediciones.spec.ts)) |
+| PT13 | Seguridad | Usuario de la JASS A accede a datos de la JASS B (mediciones, asociados, reservorios, reportes) | Denegación sin filtrar datos | RF01–RF03, RF11, RNF05 | Prototipo para asociados, cuotas, pagos y portal (verificado en local, `s1b`: [matriz de aislamiento HTTP](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-aislamiento.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-pagos.spec.ts)); mediciones y reservorios por HTTP verificados en local con `s1c` ([matriz de aislamiento de mediciones](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-mediciones.test.ts) y [E2E](../../tecnologia/e2e/pruebas/flujo-mediciones.spec.ts)); `s2a` añade la defensa en la base con seguridad por filas (PT27) |
 | PT14 | Integración | Pago parcial, doble envío con la misma `Idempotency-Key` y reversa | Saldos exactos; un solo pago; reversa auditada | RF04, RF05, RNF04 | Prototipo (verificado en local, `s1b`: [casos de padrón y pagos](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-padron.ts) sobre memoria y PostgreSQL y [concurrencia](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/acceso-concurrencia.test.ts) en 10 rondas) |
 | PT15 | RAG | Pregunta sin fuentes suficientes | Abstención explícita | RF13, RNF09 | Prototipo con corpus de **EJEMPLO** (verificado en local, `s1d`: [`asistente-dominio.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/asistente-dominio.test.ts)); pendiente con el corpus aprobado |
 | PT16 | RAG | Pregunta con fuentes aprobadas | Citas de documento, versión y página verificables | RF13, RF14, RNF09 | Prototipo con corpus de **EJEMPLO** (verificado en local, `s1d`: cada fragmento citado es subcadena literal de su página en 16 preguntas); pendiente con el corpus aprobado |
@@ -118,6 +152,9 @@ Esta tabla es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI 
 | PT23 | Usabilidad | Prueba de tareas con operadores reales | Tasa de éxito, tiempo y errores registrados | RNF06 | Pendiente |
 | PT24 | Privacidad | Fotografía con metadatos de ubicación; consulta al asistente | Metadatos eliminados; URLs temporales; ninguna solicitud al LLM contiene datos personales | RF03, RF13, RNF10 | Pendiente |
 | PT25 | Contrato | Pruebas de contrato OpenAPI y adición de un cliente o módulo nuevo | Contrato cumplido sin modificar el dominio | RNF07 | Prototipo para el contrato HTTP (verificado en local y en CI, `s1e`: [`contrato-openapi.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/contrato-openapi.test.ts) compara el [documento OpenAPI](../api/openapi.yaml) con los controladores y con los estados observados); la prueba de «añadir un cliente o módulo sin modificar el dominio» sigue pendiente |
+| PT26 | Seguridad | Ingreso por DNI con tipo de acceso equivocado, clave generada tolerante a mayúsculas, bloqueo de cuenta y límite por origen, cambio obligatorio de clave, restablecimiento y JASS suspendida | Sin sesión con el tipo equivocado; el servidor solo permite cambiar la clave mientras esté pendiente; el restablecimiento quita el bloqueo y cierra sesiones; ninguna clave en bitácora ni errores | RF01, RNF05 | Prototipo (verificado en local, `s2a`: ver arriba) |
+| PT27 | Seguridad | Consulta o escritura de la JASS A sobre filas de la JASS B directamente en la base, y transacción de negocio sin JASS | Sin filas visibles, inserción rechazada y plataforma sin acceso a datos de negocio | RF01–RF03, RNF05 | Prototipo (verificado en local, `s2a`: seguridad por filas con el rol `sijass_app`) |
+| PT28 | Usabilidad técnica | Ingreso, cambio de clave y entrega de clave a 320–1440 px: desbordamiento, objetivos de 44 px, contraste y teclado | Sin desbordamiento, objetivos ≥ 44 px, contraste ≥ 4,5:1 y recorrido completo por teclado | RNF06, RNF08 | Prototipo (verificado en local, `s2a`; **no** sustituye PT23 con personas reales) |
 
 ## 3. Pruebas del asistente RAG
 

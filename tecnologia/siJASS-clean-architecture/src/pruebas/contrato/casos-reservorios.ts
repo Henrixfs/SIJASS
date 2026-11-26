@@ -1,21 +1,23 @@
 /**
  * Casos de uso de reservorios (s1c, tarea 2.1): misma batería sobre la memoria y sobre PostgreSQL.
  */
-import { before, describe, test } from 'node:test';
+import { before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { ErrorAccesoDenegado, ErrorConflicto, ErrorDatoInvalido } from '../../dominio/errores.js';
 import type { UnidadDeTrabajoAcceso } from '../../dominio/puertos-acceso.js';
-import { crearEntorno, sembrarEscenario, type Entorno, type Escenario } from '../entorno-acceso.js';
+import { crearEntorno, sembrarEscenario, type Entorno, type Escenario, comoSistema, type UnidadDeTrabajoSistema } from '../entorno-acceso.js';
 import type { FabricaUnidadDeTrabajoAcceso } from './casos-acceso.js';
 
 export function suiteReservorios(fabrica: FabricaUnidadDeTrabajoAcceso): void {
   describe('reservorios', () => {
-    let uow: UnidadDeTrabajoAcceso;
+    let base: UnidadDeTrabajoAcceso;
+    let uow: UnidadDeTrabajoSistema;
     let e: Entorno;
     let esc: Escenario;
     before(async () => {
-      uow = fabrica();
-      e = crearEntorno(uow);
+      base = fabrica();
+      uow = comoSistema(base);
+      e = crearEntorno(base);
       esc = await sembrarEscenario(e);
     });
 

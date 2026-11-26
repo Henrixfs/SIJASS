@@ -2,9 +2,11 @@
  * Las mismas baterías de acceso, padrón, cuotas, pagos y portal que corren en memoria
  * (`npm test`), ahora sobre PostgreSQL real (tareas 3.2 y 3.3).
  */
-import { after, describe } from 'node:test';
+import { after, describe } from '../marco.js';
 import { UnidadDeTrabajoAccesoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
 import { suiteAcceso } from '../contrato/casos-acceso.js';
+import { suiteAislamiento } from '../contrato/casos-aislamiento.js';
+import { suiteIdentidad } from '../contrato/casos-identidad.js';
 import { suitePadron } from '../contrato/casos-padron.js';
 import { suiteAsistente } from '../contrato/casos-asistente.js';
 import { suiteReservorios } from '../contrato/casos-reservorios.js';
@@ -18,6 +20,8 @@ describe('acceso y padrón (PostgreSQL)', () => {
   const fabrica = (decorar?: ConstructorParameters<typeof UnidadDeTrabajoAccesoPostgres>[1]) => new UnidadDeTrabajoAccesoPostgres(pool, decorar);
 
   describe('acceso', () => suiteAcceso(fabrica));
+  describe('identidad por DNI (s2a)', () => suiteIdentidad(fabrica));
+  describe('aislamiento multi-JASS (s2a)', () => suiteAislamiento(fabrica));
   describe('padrón, cuotas, pagos y portal', () => suitePadron(fabrica));
   describe('reservorios (s1c)', () => suiteReservorios(fabrica));
   describe('asistente documental (s1d)', () => suiteAsistente(fabrica));

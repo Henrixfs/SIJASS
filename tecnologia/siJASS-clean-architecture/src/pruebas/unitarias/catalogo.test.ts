@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { METODOS_MEDICION, UNIDAD_MEDICION, esMetodoDelCatalogo } from '../../dominio/catalogo.js';
 

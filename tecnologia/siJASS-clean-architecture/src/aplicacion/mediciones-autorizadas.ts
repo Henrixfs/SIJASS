@@ -85,7 +85,7 @@ export class ConsultarHistorial {
       if (!(await r.reservorios.existeEnJass(actor.jassId, reservorioId))) throw recursoAjeno();
       const todas = await r.mediciones.listar(actor.jassId, { reservorioId });
       return todas.slice(0, LIMITE_HISTORIAL).map(aVista);
-    });
+    }, { jassId: actor.jassId });
   }
 }
 

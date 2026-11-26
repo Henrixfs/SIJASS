@@ -1,6 +1,6 @@
 /** Corpus, recuperación con citas y guarda de dosis (s1d, tareas 1.1 a 1.3). */
 import { fileURLToPath } from 'node:url';
-import { describe, test } from 'node:test';
+import { describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { ErrorCorpus, validarManifiesto, type Corpus } from '../../dominio/asistente/corpus.js';
 import { contieneContenidoSanitarioRestringido, normalizar, pideDosisOTratamiento } from '../../dominio/asistente/guarda.js';

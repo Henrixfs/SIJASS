@@ -4,7 +4,7 @@
  * versionado y reversible» y «Catálogo de métodos coherente con el dominio»).
  */
 import { randomUUID } from 'node:crypto';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import type pg from 'pg';
 import { METODOS_MEDICION } from '../../dominio/catalogo.js';

@@ -5,22 +5,44 @@ export class ErrorApi extends Error {
     readonly estado: number,
     readonly codigo: string,
     mensaje: string,
+    /** Cuerpo de la respuesta de error, por si trae datos extra (p. ej. `tipoReal`). */
+    readonly datos: Readonly<Record<string, unknown>> = {},
   ) {
     super(mensaje);
     this.name = 'ErrorApi';
   }
 }
 
-export interface Sesion {
+/** Lo que el servidor devuelve al iniciar o renovar la sesión (sin datos de la persona). */
+export interface SesionBasica {
   readonly perfil: Perfil;
   readonly rol: string | null;
+  /** La cuenta debe cambiar su clave antes de usar el sistema. */
+  readonly debeCambiarContrasena: boolean;
 }
 
-interface RespuestaSesion {
+/** Quién es la persona (`GET /v1/yo`): nunca trae identificadores internos ni el DNI completo. */
+export interface Sesion extends SesionBasica {
+  readonly nombre: string;
+  /** Solo los 3 últimos dígitos, p. ej. `•••••123`. */
+  readonly documento: string | null;
+  /** Nombre de su JASS; nulo en la plataforma. */
+  readonly jass: { readonly nombre: string } | null;
+}
+
+export type TipoDeAcceso = 'asociado' | 'administrador';
+
+/** Las credenciales son correctas, pero el tipo de acceso elegido no es el de la cuenta (`409`). */
+export class ErrorTipoDeAcceso extends Error {
+  constructor(readonly tipoReal: TipoDeAcceso) {
+    super('El tipo de acceso elegido no corresponde a la cuenta');
+    this.name = 'ErrorTipoDeAcceso';
+  }
+}
+
+interface RespuestaSesion extends SesionBasica {
   tokenAcceso: string;
   tokenRefresco: string;
-  perfil: Perfil;
-  rol: string | null;
 }
 
 const CLAVE_REFRESCO = 'sijass.refresco';
@@ -34,15 +56,16 @@ type Almacen = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
  */
 export class ClienteApi {
   private tokenAcceso: string | null = null;
+  private versionSesion = 0;
   private renovando: Promise<boolean> | null = null;
   private onSesionExpirada: () => void = () => undefined;
-  private alIniciarSesion: (sesion: Sesion) => void = () => undefined;
+  private alIniciarSesion: (sesion: SesionBasica | Sesion) => void = () => undefined;
 
   /**
    * Registra quién escucha los dos eventos de sesión: un inicio correcto (con perfil y rol) y
    * una sesión que ya no se puede renovar.
    */
-  configurar(escuchas: { alIniciarSesion?: (sesion: Sesion) => void; onSesionExpirada?: () => void }): void {
+  configurar(escuchas: { alIniciarSesion?: (sesion: SesionBasica | Sesion) => void; onSesionExpirada?: () => void }): void {
     if (escuchas.alIniciarSesion) this.alIniciarSesion = escuchas.alIniciarSesion;
     if (escuchas.onSesionExpirada) this.onSesionExpirada = escuchas.onSesionExpirada;
   }
@@ -79,26 +102,57 @@ export class ClienteApi {
   private async aError(r: Response): Promise<ErrorApi> {
     let codigo = 'error';
     let mensaje = `Error ${r.status}`;
+    let datos: Record<string, unknown> = {};
     try {
       const j = (await r.json()) as { codigo?: string; mensaje?: string };
       codigo = j.codigo ?? codigo;
       mensaje = j.mensaje ?? mensaje;
+      datos = j as Record<string, unknown>;
     } catch {
       /* cuerpo vacío o no JSON */
     }
-    return new ErrorApi(r.status, codigo, mensaje);
+    return new ErrorApi(r.status, codigo, mensaje, datos);
   }
 
-  private aplicarSesion(s: RespuestaSesion): Sesion {
+  private aplicarSesion(s: RespuestaSesion): SesionBasica {
     this.tokenAcceso = s.tokenAcceso;
     this.guardarRefresco(s.tokenRefresco);
-    return { perfil: s.perfil, rol: s.rol };
+    return { perfil: s.perfil, rol: s.rol, debeCambiarContrasena: s.debeCambiarContrasena === true };
   }
 
-  async iniciarSesion(correo: string, contrasena: string): Promise<Sesion> {
-    const r = await this.enviar('POST', '/v1/auth/login', { correo, contrasena });
-    if (!r.ok) throw await this.aError(r);
-    const sesion = this.aplicarSesion((await r.json()) as RespuestaSesion);
+  /** Quién es la persona: perfil, rol, nombre, DNI enmascarado y nombre de su JASS. */
+  consultarSesion(): Promise<Sesion> {
+    return this.solicitar<Sesion>('GET', '/v1/yo');
+  }
+
+  /**
+   * Inicia sesión con DNI y clave. El `tipo` es solo una guía: el servidor decide el perfil por la
+   * membresía y, si no coincide (con credenciales correctas), responde `409` sin emitir sesión; aquí
+   * se lanza `ErrorTipoDeAcceso` con el tipo real de la cuenta.
+   */
+  async iniciarSesion(documento: string, contrasena: string, tipo?: TipoDeAcceso): Promise<Sesion> {
+    const r = await this.enviar('POST', '/v1/auth/login', { documento, contrasena, ...(tipo ? { tipo } : {}) });
+    if (!r.ok) {
+      const error = await this.aError(r);
+      if (error.estado === 409 && error.codigo === 'tipo-de-acceso-distinto' && (error.datos.tipoReal === 'asociado' || error.datos.tipoReal === 'administrador')) {
+        throw new ErrorTipoDeAcceso(error.datos.tipoReal);
+      }
+      throw error;
+    }
+    return this.establecerSesion((await r.json()) as RespuestaSesion);
+  }
+
+  /** Cambia la propia clave (la actual y la nueva); el servidor cierra las demás sesiones y entrega una nueva. */
+  async cambiarContrasena(contrasenaActual: string, contrasenaNueva: string): Promise<Sesion> {
+    const datos = await this.solicitar<RespuestaSesion>('POST', '/v1/auth/cambiar-contrasena', { contrasenaActual, contrasenaNueva });
+    return this.establecerSesion(datos);
+  }
+
+  private async establecerSesion(datos: RespuestaSesion): Promise<Sesion> {
+    this.versionSesion++;
+    this.renovando = null;
+    const basica = this.aplicarSesion(datos);
+    const sesion: Sesion = { ...(await this.consultarSesion()), ...basica };
     this.alIniciarSesion(sesion);
     return sesion;
   }
@@ -117,14 +171,19 @@ export class ClienteApi {
   private async ejecutarRenovacion(): Promise<boolean> {
     const refresco = this.leerRefresco();
     if (!refresco) return false;
+    const version = this.versionSesion;
     try {
       const r = await this.enviar('POST', '/v1/auth/refresh', { tokenRefresco: refresco });
       if (!r.ok) {
-        this.tokenAcceso = null;
-        this.guardarRefresco(null);
+        if (version === this.versionSesion) this.guardarRefresco(null);
         return false;
       }
-      this.aplicarSesion((await r.json()) as RespuestaSesion);
+      const datos = (await r.json()) as RespuestaSesion;
+      if (version !== this.versionSesion) {
+        await this.invalidarRefresco(datos.tokenRefresco);
+        return false;
+      }
+      this.alIniciarSesion(this.aplicarSesion(datos));
       return true;
     } catch {
       return false;
@@ -135,7 +194,7 @@ export class ClienteApi {
   async restaurar(): Promise<Sesion | null> {
     if (!(await this.renovar())) return null;
     try {
-      return await this.solicitar<Sesion>('GET', '/v1/yo');
+      return await this.consultarSesion();
     } catch {
       return null;
     }
@@ -143,16 +202,36 @@ export class ClienteApi {
 
   async cerrarSesion(): Promise<void> {
     const refresco = this.leerRefresco();
+    this.versionSesion++;
+    this.renovando = null;
     this.tokenAcceso = null;
     this.guardarRefresco(null);
-    if (refresco) await this.enviar('POST', '/v1/auth/logout', { tokenRefresco: refresco }).catch(() => undefined);
+    if (refresco) await this.invalidarRefresco(refresco);
+  }
+
+  private async invalidarRefresco(tokenRefresco: string) {
+    await this.enviar('POST', '/v1/auth/logout', { tokenRefresco }).catch(() => undefined);
+  }
+
+  private async esFalloDeCredenciales(r: Response): Promise<boolean> {
+    try {
+      return ((await r.clone().json()) as { codigo?: string }).codigo === 'credenciales-invalidas';
+    } catch {
+      return false;
+    }
   }
 
   async solicitar<T>(metodo: string, ruta: string, cuerpo?: unknown, cabeceras?: Record<string, string>): Promise<T> {
+    const version = this.versionSesion;
+    const token = this.tokenAcceso;
     let r = await this.enviar(metodo, ruta, cuerpo, cabeceras);
-    if (r.status === 401 && this.tokenAcceso !== null) {
-      if (await this.renovar()) r = await this.enviar(metodo, ruta, cuerpo, cabeceras);
-      if (r.status === 401) {
+    // Un 401 de credenciales (p. ej. la clave actual equivocada al cambiarla) no es una sesión vencida:
+    // no se renueva ni se cierra la sesión.
+    if (r.status === 401 && token !== null && version === this.versionSesion && !(await this.esFalloDeCredenciales(r))) {
+      const renovado = this.tokenAcceso !== token || await this.renovar();
+      if (renovado && version === this.versionSesion) r = await this.enviar(metodo, ruta, cuerpo, cabeceras);
+      if (r.status === 401 && version === this.versionSesion) {
+        this.versionSesion++;
         this.tokenAcceso = null;
         this.guardarRefresco(null);
         this.onSesionExpirada();

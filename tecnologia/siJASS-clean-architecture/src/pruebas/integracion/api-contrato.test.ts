@@ -3,10 +3,10 @@
  * contrato OpenAPI para esa operación (s1e, spec `contrato-openapi`, «Códigos de estado
  * documentados verificados»).
  */
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { cargarOpenApi } from '../contrato-openapi-util.js';
-import { nuevaClave } from '../entorno-acceso.js';
+import { nuevaClave, nuevoDni } from '../entorno-acceso.js';
 import { crearPool } from './entorno.js';
 import { crearMundo, type Mundo } from './entorno-api.js';
 
@@ -37,18 +37,23 @@ describe('contrato OpenAPI — estados observados vs declarados', () => {
     await verificar('get', '/v1/salud', '/v1/salud', { esperado: 200 });
     await verificar('get', '/v1/yo', '/v1/yo', { token: T.tesoreroA, esperado: 200 });
     await verificar('get', '/v1/yo', '/v1/yo', { esperado: 401 });
-    await verificar('post', '/v1/auth/login', '/v1/auth/login', { cuerpo: { correo: m.esc.tesoreroA.correo, contrasena: 'Clave-de-prueba-123' }, esperado: 200 });
-    await verificar('post', '/v1/auth/login', '/v1/auth/login', { cuerpo: { correo: 'x@y.pe', contrasena: 'mala' }, esperado: 401 });
+    await verificar('post', '/v1/auth/login', '/v1/auth/login', { cuerpo: { documento: m.esc.tesoreroA.documento, contrasena: 'Clave-de-prueba-123' }, esperado: 200 });
+    await verificar('post', '/v1/auth/login', '/v1/auth/login', { cuerpo: { documento: '99999999', contrasena: 'mala' }, esperado: 401 });
     await verificar('post', '/v1/auth/refresh', '/v1/auth/refresh', { cuerpo: { tokenRefresco: 'no-existe' }, esperado: 401 });
     await verificar('post', '/v1/auth/logout', '/v1/auth/logout', { cuerpo: { tokenRefresco: 'no-existe' }, esperado: 204 });
 
-    const alta = await verificar('post', '/v1/asociados', '/v1/asociados', { token: T.tesoreroA, cuerpo: { nombre: 'Contrato Uno', documento: 'CONT-0001' }, esperado: 201 });
-    await verificar('post', '/v1/asociados', '/v1/asociados', { token: T.tesoreroA, cuerpo: { nombre: 'Contrato Uno', documento: 'CONT-0001' }, esperado: 409 });
+    const documentoAlta = nuevoDni();
+    const alta = await verificar('post', '/v1/asociados', '/v1/asociados', { token: T.tesoreroA, cuerpo: { nombre: 'Contrato Uno', documento: documentoAlta }, esperado: 201 });
+    await verificar('post', '/v1/asociados', '/v1/asociados', { token: T.tesoreroA, cuerpo: { nombre: 'Contrato Uno', documento: documentoAlta }, esperado: 409 });
     await verificar('post', '/v1/asociados', '/v1/asociados', { token: T.tesoreroA, cuerpo: { nombre: '', documento: '1' }, esperado: 422 });
     await verificar('post', '/v1/asociados', '/v1/asociados', { token: T.operadorA, cuerpo: { nombre: 'X', documento: 'CONT-0002' }, esperado: 403 });
     await verificar('get', '/v1/asociados', '/v1/asociados', { token: T.tesoreroA, esperado: 200 });
-    await verificar('post', '/v1/asociados/{id}/acceso', `/v1/asociados/${alta.cuerpo.id}/acceso`, { token: T.tesoreroA, cuerpo: { correo: `contrato.${Date.now()}@prueba.pe`, contrasena: 'Clave-de-prueba-123' }, esperado: 201 });
-    await verificar('post', '/v1/asociados/{id}/acceso', `/v1/asociados/${alta.cuerpo.id}/acceso`, { token: T.tesoreroA, cuerpo: { correo: 'x@y.pe', contrasena: 'corta' }, esperado: 422 });
+    await verificar('post', '/v1/asociados/{id}/acceso', `/v1/asociados/${alta.cuerpo.id}/acceso`, { token: T.tesoreroA, esperado: 201 });
+    await verificar('post', '/v1/asociados/{id}/acceso', `/v1/asociados/${alta.cuerpo.id}/acceso`, { token: T.tesoreroA, esperado: 409 });
+    const rara = await verificar('post', '/v1/asociados', '/v1/asociados', { token: T.tesoreroA, cuerpo: { nombre: 'Documento Raro', documento: 'CE-12345' }, esperado: 201 });
+    await verificar('post', '/v1/asociados/{id}/acceso', `/v1/asociados/${rara.cuerpo.id}/acceso`, { token: T.tesoreroA, esperado: 422 });
+    await verificar('post', '/v1/asociados/{id}/acceso/restablecer', `/v1/asociados/${alta.cuerpo.id}/acceso/restablecer`, { token: T.tesoreroA, esperado: 200 });
+    await verificar('post', '/v1/asociados/{id}/acceso/restablecer', `/v1/asociados/${rara.cuerpo.id}/acceso/restablecer`, { token: T.tesoreroA, esperado: 409 });
 
     await verificar('post', '/v1/cuotas/generar', '/v1/cuotas/generar', { token: T.tesoreroA, cuerpo: { periodo: '2026-11', importeCentimos: 1500 }, esperado: 200 });
     await verificar('post', '/v1/cuotas/generar', '/v1/cuotas/generar', { token: T.tesoreroA, cuerpo: { periodo: 'mal', importeCentimos: 1 }, esperado: 422 });
@@ -96,9 +101,9 @@ describe('contrato OpenAPI — estados observados vs declarados', () => {
   });
 
   test('el bloqueo por intentos fallidos (429) y el JSON inválido (400) están declarados', async () => {
-    const correo = m.esc.operadorB.correo;
-    for (let i = 0; i < 5; i++) await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { correo, contrasena: 'mala-contrasena-1' } });
-    await verificar('post', '/v1/auth/login', '/v1/auth/login', { cuerpo: { correo, contrasena: 'Clave-de-prueba-123' }, esperado: 429 });
+    const documento = m.esc.operadorB.documento;
+    for (let i = 0; i < 5; i++) await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { documento, contrasena: 'mala-contrasena-1' } });
+    await verificar('post', '/v1/auth/login', '/v1/auth/login', { cuerpo: { documento, contrasena: 'Clave-de-prueba-123' }, esperado: 429 });
     const r = await m.api.peticion('POST', '/v1/auth/login', { cuerpoCrudo: '{ no es json' });
     assert.equal(r.estado, 400);
     assert.ok(Object.keys(doc.paths['/v1/auth/login'].post.responses ?? {}).includes('400'));

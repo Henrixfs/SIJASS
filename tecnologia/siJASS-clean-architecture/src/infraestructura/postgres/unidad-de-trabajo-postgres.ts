@@ -1,5 +1,6 @@
 import type pg from 'pg';
-import type { DecoradorRepositorios, RepositoriosTransaccion, UnidadDeTrabajo } from '../../dominio/puertos.js';
+import type { ContextoJass, DecoradorRepositorios, RepositoriosTransaccion, UnidadDeTrabajo } from '../../dominio/puertos.js';
+import { aplicarContextoDeFilas } from './contexto-filas.js';
 import { MedicionesPostgres } from './mediciones-postgres.js';
 import { OperacionesPostgres } from './operaciones-postgres.js';
 import { ReservoriosPostgres } from './reservorios-postgres.js';
@@ -15,13 +16,14 @@ export class UnidadDeTrabajoPostgres implements UnidadDeTrabajo {
     private readonly decorar?: DecoradorRepositorios,
   ) {}
 
-  async ejecutar<T>(trabajo: (repos: RepositoriosTransaccion) => Promise<T>): Promise<T> {
+  async ejecutar<T>(trabajo: (repos: RepositoriosTransaccion) => Promise<T>, contexto: ContextoJass): Promise<T> {
     const cliente = await this.pool.connect();
     // Si falla el ROLLBACK la conexión queda en un estado desconocido: se destruye en vez
     // de devolverla al pool.
     let conexionDanada: Error | undefined;
     try {
       await cliente.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+      await aplicarContextoDeFilas(cliente, contexto);
       const repos: RepositoriosTransaccion = {
         mediciones: new MedicionesPostgres(cliente),
         operaciones: new OperacionesPostgres(cliente),

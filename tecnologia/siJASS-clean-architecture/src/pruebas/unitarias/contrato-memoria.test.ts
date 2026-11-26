@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { AlmacenMemoria, MedicionesMemoria, ReservoriosMemoria, UnidadDeTrabajoMemoria } from '../../infraestructura/memoria.js';
 import { probarContratoRegistroIdempotente } from '../contrato/registro-idempotente.js';

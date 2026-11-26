@@ -5,7 +5,7 @@
  * Este archivo no termina en `.test.ts`: solo se ejecuta cuando una suite lo invoca.
  */
 import { randomUUID } from 'node:crypto';
-import { describe, test } from 'node:test';
+import { describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { RegistrarMedicion, type ResultadoOperacion } from '../../aplicacion/registrar-medicion.js';
 import { ErrorMedicionDuplicada, type MotivoRechazo } from '../../dominio/errores.js';

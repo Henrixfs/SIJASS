@@ -1,17 +1,10 @@
 import { expect, test, type Browser } from '@playwright/test';
-import { CLAVE_E2E } from '../preparar.js';
+import { ANA, OPERADOR } from '../datos.js';
+import { ingresar, persona as entrar, tokenDe } from '../ayudas.js';
 
-const OPERADOR = 'operador@demo.sijass.pe';
-
-async function persona(browser: Browser, correo: string) {
-  const contexto = await browser.newContext();
-  const page = await contexto.newPage();
-  await page.goto('/');
-  await page.getByLabel('Correo electrónico').fill(correo);
-  await page.getByLabel('Contraseña').fill(CLAVE_E2E);
-  await page.getByRole('button', { name: 'Ingresar' }).click();
-  await page.waitForURL(/\/(personal|portal)$/);
-  await page.getByRole('button', { name: 'Asistente' }).click();
+async function persona(browser: Browser, cuenta: typeof OPERADOR) {
+  const { contexto, page } = await entrar(browser, cuenta);
+  await page.getByRole('link', { name: 'Asistente' }).click();
   await expect(page.getByRole('heading', { name: 'Asistente técnico' })).toBeVisible();
   return { contexto, page };
 }
@@ -47,18 +40,14 @@ test('el operador consulta al asistente: citas con documento, versión y página
 test('el asociado no ve el asistente y el servidor le niega la consulta', async ({ browser }) => {
   const contexto = await browser.newContext();
   const page = await contexto.newPage();
-  await page.goto('/');
-  await page.getByLabel('Correo electrónico').fill('ana.ccori@demo.sijass.pe');
-  await page.getByLabel('Contraseña').fill(CLAVE_E2E);
-  await page.getByRole('button', { name: 'Ingresar' }).click();
+  await ingresar(page, ANA);
   await page.waitForURL(/\/portal$/);
-  await expect(page.getByRole('button', { name: 'Asistente' })).toHaveCount(0);
-  const estado = await page.evaluate(async () => {
-    const refresco = sessionStorage.getItem('sijass.refresco');
-    const s = await (await fetch('/v1/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokenRefresco: refresco }) })).json();
-    const r = await fetch('/v1/asistente/consultas', { method: 'POST', headers: { Authorization: `Bearer ${s.tokenAcceso}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: '¿cómo se toma la muestra?' }) });
+  await expect(page.getByRole('link', { name: 'Asistente' })).toHaveCount(0);
+  const token = await tokenDe(page);
+  const estado = await page.evaluate(async (t) => {
+    const r = await fetch('/v1/asistente/consultas', { method: 'POST', headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ pregunta: '¿cómo se toma la muestra?' }) });
     return r.status;
-  });
+  }, token);
   expect(estado).toBe(403);
   await contexto.close();
 });

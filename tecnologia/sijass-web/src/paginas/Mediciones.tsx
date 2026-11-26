@@ -1,8 +1,11 @@
 import { useCallback, useState, type FormEvent } from 'react';
-import { useCarga } from '../hooks';
+import { useCarga, useEnvio } from '../hooks';
 import { mensajeDeError, useApp } from '../contexto';
 import { ahoraEnLima, formatearInstante, parsearValor, tomadaEnLima } from '../lib/medicion';
 import { nuevoUuid } from '../lib/uuid';
+import { SerieLecturas } from './SerieLecturas';
+import { IconoModulo } from '../identidad';
+import { Aviso as AvisoUi, Carga, ErrorConsulta, Insignia, SinPermiso, Tabla } from '../ui';
 
 interface Reservorio {
   id: string;
@@ -25,11 +28,7 @@ interface Medicion {
 type Aviso = { tipo: 'ok' | 'error'; texto: string };
 
 function Mensaje({ aviso }: { aviso: Aviso }) {
-  return (
-    <p role={aviso.tipo === 'error' ? 'alert' : 'status'} className={aviso.tipo === 'error' ? 'error' : 'exito'} data-testid={aviso.tipo === 'error' ? 'aviso-error' : 'aviso-ok'}>
-      {aviso.texto}
-    </p>
-  );
+  return <AvisoUi tipo={aviso.tipo}>{aviso.texto}</AvisoUi>;
 }
 
 /**
@@ -37,11 +36,11 @@ function Mensaje({ aviso }: { aviso: Aviso }) {
  * consultan el historial; el consejo además da de alta reservorios. Los permisos reales los
  * aplica el servidor: aquí solo se ocultan los controles que la persona no puede usar.
  */
-export function Mediciones() {
+export function Mediciones({ modo = 'mediciones' }: { modo?: 'mediciones' | 'reservorios' | 'campo' }) {
   const { api, sesion } = useApp();
   const rol = sesion?.rol;
   const cargarReservorios = useCallback(() => api.solicitar<{ reservorios: Reservorio[] }>('GET', '/v1/reservorios'), [api]);
-  const cargarCatalogo = useCallback(() => api.solicitar<Catalogo>('GET', '/v1/mediciones/catalogo'), [api]);
+  const cargarCatalogo = useCallback(() => modo === 'reservorios' ? Promise.resolve(null) : api.solicitar<Catalogo>('GET', '/v1/mediciones/catalogo'), [api, modo]);
   const reservorios = useCarga(cargarReservorios);
   const catalogo = useCarga(cargarCatalogo);
   const [elegido, setElegido] = useState('');
@@ -50,17 +49,20 @@ export function Mediciones() {
   // Si el elegido ya no está en la lista (cambió la JASS o se recargó), no se muestra.
   const elegidoVigente = lista.some((r) => r.id === elegido) ? elegido : '';
 
+  if (reservorios.prohibido) return <SinPermiso />;
   return (
     <section aria-labelledby="titulo-mediciones">
-      <h1 id="titulo-mediciones">Mediciones de cloro residual</h1>
-      <p className="aviso" data-testid="aviso-no-dictamen">
+      <h1 id="titulo-mediciones">{modo === 'reservorios' ? 'Reservorios' : modo === 'campo' ? 'Operaciones de campo' : 'Mediciones de cloro residual'}</h1>
+      {modo !== 'reservorios' && <p className="aviso" data-testid="aviso-no-dictamen">
         SIJASS registra la lectura tomada en campo; no dictamina la calidad del agua ni indica dosis. Ante una duda sanitaria, consulte al responsable técnico.
-      </p>
-      {reservorios.error && <Mensaje aviso={{ tipo: 'error', texto: reservorios.error }} />}
+      </p>}
+      {reservorios.error && <ErrorConsulta error={reservorios.error} recargar={reservorios.recargar} />}
+      {reservorios.cargando && !reservorios.datos && <Carga />}
 
       {rol === 'consejo' && <NuevoReservorio alCrear={() => void reservorios.recargar()} />}
+      {modo === 'reservorios' && lista.length > 0 && <ul className="catalogo-agua">{lista.map(r => <li key={r.id}><span className="icono-destino"><IconoModulo id="reservorios" /></span><strong>{r.nombre}</strong></li>)}</ul>}
 
-      <label className="selector">
+      {modo !== 'reservorios' && <label className="selector">
         Reservorio
         <select name="reservorio" value={elegidoVigente} onChange={(e) => setElegido(e.target.value)} disabled={reservorios.cargando && !reservorios.datos}>
           <option value="">Elija un reservorio…</option>
@@ -70,14 +72,16 @@ export function Mediciones() {
             </option>
           ))}
         </select>
-      </label>
+      </label>}
       {reservorios.datos && lista.length === 0 && (
         <p className="suave" data-testid="sin-reservorios">
           {rol === 'consejo' ? 'Aún no hay reservorios: cree el primero arriba.' : 'Aún no hay reservorios. Pida al consejo que los registre.'}
         </p>
       )}
 
-      {elegidoVigente !== '' && <Reservorio key={elegidoVigente} id={elegidoVigente} nombre={lista.find((r) => r.id === elegidoVigente)?.nombre ?? ''} catalogo={catalogo.datos} puedeRegistrar={rol === 'operador'} />}
+      {elegidoVigente && catalogo.error && <ErrorConsulta error={catalogo.error} recargar={catalogo.recargar} />}
+      {elegidoVigente && catalogo.prohibido && <SinPermiso />}
+      {elegidoVigente && <Reservorio key={elegidoVigente} id={elegidoVigente} nombre={lista.find((r) => r.id === elegidoVigente)?.nombre ?? ''} catalogo={catalogo.datos} puedeRegistrar={rol === 'operador' && catalogo.datos !== null} />}
     </section>
   );
 }
@@ -86,18 +90,19 @@ function NuevoReservorio({ alCrear }: { alCrear: () => void }) {
   const { api } = useApp();
   const [nombre, setNombre] = useState('');
   const [aviso, setAviso] = useState<Aviso | null>(null);
+  const { enviando, ejecutar } = useEnvio();
 
   async function crear(e: FormEvent) {
     e.preventDefault();
     setAviso(null);
-    try {
+    await ejecutar(async () => { try {
       await api.solicitar('POST', '/v1/reservorios', { nombre });
       setNombre('');
       setAviso({ tipo: 'ok', texto: 'Reservorio creado.' });
       alCrear();
     } catch (err) {
       setAviso({ tipo: 'error', texto: mensajeDeError(err) });
-    }
+    } });
   }
 
   return (
@@ -107,8 +112,8 @@ function NuevoReservorio({ alCrear }: { alCrear: () => void }) {
           Nuevo reservorio
           <input name="nombre-reservorio" required maxLength={80} value={nombre} onChange={(e) => setNombre(e.target.value)} />
         </label>
-        <button type="submit" className="primario">
-          Crear reservorio
+        <button type="submit" className="primario" disabled={enviando}>
+          {enviando ? 'Creando…' : 'Crear reservorio'}
         </button>
       </form>
       {aviso && <Mensaje aviso={aviso} />}
@@ -126,11 +131,12 @@ function Reservorio({ id, nombre, catalogo, puedeRegistrar }: { id: string; nomb
       {puedeRegistrar && <FormularioLectura reservorioId={id} catalogo={catalogo} alRegistrar={() => void recargar()} />}
       <h2>Historial de {nombre}</h2>
       {prohibido && <p className="aviso">Su rol no tiene acceso a este historial.</p>}
-      {error && <Mensaje aviso={{ tipo: 'error', texto: error }} />}
-      {cargando && !datos && <p className="suave">Cargando…</p>}
+      {error && <ErrorConsulta error={error} recargar={recargar} />}
+      {cargando && !datos && <Carga />}
+      {datos && <SerieLecturas lecturas={datos.mediciones} />}
       {datos && (
-        <div className="tabla-envoltorio">
-          <table data-testid="tabla-mediciones">
+        <Tabla nombre={`Mediciones de ${nombre}`}>
+          <table className="tabla-campo" role="table" data-testid="tabla-mediciones">
             <thead>
               <tr>
                 <th scope="col">Toma</th>
@@ -143,13 +149,13 @@ function Reservorio({ id, nombre, catalogo, puedeRegistrar }: { id: string; nomb
             <tbody>
               {datos.mediciones.map((m) => (
                 <tr key={m.id}>
-                  <td>{formatearInstante(m.tomadaEn)}</td>
+                  <td><span className="etiqueta-campo" aria-hidden="true">Toma </span>{formatearInstante(m.tomadaEn)}</td>
                   <td className="num">
                     {String(m.valor).replace('.', ',')} {m.unidad}
                   </td>
-                  <td>{catalogo?.metodos.find((x) => x.codigo === m.metodo)?.descripcion ?? m.metodo}</td>
-                  <td>{formatearInstante(m.registradaEn)}</td>
-                  <td>{m.estado === 'vigente' ? 'Vigente' : 'Anulada'}</td>
+                  <td><span className="etiqueta-campo" aria-hidden="true">Método </span>{catalogo?.metodos.find((x) => x.codigo === m.metodo)?.descripcion ?? m.metodo}</td>
+                  <td><span className="etiqueta-campo" aria-hidden="true">Registrada </span>{formatearInstante(m.registradaEn)}</td>
+                  <td><Insignia tipo={m.estado === 'vigente' ? 'info' : 'advertencia'}>{m.estado === 'vigente' ? 'Vigente' : 'Anulada'}</Insignia></td>
                 </tr>
               ))}
               {datos.mediciones.length === 0 && (
@@ -159,7 +165,7 @@ function Reservorio({ id, nombre, catalogo, puedeRegistrar }: { id: string; nomb
               )}
             </tbody>
           </table>
-        </div>
+        </Tabla>
       )}
       {datos && datos.mediciones.length >= 200 && <p className="suave">Se muestran las 200 mediciones más recientes.</p>}
     </>
@@ -173,6 +179,7 @@ function FormularioLectura({ reservorioId, catalogo, alRegistrar }: { reservorio
   const [toma, setToma] = useState(() => ahoraEnLima(new Date()));
   const [clave, setClave] = useState(nuevoUuid);
   const [aviso, setAviso] = useState<Aviso | null>(null);
+  const { enviando, ejecutar } = useEnvio();
 
   // Cada cambio de contenido es otra lectura (otra clave); un reintento del mismo envío conserva la suya.
   const cambiar = (poner: (v: string) => void) => (v: string) => {
@@ -188,7 +195,7 @@ function FormularioLectura({ reservorioId, catalogo, alRegistrar }: { reservorio
     if (!metodo) return setAviso({ tipo: 'error', texto: 'Elija el método de medición.' });
     if (numero === null) return setAviso({ tipo: 'error', texto: 'Escriba el valor en mg/L, por ejemplo 0.65.' });
     if (tomadaEn === null) return setAviso({ tipo: 'error', texto: 'Indique la fecha y hora de la toma.' });
-    try {
+    await ejecutar(async () => { try {
       await api.solicitar('POST', '/v1/mediciones', { reservorioId, metodo, valor: numero, unidad: catalogo?.unidad ?? 'mg/L', tomadaEn }, { 'Idempotency-Key': clave });
       setValor('');
       setClave(nuevoUuid());
@@ -196,7 +203,7 @@ function FormularioLectura({ reservorioId, catalogo, alRegistrar }: { reservorio
       alRegistrar();
     } catch (err) {
       setAviso({ tipo: 'error', texto: mensajeDeError(err) });
-    }
+    } });
   }
 
   return (
@@ -222,8 +229,8 @@ function FormularioLectura({ reservorioId, catalogo, alRegistrar }: { reservorio
           Fecha y hora de la toma (hora de Lima)
           <input name="toma" type="datetime-local" required value={toma} onChange={(e) => cambiar(setToma)(e.target.value)} />
         </label>
-        <button type="submit" className="primario">
-          Registrar lectura
+        <button type="submit" className="primario" disabled={enviando}>
+          {enviando ? 'Registrando…' : 'Registrar lectura'}
         </button>
       </form>
       {aviso && <Mensaje aviso={aviso} />}

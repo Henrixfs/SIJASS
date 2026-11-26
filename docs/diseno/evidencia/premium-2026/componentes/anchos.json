@@ -1,0 +1,422 @@
+[
+  {
+    "modulo": "asistente",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "asistente",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "asistente",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "asistente",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "asistente",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "asistente",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "asistente",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "campo",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "campo",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "campo",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "campo",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "campo",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "campo",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "campo",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "cuenta",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "cuenta",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "cuenta",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "cuenta",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "cuenta",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "cuenta",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "cuenta",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "cuotas",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "cuotas",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "cuotas",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "cuotas",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "cuotas",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "cuotas",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "cuotas",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "detalle",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "detalle",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "detalle",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "detalle",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "detalle",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "detalle",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "detalle",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "mediciones",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "mediciones",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "mediciones",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "mediciones",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "mediciones",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "mediciones",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "mediciones",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "padron",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "padron",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "padron",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "padron",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "padron",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "padron",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "padron",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "panel",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "panel",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "panel",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "panel",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "panel",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "panel",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "panel",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "perfil",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "perfil",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "perfil",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "perfil",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "perfil",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "perfil",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "perfil",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "portal",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "portal",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "portal",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "portal",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "portal",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "portal",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "portal",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "reservorios",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "reservorios",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "reservorios",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "reservorios",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "reservorios",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "reservorios",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "reservorios",
+    "ancho": 1920,
+    "contenido": 1920
+  },
+  {
+    "modulo": "reversa",
+    "ancho": 320,
+    "contenido": 320
+  },
+  {
+    "modulo": "reversa",
+    "ancho": 360,
+    "contenido": 360
+  },
+  {
+    "modulo": "reversa",
+    "ancho": 390,
+    "contenido": 390
+  },
+  {
+    "modulo": "reversa",
+    "ancho": 768,
+    "contenido": 768
+  },
+  {
+    "modulo": "reversa",
+    "ancho": 1024,
+    "contenido": 1024
+  },
+  {
+    "modulo": "reversa",
+    "ancho": 1440,
+    "contenido": 1440
+  },
+  {
+    "modulo": "reversa",
+    "ancho": 1920,
+    "contenido": 1920
+  }
+]

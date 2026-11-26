@@ -25,6 +25,6 @@ npm run build      # genera dist/, que la API puede servir con WEB_DIR=<ruta a d
 
 ## Limitaciones
 
-- Sin recuperación ni cambio de contraseña; la contraseña inicial del asociado la fija el personal.
+- Sin recuperación autónoma de clave: la persona que administra restablece la clave (ver la [guía de operación](../../docs/08-despliegue/guia-operacion-acceso.md)). El ingreso es por DNI con los botones «Soy asociado» y «Soy administrador»; la clave entregada se muestra una sola vez y no se guarda en el navegador.
 - Sin biblioteca de rutas, de estado ni de formularios; sin internacionalización más allá del español.
 - `sessionStorage` expone el token de refresco a un posible XSS; se mitiga con la ausencia de HTML inyectado y no con una política de contenido todavía.

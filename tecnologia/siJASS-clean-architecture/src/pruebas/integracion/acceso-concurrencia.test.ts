@@ -3,7 +3,7 @@
  * juntos superan la cuota, rotación simultánea de un refresco y fallos de inicio de sesión
  * simultáneos. Cada escenario se repite 10 veces para descartar fallos intermitentes.
  */
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
@@ -99,7 +99,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
   test(`rotación simultánea del mismo refresco: solo una renovación prospera (${RONDAS} rondas)`, async () => {
     const esc = await sembrarEscenario(e);
     for (let ronda = 0; ronda < RONDAS; ronda++) {
-      const s = await e.casos.autenticar.ejecutar({ correo: esc.tesoreroA.correo, contrasena: CLAVE });
+      const s = await e.casos.autenticar.ejecutar({ documento: esc.tesoreroA.documento, contrasena: CLAVE });
       const intentos = await Promise.allSettled(Array.from({ length: 5 }, () => e.casos.renovar.ejecutar({ tokenRefresco: s.tokenRefresco })));
       assert.equal(intentos.filter((i) => i.status === 'fulfilled').length, 1, `ronda ${ronda}`);
       for (const i of intentos) if (i.status === 'rejected') assert.ok(i.reason instanceof ErrorNoAutenticado);
@@ -109,7 +109,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
   test(`fallos de inicio de sesión simultáneos se suman sin perderse (${RONDAS} rondas)`, async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const esc = await sembrarEscenario(e);
-      await Promise.allSettled(Array.from({ length: 4 }, () => e.casos.autenticar.ejecutar({ correo: esc.operadorA.correo, contrasena: 'incorrecta-123' })));
+      await Promise.allSettled(Array.from({ length: 4 }, () => e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' })));
       const { rows } = await pool.query('SELECT intentos_fallidos FROM usuario WHERE id = $1', [esc.operadorA.usuarioId]);
       assert.equal(rows[0].intentos_fallidos, 4, `ronda ${ronda}: se perdió algún intento`);
     }
@@ -119,7 +119,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
     const esc = await sembrarEscenario(e);
     for (let i = 0; i < 4; i++) {
-      await assert.rejects(e.casos.autenticar.ejecutar({ correo: esc.operadorA.correo, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      await assert.rejects(e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
     }
 
     let avisarInicio!: () => void;
@@ -136,10 +136,10 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
       },
     };
     const autenticador = new AutenticarUsuario({ ...e.dependencias, contrasenas: controlada });
-    const inicioCorrecto = autenticador.ejecutar({ correo: esc.operadorA.correo, contrasena: CLAVE });
+    const inicioCorrecto = autenticador.ejecutar({ documento: esc.operadorA.documento, contrasena: CLAVE });
     try {
       await inicioVerificacion;
-      await assert.rejects(e.casos.autenticar.ejecutar({ correo: esc.operadorA.correo, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      await assert.rejects(e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
       const { rows } = await pool.query('SELECT intentos_fallidos, bloqueado_hasta FROM usuario WHERE id = $1', [esc.operadorA.usuarioId]);
       assert.equal(rows[0].intentos_fallidos, 5);
       assert.ok(rows[0].bloqueado_hasta);
@@ -153,7 +153,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
   test('el bloqueo vigente prevalece aunque cambie el hash durante la verificación', async () => {
     const esc = await sembrarEscenario(e);
     const cuenta = esc.operadorA;
-    for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ correo: cuenta.correo, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+    for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
     let avisar!: () => void;
     let liberar!: () => void;
     const inicio = new Promise<void>((resolve) => { avisar = resolve; });
@@ -167,11 +167,11 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
         return original.verificar(clave, hash);
       },
     } });
-    const intento = caso.ejecutar({ correo: cuenta.correo, contrasena: CLAVE });
+    const intento = caso.ejecutar({ documento: cuenta.documento, contrasena: CLAVE });
     const rechazo = assert.rejects(intento, ErrorCuentaBloqueada);
     await inicio;
     try {
-      await assert.rejects(e.casos.autenticar.ejecutar({ correo: cuenta.correo, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
       const nuevoHash = await original.derivar('otra-clave-segura-123');
       await pool.query('UPDATE usuario SET hash_contrasena = $1 WHERE id = $2', [nuevoHash, cuenta.usuarioId]);
     } finally {
@@ -191,7 +191,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
       await cliente.query('BEGIN');
       await cliente.query('SELECT id FROM usuario WHERE id = $1 FOR UPDATE', [esc.operadorA.usuarioId]);
       const limite = new Promise<never>((_, reject) => { temporizador = setTimeout(() => reject(new Error('otra cuenta quedó bloqueada')), 10_000); });
-      const sesion = await Promise.race([e.casos.autenticar.ejecutar({ correo: esc.tesoreroB.correo, contrasena: CLAVE }), limite]);
+      const sesion = await Promise.race([e.casos.autenticar.ejecutar({ documento: esc.tesoreroB.documento, contrasena: CLAVE }), limite]);
       assert.equal(sesion.rol, 'tesorero');
     } finally {
       if (temporizador) clearTimeout(temporizador);
@@ -217,7 +217,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
         },
       };
       const caso = new AutenticarUsuario({ ...e.dependencias, contrasenas });
-      const intento = caso.ejecutar({ correo: esc.operadorA.correo, contrasena: CLAVE });
+      const intento = caso.ejecutar({ documento: esc.operadorA.documento, contrasena: CLAVE });
       const rechazo = assert.rejects(intento, ErrorNoAutenticado);
       await inicio;
       try {
@@ -237,17 +237,17 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
   test('procesos independientes respetan el bloqueo sin afectar otra cuenta', async () => {
     const esc = await sembrarEscenario(e);
     const cuenta = esc.operadorA;
-    for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ correo: cuenta.correo, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+    for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ documento: cuenta.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
     const ruta = new URL('./auxiliar-auth.js', import.meta.url);
-    const correcto = fork(ruta, [cuenta.correo, 'correcta'], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });
+    const correcto = fork(ruta, [cuenta.documento, 'correcta'], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });
     const cierreCorrecto = once(correcto, 'exit');
     try {
       assert.equal((await once(correcto, 'message'))[0], 'verificando');
-      const incorrecto = fork(ruta, [cuenta.correo, 'incorrecta'], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });
+      const incorrecto = fork(ruta, [cuenta.documento, 'incorrecta'], { stdio: ['ignore', 'ignore', 'inherit', 'ipc'] });
       const cierreIncorrecto = once(incorrecto, 'exit');
       assert.equal((await once(incorrecto, 'message'))[0], 'ErrorNoAutenticado');
       await cierreIncorrecto;
-      const otra = await e.casos.autenticar.ejecutar({ correo: esc.tesoreroB.correo, contrasena: CLAVE });
+      const otra = await e.casos.autenticar.ejecutar({ documento: esc.tesoreroB.documento, contrasena: CLAVE });
       assert.equal(otra.rol, 'tesorero');
       const respuesta = once(correcto, 'message');
       correcto.send('continuar');
@@ -264,7 +264,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
   test('si el inicio correcto decide primero, el fallo posterior cuenta como primero', async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const esc = await sembrarEscenario(e);
-      for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ correo: esc.operadorA.correo, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
+      for (let i = 0; i < 4; i++) await assert.rejects(e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' }), ErrorNoAutenticado);
       let iniciar!: () => void;
       let liberar!: () => void;
       const iniciado = new Promise<void>((resolve) => { iniciar = resolve; });
@@ -279,11 +279,11 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
         },
       };
       const caso = new AutenticarUsuario({ ...e.dependencias, contrasenas });
-      const fallo = caso.ejecutar({ correo: esc.operadorA.correo, contrasena: 'incorrecta-123' });
+      const fallo = caso.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' });
       const rechazo = assert.rejects(fallo, ErrorNoAutenticado);
       await iniciado;
       try {
-      await e.casos.autenticar.ejecutar({ correo: esc.operadorA.correo, contrasena: CLAVE });
+      await e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: CLAVE });
       } finally {
         liberar();
       }

@@ -1,12 +1,15 @@
-export type Perfil = 'personal' | 'asociado';
+export type Perfil = 'personal' | 'asociado' | 'plataforma';
 
 export const RUTA_INGRESO = '/ingresar';
 export const RUTA_PERSONAL = '/personal';
 export const RUTA_PORTAL = '/portal';
+export const RUTA_PLATAFORMA = '/plataforma';
+
+const INICIO: Record<Perfil, string> = { personal: RUTA_PERSONAL, asociado: RUTA_PORTAL, plataforma: RUTA_PLATAFORMA };
 
 /** Pantalla de inicio de cada perfil. */
 export function inicioDe(perfil: Perfil): string {
-  return perfil === 'personal' ? RUTA_PERSONAL : RUTA_PORTAL;
+  return INICIO[perfil];
 }
 
 /**
@@ -16,7 +19,7 @@ export function inicioDe(perfil: Perfil): string {
  */
 export function destinoPara(perfil: Perfil | null, ruta: string): string {
   if (perfil === null) return RUTA_INGRESO;
-  const propia = perfil === 'personal' ? RUTA_PERSONAL : RUTA_PORTAL;
+  const propia = INICIO[perfil];
   if (ruta === propia || ruta.startsWith(`${propia}/`)) return ruta;
   return propia;
 }

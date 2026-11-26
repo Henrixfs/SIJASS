@@ -3,8 +3,15 @@ import { ErrorConflicto } from '../dominio/errores.js';
 import type { Asociado, Cuota, Pago, ReversaPago } from '../dominio/padron.js';
 import type { Reservorio } from '../dominio/reservorio.js';
 import type {
+  ContextoTransaccion,
+  CredencialesNuevas,
   DecoradorRepositoriosAcceso,
+  EstadoJass,
   EventoAuditoria,
+  Jass,
+  MiembroEquipo,
+  ResumenJass,
+  UbicacionJass,
   RepositorioAsociados,
   RepositorioAuditoria,
   RepositorioCuotas,
@@ -21,7 +28,7 @@ import type {
 
 /** Estado confirmado de la base en memoria del contexto de acceso y padrón. */
 export interface EstadoAcceso {
-  jass: Map<string, string>;
+  jass: Map<string, Jass>;
   reservorios: Map<string, Reservorio>;
   usuarios: Map<string, Usuario>;
   membresias: Map<string, Membresia>;
@@ -65,12 +72,46 @@ function copiar(e: EstadoAcceso): EstadoAcceso {
 
 class JassMemoria implements RepositorioJass {
   constructor(private readonly e: EstadoAcceso) {}
-  async crear(jass: { id: string; nombre: string }): Promise<void> {
+  async crear(jass: { id: string; nombre: string } & Partial<UbicacionJass>): Promise<void> {
     if (this.e.jass.has(jass.id)) throw new ErrorConflicto('jass-duplicada');
-    this.e.jass.set(jass.id, jass.nombre);
+    const clave = (j: { nombre: string; distrito?: string | null; centroPoblado?: string | null }) =>
+      [j.nombre, j.distrito ?? '', j.centroPoblado ?? ''].map((s) => s.trim().toLowerCase()).join('|');
+    for (const otra of this.e.jass.values()) if (clave(otra) === clave(jass)) throw new ErrorConflicto('jass-duplicada');
+    this.e.jass.set(jass.id, {
+      id: jass.id,
+      nombre: jass.nombre,
+      estado: 'activa',
+      departamento: jass.departamento ?? null,
+      provincia: jass.provincia ?? null,
+      distrito: jass.distrito ?? null,
+      centroPoblado: jass.centroPoblado ?? null,
+    });
   }
   async existe(id: string): Promise<boolean> {
     return this.e.jass.has(id);
+  }
+  async buscar(id: string): Promise<Jass | undefined> {
+    return this.e.jass.get(id);
+  }
+  async listar(): Promise<ResumenJass[]> {
+    return [...this.e.jass.values()]
+      .map((j) => ({
+        ...j,
+        cuentasActivas: [...this.e.membresias.values()].filter(
+          (m) => m.jassId === j.id && m.estado === 'activa' && this.e.usuarios.get(m.usuarioId)?.estado === 'activo',
+        ).length,
+      }))
+      .sort((a, b) => {
+        const x = a.nombre.toLowerCase();
+        const y = b.nombre.toLowerCase();
+        return x < y ? -1 : x > y ? 1 : a.id < b.id ? -1 : 1;
+      });
+  }
+  async cambiarEstado(id: string, estado: EstadoJass): Promise<boolean> {
+    const j = this.e.jass.get(id);
+    if (!j) return false;
+    this.e.jass.set(id, { ...j, estado });
+    return true;
   }
 }
 
@@ -96,8 +137,14 @@ class ReservoriosJassMemoria implements RepositorioReservoriosJass {
 class UsuariosMemoria implements RepositorioUsuarios {
   constructor(private readonly e: EstadoAcceso) {}
   async crear(usuario: Usuario): Promise<void> {
-    for (const u of this.e.usuarios.values()) if (u.correo === usuario.correo) throw new ErrorConflicto('correo-duplicado');
+    for (const u of this.e.usuarios.values()) {
+      if (usuario.documento !== null && u.documento === usuario.documento) throw new ErrorConflicto('documento-con-acceso');
+      if (usuario.correo !== null && u.correo === usuario.correo) throw new ErrorConflicto('correo-duplicado');
+    }
     this.e.usuarios.set(usuario.id, usuario);
+  }
+  async buscarPorDocumento(documento: string): Promise<Usuario | undefined> {
+    return [...this.e.usuarios.values()].find((u) => u.documento === documento);
   }
   async buscarPorCorreo(correo: string): Promise<Usuario | undefined> {
     return [...this.e.usuarios.values()].find((u) => u.correo === correo);
@@ -107,6 +154,24 @@ class UsuariosMemoria implements RepositorioUsuarios {
   }
   async buscarPorIdBloqueando(id: string): Promise<Usuario | undefined> {
     return this.buscarPorId(id);
+  }
+  async actualizarCredenciales(id: string, nuevas: CredencialesNuevas): Promise<void> {
+    const u = this.e.usuarios.get(id);
+    if (!u) throw new Error(`usuario inexistente: ${id}`);
+    this.e.usuarios.set(id, { ...u, ...nuevas, intentosFallidos: 0, bloqueadoHasta: null });
+  }
+  async cambiarEstado(id: string, estado: 'activo' | 'inactivo'): Promise<boolean> {
+    const u = this.e.usuarios.get(id);
+    if (!u) return false;
+    this.e.usuarios.set(id, { ...u, estado });
+    return true;
+  }
+  async asignarDocumento(id: string, documento: string, nombre: string): Promise<boolean> {
+    const u = this.e.usuarios.get(id);
+    if (!u) return false;
+    for (const o of this.e.usuarios.values()) if (o.id !== id && o.documento === documento) throw new ErrorConflicto('documento-con-acceso');
+    this.e.usuarios.set(id, { ...u, documento, nombre });
+    return true;
   }
   async registrarFallo(id: string, umbral: number, bloqueadoHasta: string) {
     const u = this.e.usuarios.get(id);
@@ -143,6 +208,26 @@ class MembresiasMemoria implements RepositorioMembresias {
     this.e.membresias.set(m.id, { ...m, estado: 'inactiva' });
     return true;
   }
+  async listarPersonal(jassId: string): Promise<MiembroEquipo[]> {
+    const orden = { consejo: 0, tesorero: 1, operador: 2 } as const;
+    const nombreDe = (x: MiembroEquipo) => x.nombre.toLowerCase();
+    return [...this.e.membresias.values()]
+      .filter((m) => m.jassId === jassId && m.perfil === 'personal' && m.rol !== null)
+      .map((m): MiembroEquipo => {
+        const u = this.e.usuarios.get(m.usuarioId);
+        return {
+          usuarioId: m.usuarioId,
+          nombre: u?.nombre ?? '',
+          documento: u?.documento ?? '',
+          rol: m.rol as NonNullable<typeof m.rol>,
+          estado: m.estado === 'activa' && u?.estado === 'activo' ? 'activo' : 'inactivo',
+        };
+      })
+      .sort((a, b) => orden[a.rol] - orden[b.rol] || (nombreDe(a) < nombreDe(b) ? -1 : nombreDe(a) > nombreDe(b) ? 1 : a.usuarioId < b.usuarioId ? -1 : 1));
+  }
+  async listarDeAsociados(jassId: string): Promise<Membresia[]> {
+    return [...this.e.membresias.values()].filter((m) => m.jassId === jassId && m.perfil === 'asociado');
+  }
 }
 
 class SesionesMemoria implements RepositorioSesiones {
@@ -162,6 +247,11 @@ class SesionesMemoria implements RepositorioSesiones {
   async revocarFamilia(familiaId: string, ahora: string): Promise<void> {
     for (const s of this.e.sesiones.values()) {
       if (s.familiaId === familiaId && s.revocadaEn === null) this.e.sesiones.set(s.id, { ...s, revocadaEn: ahora });
+    }
+  }
+  async revocarDeUsuario(usuarioId: string, ahora: string): Promise<void> {
+    for (const s of this.e.sesiones.values()) {
+      if (s.usuarioId === usuarioId && s.revocadaEn === null) this.e.sesiones.set(s.id, { ...s, revocadaEn: ahora });
     }
   }
 }
@@ -213,6 +303,11 @@ class CuotasMemoria implements RepositorioCuotas {
       .filter((c) => c.jassId === jassId && c.asociadoId === asociadoId)
       .sort((x, y) => (x.periodo < y.periodo ? -1 : x.periodo > y.periodo ? 1 : 0));
   }
+  async listarPorJass(jassId: string): Promise<Cuota[]> {
+    return [...this.e.cuotas.values()]
+      .filter((c) => c.jassId === jassId)
+      .sort((x, y) => (x.periodo < y.periodo ? -1 : x.periodo > y.periodo ? 1 : 0));
+  }
 }
 
 const porFechaYId = (a: Pago, b: Pago): number =>
@@ -241,6 +336,9 @@ class PagosMemoria implements RepositorioPagos {
       [...this.e.cuotas.values()].filter((c) => c.jassId === jassId && c.asociadoId === asociadoId).map((c) => c.id),
     );
     return [...this.e.pagos.values()].filter((p) => p.jassId === jassId && cuotas.has(p.cuotaId)).sort(porFechaYId);
+  }
+  async listarPorJass(jassId: string): Promise<Pago[]> {
+    return [...this.e.pagos.values()].filter((p) => p.jassId === jassId).sort(porFechaYId);
   }
   async marcarRevertido(jassId: string, id: string): Promise<boolean> {
     const p = await this.buscar(jassId, id);
@@ -302,7 +400,9 @@ export class UnidadDeTrabajoAccesoMemoria implements UnidadDeTrabajoAcceso {
     private readonly decorar?: DecoradorRepositoriosAcceso,
   ) {}
 
-  ejecutar<T>(trabajo: (repos: RepositoriosAcceso) => Promise<T>): Promise<T> {
+  // El contexto se ignora: la memoria aísla por filtro en cada repositorio (design.md D11).
+  ejecutar<T>(trabajo: (repos: RepositoriosAcceso) => Promise<T>, contexto: ContextoTransaccion): Promise<T> {
+    void contexto;
     const resultado = this.almacen.cola.then(() => this.ejecutarEnSerie(trabajo));
     this.almacen.cola = resultado.catch(() => undefined);
     return resultado;

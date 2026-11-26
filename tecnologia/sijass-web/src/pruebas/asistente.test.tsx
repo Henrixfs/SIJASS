@@ -1,8 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, test, vi } from 'vitest';
+import { beforeAll, describe, expect, test, vi } from 'vitest';
 import { App } from '../App';
 import { ClienteApi } from '../api/cliente';
+import { ingresarPorDni, respuestaYo } from './ayudas';
+
+// Vite transforma los módulos diferidos al primer import. Esa preparación pertenece al setup de jsdom.
+beforeAll(async () => {
+  await Promise.all([import('../paginas/Personal'), import('../paginas/Asistente')]);
+});
 
 const json = (estado: number, cuerpo?: unknown) =>
   new Response(cuerpo === undefined ? null : JSON.stringify(cuerpo), { status: estado, headers: { 'Content-Type': 'application/json' } });
@@ -22,6 +28,7 @@ function montar(consulta: (pregunta: unknown) => Response, corpus: 'ejemplo' | '
     const cuerpo = init?.body ? JSON.parse(init.body as string) : undefined;
     llamadas.push({ ruta: r, cuerpo });
     if (r === '/v1/auth/login') return json(200, { tokenAcceso: 'a', tokenRefresco: 'r', perfil: 'personal', rol });
+    if (r === '/v1/yo') return json(200, respuestaYo('personal', rol));
     if (r === '/v1/asistente/documentos') return json(200, documentos(corpus));
     if (r === '/v1/asistente/consultas') return consulta(cuerpo?.pregunta);
     if (r === '/v1/reservorios') return json(200, { reservorios: [] });
@@ -35,10 +42,8 @@ function montar(consulta: (pregunta: unknown) => Response, corpus: 'ejemplo' | '
 }
 
 async function abrirAsistente(usuario: ReturnType<typeof userEvent.setup>) {
-  await usuario.type(await screen.findByLabelText('Correo electrónico'), 'a@b.pe');
-  await usuario.type(screen.getByLabelText('Contraseña'), 'Clave-de-prueba-123');
-  await usuario.click(screen.getByRole('button', { name: 'Ingresar' }));
-  await usuario.click(await screen.findByRole('button', { name: 'Asistente' }));
+  await ingresarPorDni(usuario);
+  await usuario.click(await screen.findByRole('link', { name: 'Asistente' }));
   await screen.findByRole('heading', { name: 'Asistente técnico' });
 }
 

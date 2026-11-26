@@ -9,7 +9,7 @@ import {
   validarMotivo,
   type Pago,
 } from '../../dominio/padron.js';
-import { auditar, type DependenciasAcceso } from '../acceso/comun.js';
+import { auditar, enJass, type DependenciasAcceso } from '../acceso/comun.js';
 
 const recursoAjeno = () => new ErrorAccesoDenegado('recurso-ajeno');
 
@@ -43,7 +43,7 @@ export class RegistrarPago {
     const payloadHash = hashDePago({ cuotaId, importeCentimos, comprobante });
     const ahora = this.d.reloj.ahora();
 
-    return this.d.unidadDeTrabajo.ejecutar(async (r): Promise<ResultadoPago> => {
+    return enJass(this.d, actor)(async (r): Promise<ResultadoPago> => {
       const decidir = (existente: Pago): ResultadoPago => {
         if (existente.payloadHash !== payloadHash) throw new ErrorConflicto('clave-idempotencia-reutilizada');
         return { pago: existente, duplicado: true };
@@ -98,7 +98,7 @@ export class ReversarPago {
     if (!esUuid(pagoId)) throw recursoAjeno();
     const motivo = validarMotivo(comando.motivo);
     const ahora = this.d.reloj.ahora();
-    return this.d.unidadDeTrabajo.ejecutar(async (r) => {
+    return enJass(this.d, actor)(async (r) => {
       const pago = await r.pagos.buscar(actor.jassId, pagoId);
       if (!pago) throw recursoAjeno();
       // Se bloquea la cuota para ordenar la reversa respecto de otros pagos de la misma cuota.
@@ -117,7 +117,7 @@ export class ConsultarPago {
   async ejecutar(actor: ContextoAcceso, pagoId: string): Promise<Pago & { reversa: { motivo: string; creadaEn: string } | null }> {
     exigirPermiso(actor, 'pagos.leer');
     if (!esUuid(pagoId)) throw recursoAjeno();
-    return this.d.unidadDeTrabajo.ejecutar(async (r) => {
+    return enJass(this.d, actor)(async (r) => {
       const pago = await r.pagos.buscar(actor.jassId, pagoId);
       if (!pago) throw recursoAjeno();
       const reversa = await r.pagos.buscarReversa(actor.jassId, pagoId);

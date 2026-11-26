@@ -1,5 +1,5 @@
 /** Acceso sobre la memoria + matriz de permisos perfil/rol (tarea 2.3). */
-import { describe, test } from 'node:test';
+import { describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { tienePermiso, type ContextoAcceso, type Permiso } from '../../dominio/acceso.js';
 import { AlmacenAccesoMemoria, UnidadDeTrabajoAccesoMemoria } from '../../infraestructura/memoria-acceso.js';

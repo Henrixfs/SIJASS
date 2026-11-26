@@ -1,25 +1,12 @@
-import { expect, test, type Browser, type Page } from '@playwright/test';
-import { CLAVE_E2E, CORREO_CONSEJO_B } from '../preparar.js';
+import { expect, test, type Page } from '@playwright/test';
+import { CONSEJO, CONSEJO_B, OPERADOR, TESORERO } from '../datos.js';
+import { persona, tokenDe } from '../ayudas.js';
 
-const CONSEJO = 'consejo@demo.sijass.pe';
-const OPERADOR = 'operador@demo.sijass.pe';
-const TESORERO = 'tesorero@demo.sijass.pe';
 const NOMBRE_RESERVORIO = 'Reservorio E2E';
-
-async function persona(browser: Browser, correo: string) {
-  const contexto = await browser.newContext();
-  const page = await contexto.newPage();
-  await page.goto('/');
-  await page.getByLabel('Correo electrónico').fill(correo);
-  await page.getByLabel('Contraseña').fill(CLAVE_E2E);
-  await page.getByRole('button', { name: 'Ingresar' }).click();
-  await page.waitForURL(/\/(personal|portal)$/);
-  return { contexto, page };
-}
 
 async function abrirMediciones(page: Page) {
   // Todos los roles de personal tienen la pestaña; `click` espera a que aparezca.
-  await page.getByRole('button', { name: 'Mediciones' }).click();
+  await page.getByRole('link', { name: 'Mediciones' }).click();
   await expect(page.getByRole('heading', { name: 'Mediciones de cloro residual' })).toBeVisible();
 }
 
@@ -67,23 +54,21 @@ test('el consejo crea un reservorio, el operador registra una medición y la ve 
 
 test('el consejo de otra JASS no ve reservorios ni mediciones, y el servidor le niega el historial aunque conozca el identificador', async ({ browser }) => {
   const consejo = await persona(browser, CONSEJO);
-  const idReservorio = await consejo.page.evaluate(async () => {
-    const refresco = sessionStorage.getItem('sijass.refresco');
-    const s = await (await fetch('/v1/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokenRefresco: refresco }) })).json();
-    const l = await (await fetch('/v1/reservorios', { headers: { Authorization: `Bearer ${s.tokenAcceso}` } })).json();
+  const tokenConsejo = await tokenDe(consejo.page);
+  const idReservorio = await consejo.page.evaluate(async (token) => {
+    const l = await (await fetch('/v1/reservorios', { headers: { Authorization: `Bearer ${token}` } })).json();
     return l.reservorios[0].id as string;
-  });
+  }, tokenConsejo);
 
-  const otra = await persona(browser, CORREO_CONSEJO_B);
+  const otra = await persona(browser, CONSEJO_B);
   await abrirMediciones(otra.page);
   await expect(otra.page.getByTestId('sin-reservorios')).toBeVisible();
   expect(await otra.page.textContent('body')).not.toContain(NOMBRE_RESERVORIO);
   expect(await otra.page.textContent('body')).not.toContain('0,65');
 
-  const respuestas = await otra.page.evaluate(async (id) => {
-    const refresco = sessionStorage.getItem('sijass.refresco');
-    const s = await (await fetch('/v1/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokenRefresco: refresco }) })).json();
-    const h = { Authorization: `Bearer ${s.tokenAcceso}` };
+  const tokenOtra = await tokenDe(otra.page);
+  const respuestas = await otra.page.evaluate(async ({ id, token }) => {
+    const h = { Authorization: `Bearer ${token}` };
     const historial = await fetch(`/v1/reservorios/${id}/mediciones`, { headers: h });
     const registro = await fetch('/v1/mediciones', {
       method: 'POST',
@@ -91,7 +76,7 @@ test('el consejo de otra JASS no ve reservorios ni mediciones, y el servidor le 
       body: JSON.stringify({ reservorioId: id, metodo: 'comparador-dpd', valor: 1, unidad: 'mg/L', tomadaEn: '2026-01-01T00:00:00-05:00' }),
     });
     return { historial: [historial.status, await historial.text()], registro: [registro.status, await registro.text()] };
-  }, idReservorio);
+  }, { id: idReservorio, token: tokenOtra });
   for (const [estado, texto] of [respuestas.historial, respuestas.registro]) {
     expect(estado).toBe(403);
     expect(texto).not.toContain('0.65');

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ErrorApi } from './api/cliente';
 import { mensajeDeError } from './contexto';
 
@@ -24,7 +24,7 @@ export function useCarga<T>(cargar: () => Promise<T>) {
       (datos) => activo && setEstado({ datos, error: null, prohibido: false, cargando: false }),
       (e: unknown) => {
         if (!activo) return;
-        if (e instanceof ErrorApi && e.estado === 403) setEstado((s) => ({ ...s, prohibido: true, cargando: false }));
+        if (e instanceof ErrorApi && e.estado === 403) setEstado({ datos: null, error: null, prohibido: true, cargando: false });
         else setEstado((s) => ({ ...s, error: mensajeDeError(e), cargando: false }));
       },
     );
@@ -34,9 +34,28 @@ export function useCarga<T>(cargar: () => Promise<T>) {
   }, [cargar, version]);
 
   const recargar = useCallback(async () => {
-    setEstado((s) => ({ ...s, cargando: true }));
+    setEstado((s) => ({ ...s, error: null, cargando: true }));
     setVersion((v) => v + 1);
   }, []);
 
   return { ...estado, recargar };
+}
+
+export function useEnvio() {
+  const bloqueo = useRef(false);
+  const [enviando, setEnviando] = useState(false);
+
+  async function ejecutar(operacion: () => Promise<void>) {
+    if (bloqueo.current) return;
+    bloqueo.current = true;
+    setEnviando(true);
+    try {
+      await operacion();
+    } finally {
+      bloqueo.current = false;
+      setEnviando(false);
+    }
+  }
+
+  return { enviando, ejecutar };
 }
