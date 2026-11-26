@@ -137,3 +137,51 @@ jobs:
           name: trazas-e2e
           path: tecnologia/e2e/test-results/
           if-no-files-found: ignore
+
+  # Imagen del contenedor (s1e): se construye, se levanta con PostgreSQL y migraciones, y se
+  # verifica con `scripts/verificar-despliegue.mjs`. No publica nada: la publicación es manual
+  # (`publicar-imagen.yml`).
+  imagen:
+    name: Imagen del contenedor
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE: docker compose -f docker-compose.despliegue.yml --env-file .env.despliegue
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Construir la imagen
+        run: docker build -t sijass:ci .
+      - name: Secretos efímeros del job (no se versionan ni se publican)
+        run: |
+          {
+            echo "JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')"
+            echo "SIJASS_DB_CLAVE=$(openssl rand -hex 16)"
+            echo "SIJASS_PUERTO=3000"
+          } > .env.despliegue
+      - name: Levantar PostgreSQL, migraciones y API
+        run: $COMPOSE up -d --build
+      - name: Esperar a que la API esté sana
+        run: |
+          for i in $(seq 1 40); do
+            curl -fsS http://127.0.0.1:3000/v1/salud && exit 0
+            sleep 3
+          done
+          $COMPOSE logs
+          exit 1
+      - name: Verificar el despliegue (salud, cabeceras y caché)
+        run: node scripts/verificar-despliegue.mjs http://127.0.0.1:3000
+      - name: La API no corre como root
+        run: test "$($COMPOSE exec -T api id -u)" != "0"
+      - name: Sin JWT_SECRET la imagen no arranca
+        run: |
+          if docker run --rm -e DATABASE_URL=postgres://x sijass:ci; then echo "arrancó sin JWT_SECRET"; exit 1; fi
+      - name: Las pruebas compiladas no están en la imagen
+        run: docker run --rm --entrypoint sh sijass:ci -c 'test ! -d /app/dist/pruebas && test ! -e /app/.env'
+      - name: Registros si algo falla
+        if: failure()
+        run: $COMPOSE logs --no-color || true
+      - name: Apagar
+        if: always()
+        run: $COMPOSE down -v

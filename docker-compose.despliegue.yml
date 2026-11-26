@@ -1,0 +1,64 @@
+# Despliegue de SIJASS con contenedores (s1e, design.md D4–D5): PostgreSQL, migraciones y API
+# (con la interfaz). Sin secretos en el repositorio: se leen del entorno o de un archivo
+# `.env.despliegue` que NO se versiona (ver `.env.despliegue.example`).
+#
+#   docker compose -f docker-compose.despliegue.yml --env-file .env.despliegue up -d --build
+#   docker compose -f docker-compose.despliegue.yml --env-file .env.despliegue --profile https up -d   # con dominio: Caddy + HTTPS
+#
+# Estado: la ejecución local (sin el perfil `https`) está verificada; HTTPS con dominio real NO.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${SIJASS_DB_USUARIO:-sijass}
+      POSTGRES_PASSWORD: ${SIJASS_DB_CLAVE:?defina SIJASS_DB_CLAVE}
+      POSTGRES_DB: ${SIJASS_DB_NOMBRE:-sijass}
+    volumes:
+      - sijass_datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SIJASS_DB_USUARIO:-sijass} -d ${SIJASS_DB_NOMBRE:-sijass}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrar:
+    build: { context: ., target: migrar }
+    environment:
+      DATABASE_URL: postgres://${SIJASS_DB_USUARIO:-sijass}:${SIJASS_DB_CLAVE}@postgres:5432/${SIJASS_DB_NOMBRE:-sijass}
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    build: { context: ., target: api }
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET (32 bytes o más)}
+      DATABASE_URL: postgres://${SIJASS_DB_USUARIO:-sijass}:${SIJASS_DB_CLAVE}@postgres:5432/${SIJASS_DB_NOMBRE:-sijass}
+      PORT: "3000"
+      # ASISTENTE_CORPUS_DIR: /corpus   # al incorporar el corpus aprobado (montar un volumen de solo lectura)
+    depends_on:
+      migrar: { condition: service_completed_successfully }
+    ports:
+      - "${SIJASS_PUERTO:-3000}:3000"
+    restart: unless-stopped
+
+  # HTTPS automático delante de la API cuando exista dominio (perfil `https`). NO verificado sin dominio.
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    environment:
+      SIJASS_DOMINIO: ${SIJASS_DOMINIO:-}   # obligatorio con el perfil https
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  sijass_datos:
+  caddy_datos:

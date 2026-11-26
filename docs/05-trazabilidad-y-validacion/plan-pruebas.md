@@ -29,6 +29,17 @@ El archivo `dominio.test.ts` (cinco pruebas sobre el modelo heredado) se retiró
 
 PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservorios y mediciones (`s1c`, ver abajo).
 
+### Verificación de `s1e-despliegue-evidencia` (2026-11-20)
+
+| Entorno | Comprobación | Resultado |
+|---|---|---|
+| Local | `npm run lint`, `npm run build` y `npm test` (API) | Código 0; 400 pruebas unitarias |
+| Local | `npm run test:integration` contra PostgreSQL 16 | Código 0; 280 pruebas (contrato OpenAPI por HTTP, salud, caché estática y verificación de despliegue incluidos) |
+| Local | `docker build` y la pila del compose (PostgreSQL, migraciones, API) | Imagen de 362 MB; `/v1/salud` y `/` responden; usuario no root; sin `.env`, sin pruebas compiladas y sin `JWT_SECRET` no arranca; `verificar-despliegue.mjs`: 6 aprobadas, 0 fallidas, 4 no aplicables |
+| Local | k6: humo y rampa hasta 2.000 usuarios virtuales | Ver la [matriz](../07-evaluacion-final/matriz-cumplimiento.md#35-aporte-de-s1e); **local, no representa el despliegue** |
+| CI | Los siete jobs, incluido `Imagen del contenedor` | En verde: [PR #12](https://github.com/Henrixfs/SIJASS/pull/12), commit `2a42eeb` (hoy `d85db0e`, tras un rebase), [ejecución 44651717598](https://github.com/Henrixfs/SIJASS/actions/runs/44651717598): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)`, `Interfaz y E2E (navegador)` e `Imagen del contenedor` en verde |
+| Despliegue | Todo | **Sin medir**: no existe despliegue |
+
 ### Verificación de `s1d-asistente-tecnico` (2026-11-19, en local)
 
 | Comprobación | Resultado |
@@ -106,7 +117,7 @@ Esta tabla es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI 
 | PT22 | Rendimiento | Guardado local de 50 mediciones en un teléfono de gama baja del piloto | Percentil 95 ≤ 2 s | RNF02 | Pendiente |
 | PT23 | Usabilidad | Prueba de tareas con operadores reales | Tasa de éxito, tiempo y errores registrados | RNF06 | Pendiente |
 | PT24 | Privacidad | Fotografía con metadatos de ubicación; consulta al asistente | Metadatos eliminados; URLs temporales; ninguna solicitud al LLM contiene datos personales | RF03, RF13, RNF10 | Pendiente |
-| PT25 | Contrato | Pruebas de contrato OpenAPI y adición de un cliente o módulo nuevo | Contrato cumplido sin modificar el dominio | RNF07 | Pendiente |
+| PT25 | Contrato | Pruebas de contrato OpenAPI y adición de un cliente o módulo nuevo | Contrato cumplido sin modificar el dominio | RNF07 | Prototipo para el contrato HTTP (verificado en local y en CI, `s1e`: [`contrato-openapi.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/contrato-openapi.test.ts) compara el [documento OpenAPI](../api/openapi.yaml) con los controladores y con los estados observados); la prueba de «añadir un cliente o módulo sin modificar el dominio» sigue pendiente |
 
 ## 3. Pruebas del asistente RAG
 

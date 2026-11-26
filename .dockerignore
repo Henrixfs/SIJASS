@@ -1,0 +1,17 @@
+.git
+.github
+.claude
+.agents
+**/node_modules
+**/dist
+**/test-results
+**/playwright-report
+**/.env
+**/.env.*
+!**/.env.example
+docs
+openspec
+scripts
+tecnologia/e2e
+tecnologia/carga
+*.md
