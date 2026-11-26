@@ -62,7 +62,7 @@
 ## 9. Documentación y cierre
 
 - [x] 9.1 Actualizar la matriz de cumplimiento (C01–C09 aplicables), el plan de pruebas, el README del backend y una guía breve de operación (arranque de plataforma, alta de JASS, entrega y restablecimiento de claves, rol `sijass_app`), citando solo evidencia ejecutada; comprobar con `node scripts/verificar-docs.mjs`.
-- [ ] 9.2 Al archivar `s1b-acceso-cuotas-pagos`, añadir a este cambio un delta `MODIFIED` sobre `acceso-por-perfiles` que sustituya el inicio de sesión con correo y la política de contraseñas por los de `acceso-por-documento`; comprobar con `openspec validate s2a-acceso-dni-multi-jass --strict`.
+- [x] 9.2 Al archivar `s1b-acceso-cuotas-pagos`, añadir a este cambio un delta `MODIFIED` sobre `acceso-por-perfiles` que sustituya el inicio de sesión con correo y la política de contraseñas por los de `acceso-por-documento`; comprobar con `openspec validate s2a-acceso-dni-multi-jass --strict`. Hecho tras archivar `s1b`: delta en `specs/acceso-por-perfiles/spec.md` con los dos requisitos; la validación estricta devuelve código 0.
 - [x] 9.3 Ejecutar el conjunto completo (`npm test`, `npm run test:integration`, lint y build del backend; lint, Vitest y build del frontend; E2E) sobre una base limpia y registrar los resultados y los comandos en el documento de avance.
 
 ## Workflow follow-up

@@ -31,7 +31,7 @@ Fuera de alcance: recuperación de clave por correo o SMS, verificación en dos 
 - `interfaz-acceso-y-administracion`: pantallas de ingreso, cambio de clave, entrega de claves, equipo y plataforma, sencillas, accesibles y adaptables a celular.
 
 ### Modified Capabilities
-<!-- Ninguna en `openspec/specs/`: el cambio `s1b-acceso-cuotas-pagos` aún no se archivó y su capacidad `acceso-por-perfiles` vive solo en esa propuesta. Al archivar s1b, la tarea 9.2 de este cambio reconcilia sus requisitos de «inicio de sesión con correo» y «política de contraseñas» con los nuevos. -->
+- `acceso-por-perfiles` (archivada desde `s1b`): se sustituyen «Inicio de sesión con credenciales individuales» (ahora con el DNI) y «Política mínima de contraseñas» (ahora de 10 a 128 caracteres y distinta del DNI, con claves temporales generadas) por sus equivalentes con DNI (tarea 9.2). El resto de la capacidad (limitación de intentos, renovación y cierre de sesión, perfiles y membresía única, autorización) no cambia.
 
 ## Impact
 

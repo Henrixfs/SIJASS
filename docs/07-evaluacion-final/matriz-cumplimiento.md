@@ -1,6 +1,6 @@
 # Matriz de cumplimiento del trabajo final — SIJASS
 
-**Versión:** 2026-11-26 (Sprint 2 en local) · **Base:** [rúbrica del trabajo final](rubrica-trabajo-final.md) (C01–C16) · **Alcance y estados:** [alcance y hoja de ruta](../00-alcance-y-roadmap.md).
+**Versión:** 2026-11-26 (Sprint 2, en `main`) · **Base:** [rúbrica del trabajo final](rubrica-trabajo-final.md) (C01–C16) · **Alcance y estados:** [alcance y hoja de ruta](../00-alcance-y-roadmap.md).
 
 Esta matriz relaciona cada criterio de evaluación con los artefactos de SIJASS (historias, requisitos, decisiones y pruebas), los entregables previstos y la evidencia que existe **hoy**. No contiene puntajes ni resultados de pruebas que no se hayan ejecutado. Complementa, sin reemplazar, la [matriz de trazabilidad](../05-trazabilidad-y-validacion/matriz-trazabilidad.md) (HU → RF → RNF → DA → ADR → pruebas).
 
@@ -66,12 +66,12 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 
 ## 3.2. Aporte de s1b
 
-`s1b-acceso-cuotas-pagos` ([propuesta](../../openspec/changes/s1b-acceso-cuotas-pagos/proposal.md)) construye el primer flujo de valor de extremo a extremo: acceso por perfiles (personal y asociado), padrón, cuotas, pagos con reversa y portal del asociado. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. La evidencia **local** (2026-11-19) se complementa con la de **GitHub Actions**, que se cita aparte: CI en GitHub Actions: [PR #9](https://github.com/Henrixfs/SIJASS/pull/9), commit `97ba688`, [ejecución 44635444554](https://github.com/Henrixfs/SIJASS/actions/runs/44635444554) con `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde.
+`s1b-acceso-cuotas-pagos` ([propuesta](../../openspec/changes/archive/2026-11-26-s1b-acceso-cuotas-pagos/proposal.md)) construye el primer flujo de valor de extremo a extremo: acceso por perfiles (personal y asociado), padrón, cuotas, pagos con reversa y portal del asociado. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. La evidencia **local** (2026-11-19) se complementa con la de **GitHub Actions**, que se cita aparte: CI en GitHub Actions: [PR #9](https://github.com/Henrixfs/SIJASS/pull/9), commit `97ba688`, [ejecución 44635444554](https://github.com/Henrixfs/SIJASS/actions/runs/44635444554) con `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)` e `Interfaz y E2E (navegador)` en verde.
 
 | Criterio | Aporte de s1b | Evidencia | Pendiente visible |
 |---|---|---|---|
-| Criterio C02 | Módulos `identidad`, `padron` y `auditoria` del diseño interno | [Especificaciones](../../openspec/changes/s1b-acceso-cuotas-pagos/specs/cuotas-y-pagos/spec.md) y [diseño](../../openspec/changes/s1b-acceso-cuotas-pagos/design.md) | RF08, RF15, OpenAPI |
-| Criterio C04 | Tercer cambio SDD: cuatro especificaciones con escenarios y tareas con verificación | [Cambio](../../openspec/changes/s1b-acceso-cuotas-pagos/tasks.md) | Archivar tras fusionar |
+| Criterio C02 | Módulos `identidad`, `padron` y `auditoria` del diseño interno | [Especificaciones](../../openspec/changes/archive/2026-11-26-s1b-acceso-cuotas-pagos/specs/cuotas-y-pagos/spec.md) y [diseño](../../openspec/changes/archive/2026-11-26-s1b-acceso-cuotas-pagos/design.md) | RF08, RF15, OpenAPI |
+| Criterio C04 | Tercer cambio SDD: cuatro especificaciones con escenarios y tareas con verificación | [Cambio](../../openspec/changes/archive/2026-11-26-s1b-acceso-cuotas-pagos/tasks.md) | Archivar tras fusionar |
 | Criterio C05 | PT13 y PT14 para asociados, cuotas y pagos; contrato memoria/PostgreSQL; concurrencia | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md) | PT09, PT10, PT19 |
 | Criterio C06 | Un flujo E2E en navegador real | [`flujo-pagos.spec.ts`](../../tecnologia/e2e/pruebas/flujo-pagos.spec.ts) | Operación sin conexión |
 | Criterio C07 | Interfaz del flujo de cobro | [`sijass-web`](../../tecnologia/sijass-web/README.md) | Diseño, usabilidad real, PWA |
@@ -85,8 +85,8 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 
 | Criterio | Aporte de s1c | Evidencia | Pendiente visible |
 |---|---|---|---|
-| Criterio C02 | RF02 (reservorios) y RF06, RF07 y RF11 parcial por HTTP e interfaz | [Especificaciones](../../openspec/changes/s1c-reservorios-mediciones/specs/mediciones-en-linea/spec.md) | RF08, RF15, auditoría de mediciones |
-| Criterio C04 | Cuarto cambio SDD | [Cambio](../../openspec/changes/s1c-reservorios-mediciones/tasks.md) | Archivar tras fusionar |
+| Criterio C02 | RF02 (reservorios) y RF06, RF07 y RF11 parcial por HTTP e interfaz | [Especificaciones](../../openspec/changes/archive/2026-11-26-s1c-reservorios-mediciones/specs/mediciones-en-linea/spec.md) | RF08, RF15, auditoría de mediciones |
+| Criterio C04 | Cuarto cambio SDD | [Cambio](../../openspec/changes/archive/2026-11-26-s1c-reservorios-mediciones/tasks.md) | Archivar tras fusionar |
 | Criterio C05 | PT13 completo para mediciones y reservorios; 278 + 245 + 84 pruebas | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md) | PT09, PT10, PT19 |
 | Criterio C06 | Segundo flujo E2E en navegador | [`flujo-mediciones.spec.ts`](../../tecnologia/e2e/pruebas/flujo-mediciones.spec.ts) | Operación sin conexión |
 | Criterio C07 | Pantalla de mediciones por rol, con aviso de no dictamen | [`Mediciones.tsx`](../../tecnologia/sijass-web/src/paginas/Mediciones.tsx) | Usabilidad con operadores reales |
@@ -99,8 +99,8 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 
 | Criterio | Aporte de s1d | Evidencia | Pendiente visible |
 |---|---|---|---|
-| Criterio C02 | RF13 y RF14 en su parte determinista | [Especificación](../../openspec/changes/s1d-asistente-tecnico/specs/asistente-documental/spec.md) | Corpus aprobado, proveedor, FastAPI |
-| Criterio C04 | Quinto cambio SDD | [Cambio](../../openspec/changes/s1d-asistente-tecnico/tasks.md) | Archivar tras fusionar |
+| Criterio C02 | RF13 y RF14 en su parte determinista | [Especificación](../../openspec/changes/archive/2026-11-26-s1d-asistente-tecnico/specs/asistente-documental/spec.md) | Corpus aprobado, proveedor, FastAPI |
+| Criterio C04 | Quinto cambio SDD | [Cambio](../../openspec/changes/archive/2026-11-26-s1d-asistente-tecnico/tasks.md) | Archivar tras fusionar |
 | Criterio C05 | PT15, PT16 y PT17 con corpus de ejemplo | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md) | Evaluación con el corpus aprobado |
 | Criterio C06 | Tercer flujo E2E | [`flujo-asistente.spec.ts`](../../tecnologia/e2e/pruebas/flujo-asistente.spec.ts) | Operación sin conexión |
 | Criterio C07 | Pestaña *Asistente* con aviso de corpus de ejemplo | [`Asistente.tsx`](../../tecnologia/sijass-web/src/paginas/Asistente.tsx) | Usabilidad con operadores reales |
@@ -150,12 +150,12 @@ Primera rampa (seis escalones de 60 s hasta 2.000, mantenimiento de 120 s): p50 
 
 ## 3.6. Aporte de s2a
 
-`s2a-acceso-dni-multi-jass` ([propuesta](../../openspec/changes/s2a-acceso-dni-multi-jass/proposal.md)) cambia el acceso para que lo use gente sin estudios: ingreso con DNI y dos botones, claves de tres palabras, cambio y restablecimiento de clave, equipo del Consejo, rol de plataforma que da de alta las JASS y aislamiento entre JASS reforzado con seguridad por filas en la base. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. La evidencia es **local** (2026-11-25); **no hay ejecución de CI** del cambio, y la evidencia del **despliegue** sigue en blanco porque no existe despliegue.
+`s2a-acceso-dni-multi-jass` ([propuesta](../../openspec/changes/archive/2026-11-26-s2a-acceso-dni-multi-jass/proposal.md)) cambia el acceso para que lo use gente sin estudios: ingreso con DNI y dos botones, claves de tres palabras, cambio y restablecimiento de clave, equipo del Consejo, rol de plataforma que da de alta las JASS y aislamiento entre JASS reforzado con seguridad por filas en la base. **No** cierra ningún criterio y **ninguno pasa a *Implementado***. La evidencia es **local** (2026-11-25); **no hay ejecución de CI** del cambio, y la evidencia del **despliegue** sigue en blanco porque no existe despliegue.
 
 | Criterio | Aporte de s2a | Evidencia **local** | Pendiente visible |
 |---|---|---|---|
-| Criterio C02 | RF01 con identidad por DNI, perfiles y plataforma; claves generadas | [Especificaciones](../../openspec/changes/s2a-acceso-dni-multi-jass/specs/acceso-por-documento/spec.md) y [diseño](../../openspec/changes/s2a-acceso-dni-multi-jass/design.md) | Recuperación autónoma de clave, varias JASS por persona |
-| Criterio C04 | Cambio SDD completo: cinco especificaciones, diseño de 14 decisiones y 38 tareas; `openspec validate --strict` válido | [Cambio](../../openspec/changes/s2a-acceso-dni-multi-jass/tasks.md) | Tarea 9.2 (delta sobre `acceso-por-perfiles`, al archivar `s1b`); archivar |
+| Criterio C02 | RF01 con identidad por DNI, perfiles y plataforma; claves generadas | [Especificaciones](../../openspec/changes/archive/2026-11-26-s2a-acceso-dni-multi-jass/specs/acceso-por-documento/spec.md) y [diseño](../../openspec/changes/archive/2026-11-26-s2a-acceso-dni-multi-jass/design.md) | Recuperación autónoma de clave, varias JASS por persona |
+| Criterio C04 | Cambio SDD completo: cinco especificaciones, diseño de 14 decisiones y 38 tareas; `openspec validate --strict` válido | [Cambio](../../openspec/changes/archive/2026-11-26-s2a-acceso-dni-multi-jass/tasks.md) | Tarea 9.2 (delta sobre `acceso-por-perfiles`, al archivar `s1b`); archivar |
 | Criterio C05 | 456 pruebas unitarias, 364 de integración y 147 de interfaz; PT26 y PT27 | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md#verificación-de-s2a-acceso-dni-multi-jass-2026-11-25-en-local) | Ejecución en CI |
 | Criterio C06 | Cinco recorridos nuevos en navegador real: tipo equivocado, Consejo→Tesorería con cambio de clave, Tesorería→asociada, bloqueo y restablecimiento, plataforma→JASS nueva y suspensión | [`flujo-acceso.spec.ts`](../../tecnologia/e2e/pruebas/flujo-acceso.spec.ts) | Operación sin conexión |
 | Criterio C07 | Ingreso con dos botones, cambio obligatorio y entrega de clave, medidos a 320, 360, 390, 768 y 1440 px | [Capturas y medidas](../diseno/evidencia/s2a-acceso/README.md); [`acceso.spec.ts`](../../tecnologia/e2e/responsive/acceso.spec.ts) | Prueba de usabilidad con personas reales (PT23), PWA |
@@ -164,12 +164,12 @@ Primera rampa (seis escalones de 60 s hasta 2.000, mantenimiento de 120 s): p50 
 
 ## 3.7. Aporte del Sprint 2
 
-Contraste detallado con el enunciado del Sprint 2 en [cumplimiento del Sprint 2](cumplimiento-sprint-2.md). Toda la evidencia es **local** (2026-11-26); no hay ejecución de CI del cambio y la evidencia del **despliegue** sigue en blanco porque no existe despliegue. **No** cierra ningún criterio.
+Contraste detallado con el enunciado del Sprint 2 en [cumplimiento del Sprint 2](cumplimiento-sprint-2.md). Las pruebas y la carga se ejecutaron en **local** (2026-11-26); el CI de GitHub Actions del cambio ([PR #13](https://github.com/Henrixfs/SIJASS/pull/13), 14 de 14 comprobaciones en verde) se cita en el [plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md#verificación-del-sprint-2-2026-11-26-en-local) y la evidencia del **despliegue** sigue en blanco porque no existe despliegue. **No** cierra ningún criterio.
 
 | Criterio | Aporte | Evidencia **local** | Pendiente visible |
 |---|---|---|---|
 | Criterio C03 | Capas verificables y decisiones nuevas (ADR-016 y ADR-017) | [SOLID y patrones en el código](../03-diseno-de-software/diseno-interno/solid-y-patrones-en-el-codigo.md) | Módulos con límites forzados |
-| Criterio C05 | **Jest** con reporte de cobertura (núcleo: 98,1 % de líneas, 92,3 % de ramas) y 470 unitarias; 380 de integración | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md#verificación-del-sprint-2-2026-11-26-en-local) | Ver el CI en verde |
+| Criterio C05 | **Jest** con reporte de cobertura (núcleo: 98,1 % de líneas, 92,3 % de ramas) y 470 unitarias; 380 de integración | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md#verificación-del-sprint-2-2026-11-26-en-local) | CI en verde en el PR #13; falta la ejecución en el despliegue |
 | Criterio C08 | Contrato OpenAPI de 35 operaciones con Swagger UI en `/docs` y colección de Postman ejecutada con Newman (35 peticiones, 0 fallos); capacidad medida | [Validación de atributos de calidad](validacion-atributos-de-calidad.md) | Escalado horizontal no medido |
 | Criterio C09 | Análisis con `EXPLAIN` sobre 2.000 asociados; el «N + 1» del padrón se corrigió (13,7 s → 0,24 s) | [Análisis de BD y caché](analisis-bd-y-cache.md) | Respaldo y crecimiento: solo propuesta |
 | Criterio C11 | Caché HTTP de estáticos inmutables y del catálogo de referencia; sin caché de datos de personas (ADR-016) | [Análisis](analisis-bd-y-cache.md#5-estrategia-de-caché-decisión-adr-016) | Sin CDN ni caché de servidor |
