@@ -7,8 +7,14 @@ info:
 
     - Todas las rutas van bajo `/v1`. Los importes viajan como **céntimos enteros**.
     - La JASS, el perfil y el rol **nunca** se envían: salen de la membresía activa de la cuenta autenticada.
+    - Se entra con el **DNI** (8 dígitos) y una clave; el correo no se usa. El `tipo` de acceso (`asociado` o
+      `administrador`) es solo una guía: el servidor decide el perfil por la membresía.
+    - Las claves temporales (tres palabras) se devuelven **una sola vez**, en la respuesta que las genera.
+    - Una cuenta con el cambio de clave pendiente solo puede cambiarla, consultar `yo` o cerrar sesión (`403 cambio-de-clave-pendiente`).
     - Un recurso inexistente y uno de otra JASS devuelven el mismo `403` sin datos.
     - `Idempotency-Key` (UUID) es obligatorio en `POST /pagos` y `POST /mediciones`.
+    - La API publica este mismo documento como **Swagger UI** en `/docs` (autoalojado) y como colección de Postman
+      generada desde él (`docs/api/sijass.postman_collection.json`).
     - Una prueba automática (`contrato-openapi.test.ts`) verifica que este documento y los controladores
       declaran las mismas rutas y que los estados observados están declarados.
 servers:
@@ -19,6 +25,8 @@ security:
 tags:
   - name: Sistema
   - name: Acceso
+  - name: Equipo de la JASS
+  - name: Plataforma
   - name: Padrón y pagos
   - name: Portal del asociado
   - name: Reservorios y mediciones
@@ -39,14 +47,16 @@ paths:
     post:
       tags: [Acceso]
       operationId: iniciarSesion
-      summary: Inicio de sesión con correo y contraseña
+      summary: Inicio de sesión con DNI y clave
       security: []
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Credenciales' } } } }
       responses:
         '200': { description: Sesión iniciada, content: { application/json: { schema: { $ref: '#/components/schemas/Sesion' } } } }
         '400': { $ref: '#/components/responses/E400' }
         '401': { $ref: '#/components/responses/E401' }
-        '403': { $ref: '#/components/responses/E403' }
+        '403': { description: Sin membresía activa o JASS suspendida (`jass-suspendida`), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: Credenciales correctas pero el tipo de acceso elegido no es el de la cuenta (`tipo-de-acceso-distinto`, con `tipoReal`); no se emite sesión, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorTipoDeAcceso' } } } }
+        '422': { $ref: '#/components/responses/E422' }
         '429': { $ref: '#/components/responses/E429' }
   /v1/auth/refresh:
     post:
@@ -69,11 +79,24 @@ paths:
       responses:
         '204': { description: Sesión cerrada }
         '400': { $ref: '#/components/responses/E400' }
+  /v1/auth/cambiar-contrasena:
+    post:
+      tags: [Acceso]
+      operationId: cambiarContrasena
+      summary: Cambia la propia clave, cierra las sesiones anteriores y devuelve una sesión nueva
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CambioDeClave' } } } }
+      responses:
+        '200': { description: Clave cambiada; sesión nueva, content: { application/json: { schema: { $ref: '#/components/schemas/Sesion' } } } }
+        '400': { $ref: '#/components/responses/E400' }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '422': { $ref: '#/components/responses/E422' }
+        '429': { $ref: '#/components/responses/E429' }
   /v1/yo:
     get:
       tags: [Acceso]
       operationId: consultarPerfil
-      summary: Perfil y rol de quien consulta (nunca la JASS)
+      summary: Perfil, rol, nombre, DNI enmascarado y nombre de la JASS de quien consulta (sin identificadores internos)
       responses:
         '200': { description: Perfil, content: { application/json: { schema: { $ref: '#/components/schemas/Perfil' } } } }
         '401': { $ref: '#/components/responses/E401' }
@@ -113,15 +136,25 @@ paths:
     post:
       tags: [Padrón y pagos]
       operationId: crearAccesoAsociado
-      summary: Crea la cuenta de acceso del asociado (perfil asociado)
+      summary: Crea la cuenta de acceso del asociado con su DNI del padrón y una clave temporal generada (tesorero, consejo)
       parameters: [{ $ref: '#/components/parameters/Id' }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevoAcceso' } } } }
       responses:
-        '201': { description: Cuenta creada, content: { application/json: { schema: { type: object, properties: { usuarioId: { type: string, format: uuid } } } } } }
+        '201': { description: Cuenta creada; la clave temporal solo se muestra aquí, content: { application/json: { schema: { $ref: '#/components/schemas/AccesoEntregado' } } } }
         '401': { $ref: '#/components/responses/E401' }
         '403': { $ref: '#/components/responses/E403' }
         '409': { $ref: '#/components/responses/E409' }
         '422': { $ref: '#/components/responses/E422' }
+  /v1/asociados/{id}/acceso/restablecer:
+    post:
+      tags: [Padrón y pagos]
+      operationId: restablecerAccesoAsociado
+      summary: Restablece la clave del asociado con una clave temporal nueva y cierra sus sesiones (tesorero, consejo)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Clave restablecida; la clave temporal solo se muestra aquí, content: { application/json: { schema: { $ref: '#/components/schemas/AccesoEntregado' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
   /v1/asociados/{id}/estado-de-cuenta:
     get:
       tags: [Padrón y pagos]
@@ -132,6 +165,105 @@ paths:
         '200': { description: Estado de cuenta, content: { application/json: { schema: { $ref: '#/components/schemas/EstadoDeCuenta' } } } }
         '401': { $ref: '#/components/responses/E401' }
         '403': { $ref: '#/components/responses/E403' }
+
+  /v1/equipo:
+    get:
+      tags: [Equipo de la JASS]
+      operationId: listarEquipo
+      summary: Tesorería y Operador de la JASS, con el DNI enmascarado (solo consejo)
+      responses:
+        '200': { description: Equipo, content: { application/json: { schema: { type: object, properties: { equipo: { type: array, items: { $ref: '#/components/schemas/FilaEquipo' } } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+    post:
+      tags: [Equipo de la JASS]
+      operationId: crearMiembroEquipo
+      summary: Alta de Tesorería u Operador con clave temporal generada y cambio pendiente (solo consejo)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevoMiembro' } } } }
+      responses:
+        '201': { description: Cuenta creada; la clave temporal solo se muestra aquí, content: { application/json: { schema: { $ref: '#/components/schemas/AccesoEntregado' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/equipo/{usuarioId}/desactivar:
+    post:
+      tags: [Equipo de la JASS]
+      operationId: desactivarMiembroEquipo
+      summary: Desactiva la cuenta y cierra sus sesiones (solo consejo; no a sí mismo ni a un consejo)
+      parameters: [{ $ref: '#/components/parameters/UsuarioId' }]
+      responses:
+        '204': { description: Cuenta desactivada }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+  /v1/equipo/{usuarioId}/restablecer-clave:
+    post:
+      tags: [Equipo de la JASS]
+      operationId: restablecerClaveEquipo
+      summary: Restablece la clave de Tesorería u Operador con una clave temporal y cambio pendiente (solo consejo)
+      parameters: [{ $ref: '#/components/parameters/UsuarioId' }]
+      responses:
+        '200': { description: Clave restablecida; la clave temporal solo se muestra aquí, content: { application/json: { schema: { $ref: '#/components/schemas/AccesoEntregado' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+
+  /v1/plataforma/jass:
+    get:
+      tags: [Plataforma]
+      operationId: listarJass
+      summary: JASS con su estado y cantidad de cuentas activas, sin datos de negocio (solo plataforma)
+      responses:
+        '200': { description: JASS, content: { application/json: { schema: { type: object, properties: { jass: { type: array, items: { $ref: '#/components/schemas/VistaJass' } } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+    post:
+      tags: [Plataforma]
+      operationId: crearJass
+      summary: Alta de una JASS con su primer Consejo y clave temporal con cambio pendiente (solo plataforma)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevaJass' } } } }
+      responses:
+        '201': { description: JASS creada; la clave temporal solo se muestra aquí, content: { application/json: { schema: { $ref: '#/components/schemas/JassCreada' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/plataforma/jass/{id}/suspender:
+    post:
+      tags: [Plataforma]
+      operationId: suspenderJass
+      summary: Suspende la JASS; sus cuentas no inician ni renuevan sesión y sus datos se conservan (solo plataforma)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '204': { description: JASS suspendida }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/plataforma/jass/{id}/reactivar:
+    post:
+      tags: [Plataforma]
+      operationId: reactivarJass
+      summary: Reactiva una JASS suspendida (solo plataforma)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '204': { description: JASS reactivada }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/plataforma/jass/{id}/consejo/restablecer-clave:
+    post:
+      tags: [Plataforma]
+      operationId: restablecerClaveConsejo
+      summary: Restablece la clave de un Consejo activo de la JASS con una clave temporal y cambio pendiente (solo plataforma)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { usuarioId: { type: string, format: uuid } } } } } }
+      responses:
+        '200': { description: Clave restablecida; la clave temporal solo se muestra aquí, content: { application/json: { schema: { $ref: '#/components/schemas/ConsejoRestablecido' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
 
   /v1/cuotas/generar:
     post:
@@ -246,6 +378,9 @@ paths:
       tags: [Reservorios y mediciones]
       operationId: catalogoMetodos
       summary: Métodos de medición (catálogo provisional) y unidad
+      description: >-
+        Dato de referencia igual para todos. Es el único `GET` de `/v1` con caché
+        (`Cache-Control: private, max-age=300`, `ETag` y `304`; ADR-016); el resto responde `no-store`.
       responses:
         '200': { description: Catálogo, content: { application/json: { schema: { $ref: '#/components/schemas/Catalogo' } } } }
         '401': { $ref: '#/components/responses/E401' }
@@ -291,14 +426,15 @@ components:
     bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token de acceso de 15 minutos }
   parameters:
     Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    UsuarioId: { name: usuarioId, in: path, required: true, schema: { type: string, format: uuid } }
     IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid }, description: Clave de idempotencia única por JASS }
   responses:
     E400: { description: Solicitud mal formada (por ejemplo, JSON inválido), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E401: { description: Sin sesión, token inválido o vencido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    E403: { description: Sin permiso, o recurso inexistente o de otra JASS (indistinguibles), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E403: { description: 'Sin permiso, recurso inexistente o de otra JASS (indistinguibles), JASS suspendida (`jass-suspendida`) o cambio de clave pendiente (`cambio-de-clave-pendiente`)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E409: { description: Conflicto con el estado actual (duplicado, clave reutilizada, ya revertido), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E422: { description: Dato inválido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    E429: { description: Cuenta bloqueada temporalmente tras intentos fallidos, headers: { Retry-After: { schema: { type: integer } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E429: { description: Cuenta bloqueada tras 5 intentos fallidos u origen con 50 intentos fallidos en 15 minutos, headers: { Retry-After: { schema: { type: integer } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
   schemas:
     Error:
       type: object
@@ -310,24 +446,91 @@ components:
       properties: { estado: { enum: [ok, degradado] }, base: { enum: [ok, error] } }
     Credenciales:
       type: object
-      required: [correo, contrasena]
-      properties: { correo: { type: string, format: email }, contrasena: { type: string } }
+      required: [documento, contrasena]
+      properties:
+        documento: { type: string, pattern: '^[0-9]{8}$', description: DNI de 8 dígitos }
+        contrasena: { type: string }
+        tipo: { enum: [asociado, administrador], description: 'Guía opcional: `administrador` vale para personal de una JASS y para la plataforma. El servidor decide el perfil por la membresía.' }
+    ErrorTipoDeAcceso:
+      type: object
+      required: [codigo, mensaje, tipoReal]
+      properties: { codigo: { const: tipo-de-acceso-distinto }, mensaje: { type: string }, tipoReal: { enum: [asociado, administrador] } }
+    CambioDeClave:
+      type: object
+      required: [contrasenaActual, contrasenaNueva]
+      properties:
+        contrasenaActual: { type: string }
+        contrasenaNueva: { type: string, minLength: 10, maxLength: 128, description: Distinta del DNI }
+    AccesoEntregado:
+      type: object
+      required: [usuarioId, claveTemporal]
+      properties:
+        usuarioId: { type: string, format: uuid }
+        claveTemporal: { type: string, example: rio-luna-maiz, description: Tres palabras sin tildes; solo se devuelve en esta respuesta y nunca se vuelve a poder consultar }
+    FilaEquipo:
+      type: object
+      properties:
+        usuarioId: { type: string, format: uuid }
+        nombre: { type: string }
+        documento: { type: string, example: '•••••123', description: DNI enmascarado (3 últimos dígitos) }
+        rol: { enum: [consejo, tesorero, operador] }
+        estado: { enum: [activo, inactivo] }
+    NuevoMiembro:
+      type: object
+      required: [nombre, documento, rol]
+      properties: { nombre: { type: string, maxLength: 120 }, documento: { type: string, pattern: '^[0-9]{8}$' }, rol: { enum: [tesorero, operador] } }
+    NuevaJass:
+      type: object
+      required: [nombre, consejo]
+      properties:
+        nombre: { type: string, maxLength: 120 }
+        ubicacion: { $ref: '#/components/schemas/Ubicacion' }
+        consejo: { type: object, required: [nombre, documento], properties: { nombre: { type: string, maxLength: 120 }, documento: { type: string, pattern: '^[0-9]{8}$' } } }
+    Ubicacion:
+      type: object
+      properties:
+        departamento: { type: [string, 'null'], maxLength: 80 }
+        provincia: { type: [string, 'null'], maxLength: 80 }
+        distrito: { type: [string, 'null'], maxLength: 80 }
+        centroPoblado: { type: [string, 'null'], maxLength: 80 }
+    JassCreada:
+      type: object
+      required: [jassId, usuarioId, claveTemporal]
+      properties: { jassId: { type: string, format: uuid }, usuarioId: { type: string, format: uuid }, claveTemporal: { type: string } }
+    VistaJass:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nombre: { type: string }
+        estado: { enum: [activa, suspendida] }
+        ubicacion: { $ref: '#/components/schemas/Ubicacion' }
+        cuentasActivas: { type: integer }
+    ConsejoRestablecido:
+      type: object
+      properties: { usuarioId: { type: string, format: uuid }, nombre: { type: string }, documento: { type: string }, claveTemporal: { type: string } }
     Refresco:
       type: object
       required: [tokenRefresco]
       properties: { tokenRefresco: { type: string } }
     Sesion:
       type: object
-      required: [tokenAcceso, tokenRefresco, venceEnSegundos, perfil, rol]
+      required: [tokenAcceso, tokenRefresco, venceEnSegundos, perfil, rol, debeCambiarContrasena]
       properties:
         tokenAcceso: { type: string }
         tokenRefresco: { type: string }
         venceEnSegundos: { type: integer, example: 900 }
-        perfil: { enum: [personal, asociado] }
+        perfil: { enum: [personal, asociado, plataforma] }
         rol: { enum: [consejo, tesorero, operador, null] }
+        debeCambiarContrasena: { type: boolean }
     Perfil:
       type: object
-      properties: { perfil: { enum: [personal, asociado] }, rol: { enum: [consejo, tesorero, operador, null] } }
+      properties:
+        perfil: { enum: [personal, asociado, plataforma] }
+        rol: { enum: [consejo, tesorero, operador, null] }
+        nombre: { type: string }
+        documento: { type: [string, 'null'], example: '•••••123', description: DNI enmascarado }
+        jass: { type: [object, 'null'], properties: { nombre: { type: string } }, description: Nulo en la plataforma }
+        debeCambiarContrasena: { type: boolean }
     NuevoAsociado:
       type: object
       required: [nombre, documento]
@@ -337,11 +540,7 @@ components:
       properties: { id: { type: string, format: uuid }, jassId: { type: string, format: uuid }, nombre: { type: string }, documento: { type: string }, estado: { enum: [activo, baja] } }
     ResumenAsociado:
       type: object
-      properties: { id: { type: string, format: uuid }, nombre: { type: string }, documento: { type: string }, estado: { enum: [activo, baja] }, saldoCentimos: { type: integer } }
-    NuevoAcceso:
-      type: object
-      required: [correo, contrasena]
-      properties: { correo: { type: string, format: email }, contrasena: { type: string, minLength: 10, maxLength: 128 } }
+      properties: { id: { type: string, format: uuid }, nombre: { type: string }, documento: { type: string }, estado: { enum: [activo, baja] }, saldoCentimos: { type: integer }, acceso: { enum: [sin-acceso, activo, inactivo] } }
     GenerarCuotas:
       type: object
       required: [periodo, importeCentimos]
@@ -387,6 +586,7 @@ components:
       type: object
       properties:
         asociado: { type: object }
+        acceso: { enum: [sin-acceso, activo, inactivo], description: Solo en la consulta del personal }
         saldoCentimos: { type: integer, description: Positivo cuando el asociado debe }
         periodoActual: { type: string }
         cuotas: { type: array, items: { $ref: '#/components/schemas/VistaCuota' } }

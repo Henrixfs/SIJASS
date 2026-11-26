@@ -11,7 +11,7 @@
 | Sonda `GET /v1/salud` | `tecnologia/siJASS-clean-architecture/src/api` | Pruebas de integración (incluida la base caída: `503` sin detalles) |
 | Caché estática: `/assets/*` inmutable con `ETag`, `index.html` y rutas de la interfaz con `no-cache`, `/v1/*` con `no-store` | `src/api/aplicacion.ts` | Pruebas HTTP y `scripts/verificar-despliegue.mjs` |
 | Verificación del despliegue (DNS, TLS, HSTS, redirección, cabeceras, caché, salud) | [`scripts/verificar-despliegue.mjs`](../../scripts/verificar-despliegue.mjs) | Local y CI; DNS, TLS, HSTS y redirección salen como **no aplicable** sin dominio |
-| Contrato OpenAPI de las 24 rutas, con prueba de coherencia | [`docs/api/openapi.yaml`](../api/openapi.yaml) | `npm test` |
+| Contrato OpenAPI de las 35 operaciones (24 hasta `s1e`; las nuevas son de acceso, equipo y plataforma de `s2a`), con prueba de coherencia | [`docs/api/openapi.yaml`](../api/openapi.yaml) | `npm test` |
 | Escenario de carga k6 con rampa gradual hasta 2.000 usuarios | [`tecnologia/carga/`](../../tecnologia/carga/) | Humo y rampa **locales** (ver §4) |
 | Publicación manual de la imagen en GHCR | [`publicar-imagen.yml`](../../.github/workflows/publicar-imagen.yml) | **No ejecutado** (requiere autorización) |
 | Proxy HTTPS (Caddy) preparado | [`Caddyfile`](../../Caddyfile), perfil `https` del compose | **No verificado**: necesita un dominio |
@@ -36,6 +36,7 @@ node scripts/verificar-despliegue.mjs http://127.0.0.1:3000
 | 6 | Carga contra el despliegue (**C13**) | Medir el servicio real | La **URL del despliegue**, **autorización explícita** para generar hasta 2.000 usuarios virtuales contra él, una **ventana de tiempo** acordada y un entorno equivalente al de producción (no el de desarrollo) |
 | 7 | Respaldo y restauración | Política de respaldos de PostgreSQL | Dónde se guardan, con qué frecuencia y quién restaura |
 | 8 | Asistente documental (**s1d**) | Corpus aprobado y proveedor de modelo | El **corpus aprobado** (documento, versión, páginas y responsable de aprobación), la **decisión del proveedor** de modelo de lenguaje con su credencial y su política de privacidad (Ley N.° 29733), y el **protocolo validado y casos de referencia revisados** si se desea cálculo de dosis |
+| 9 | Primer arranque de accesos (**s2a**) | Crear la cuenta de plataforma y las JASS en el servidor | Con el despliegue en marcha: `crear-plataforma` (y `crear-jass` si no se usa la pantalla `/plataforma`) dentro del contenedor de la API, con `SIJASS_CLAVE_INICIAL` en el entorno, y `TRUST_PROXY=1` si se usa el perfil `https` y el puerto 3000 no se publica. Los pasos están en la [guía de operación](guia-operacion-acceso.md); **la ejecución de esos comandos dentro de la imagen no se ha verificado** |
 
 ## 3. Cómo se completa la evidencia cuando existan esos insumos
 

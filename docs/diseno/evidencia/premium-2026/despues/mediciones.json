@@ -1,0 +1,142 @@
+[
+  {
+    "ancho": 320,
+    "contenido": 320,
+    "boton": 52,
+    "cls": 0,
+    "lcp": 1428,
+    "orden": [
+      "correo",
+      "contrasena",
+      "Mostrar contraseña",
+      "Ingresar"
+    ],
+    "contraste": {
+      "accion": 6.87,
+      "secundario": 6.12,
+      "borde": 3.93,
+      "alturaVerClave": 44,
+      "transicionReducida": "0s"
+    }
+  },
+  {
+    "ancho": 360,
+    "contenido": 360,
+    "boton": 52,
+    "cls": 0.0003846499404775275,
+    "lcp": 1292,
+    "orden": [
+      "correo",
+      "contrasena",
+      "Mostrar contraseña",
+      "Ingresar"
+    ],
+    "contraste": {
+      "accion": 6.87,
+      "secundario": 6.12,
+      "borde": 3.93,
+      "alturaVerClave": 44,
+      "transicionReducida": "0s"
+    }
+  },
+  {
+    "ancho": 390,
+    "contenido": 390,
+    "boton": 52,
+    "cls": 0.00038834849759750373,
+    "lcp": 1408,
+    "orden": [
+      "correo",
+      "contrasena",
+      "Mostrar contraseña",
+      "Ingresar"
+    ],
+    "contraste": {
+      "accion": 6.87,
+      "secundario": 6.12,
+      "borde": 3.93,
+      "alturaVerClave": 44,
+      "transicionReducida": "0s"
+    }
+  },
+  {
+    "ancho": 768,
+    "contenido": 768,
+    "boton": 52,
+    "cls": 0,
+    "lcp": 1376,
+    "orden": [
+      "correo",
+      "contrasena",
+      "Mostrar contraseña",
+      "Ingresar"
+    ],
+    "contraste": {
+      "accion": 6.87,
+      "secundario": 6.12,
+      "borde": 3.93,
+      "alturaVerClave": 44,
+      "transicionReducida": "0s"
+    }
+  },
+  {
+    "ancho": 1024,
+    "contenido": 1024,
+    "boton": 52,
+    "cls": 0,
+    "lcp": 1412,
+    "orden": [
+      "correo",
+      "contrasena",
+      "Mostrar contraseña",
+      "Ingresar"
+    ],
+    "contraste": {
+      "accion": 6.87,
+      "secundario": 6.12,
+      "borde": 3.93,
+      "alturaVerClave": 44,
+      "transicionReducida": "0s"
+    }
+  },
+  {
+    "ancho": 1440,
+    "contenido": 1440,
+    "boton": 52,
+    "cls": 0,
+    "lcp": 1544,
+    "orden": [
+      "correo",
+      "contrasena",
+      "Mostrar contraseña",
+      "Ingresar"
+    ],
+    "contraste": {
+      "accion": 6.87,
+      "secundario": 6.12,
+      "borde": 3.93,
+      "alturaVerClave": 44,
+      "transicionReducida": "0s"
+    }
+  },
+  {
+    "ancho": 1920,
+    "contenido": 1920,
+    "boton": 52,
+    "cls": 0,
+    "lcp": 1208,
+    "orden": [
+      "correo",
+      "contrasena",
+      "Mostrar contraseña",
+      "Ingresar"
+    ],
+    "contraste": {
+      "accion": 6.87,
+      "secundario": 6.12,
+      "borde": 3.93,
+      "alturaVerClave": 44,
+      "transicionReducida": "0s"
+    }
+  }
+]

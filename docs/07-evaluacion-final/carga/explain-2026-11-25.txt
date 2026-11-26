@@ -1,0 +1,112 @@
+
+
+     t     | count 
+-----------+-------
+ jass      |     1
+ usuario   |  2001
+ asociado  |  2000
+ membresia |  2001
+ cuota     |  6000
+ pago      |   666
+(6 rows)
+ANALYZE
+SET
+              set_config              
+--------------------------------------
+ 576f5d9c-161f-b232-751f-c34a85e326cc
+(1 row)
+=== Q1 inicio de sesion: usuario por DNI
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Index Scan using usuario_documento_key on usuario (actual rows=1 loops=1)
+   Index Cond: (documento = '90000777'::text)
+   Buffers: shared hit=3
+ Planning:
+   Buffers: shared hit=51
+ Planning Time: 0.280 ms
+ Execution Time: 0.907 ms
+(7 rows)
+=== Q2 membresia activa del usuario
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using membresia_usuario_activa_key on membresia (actual rows=1 loops=1)
+   Index Cond: (usuario_id = '521bbb03-baab-d156-5808-2942e6fc1531'::uuid)
+   Filter: ((jass_id = (NULLIF(current_setting('app.jass_id'::text, true), ''::text))::uuid) OR (current_setting('app.sistema'::text, true) = 'on'::text))
+   Buffers: shared hit=3
+ Planning:
+   Buffers: shared hit=34
+ Planning Time: 0.303 ms
+ Execution Time: 0.035 ms
+(8 rows)
+=== Q3 portal: cuotas del asociado
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Result (actual rows=3 loops=1)
+   One-Time Filter: ((NULLIF(current_setting('app.jass_id'::text, true), ''::text))::uuid = '576f5d9c-161f-b232-751f-c34a85e326cc'::uuid)
+   Buffers: shared hit=5
+   ->  Index Scan using cuota_jass_asociado_idx on cuota (actual rows=3 loops=1)
+         Index Cond: ((jass_id = '576f5d9c-161f-b232-751f-c34a85e326cc'::uuid) AND (asociado_id = 'ecdb0627-722d-9cb2-a036-c8c8af3eae5e'::uuid))
+         Buffers: shared hit=5
+ Planning:
+   Buffers: shared hit=30
+ Planning Time: 0.338 ms
+ Execution Time: 0.051 ms
+(10 rows)
+=== Q4 portal: pagos del asociado
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort (actual rows=1 loops=1)
+   Sort Key: p.pagado_en, p.id
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=12
+   ->  Result (actual rows=1 loops=1)
+         One-Time Filter: ((NULLIF(current_setting('app.jass_id'::text, true), ''::text))::uuid = '576f5d9c-161f-b232-751f-c34a85e326cc'::uuid)
+         Buffers: shared hit=12
+         ->  Nested Loop (actual rows=1 loops=1)
+               Buffers: shared hit=12
+               ->  Index Scan using cuota_jass_asociado_idx on cuota c (actual rows=3 loops=1)
+                     Index Cond: ((jass_id = '576f5d9c-161f-b232-751f-c34a85e326cc'::uuid) AND (asociado_id = 'ecdb0627-722d-9cb2-a036-c8c8af3eae5e'::uuid))
+                     Buffers: shared hit=5
+               ->  Index Scan using pago_jass_cuota_idx on pago p (actual rows=0 loops=3)
+                     Index Cond: ((jass_id = '576f5d9c-161f-b232-751f-c34a85e326cc'::uuid) AND (cuota_id = c.id))
+                     Buffers: shared hit=7
+ Planning:
+   Buffers: shared hit=83
+ Planning Time: 0.610 ms
+ Execution Time: 0.120 ms
+(19 rows)
+=== Q5 padron: asociados de la JASS
+                                                                   QUERY PLAN                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort (actual rows=2000 loops=1)
+   Sort Key: documento COLLATE "C"
+   Sort Method: quicksort  Memory: 283kB
+   Buffers: shared hit=27
+   ->  Result (actual rows=2000 loops=1)
+         One-Time Filter: ((NULLIF(current_setting('app.jass_id'::text, true), ''::text))::uuid = '576f5d9c-161f-b232-751f-c34a85e326cc'::uuid)
+         Buffers: shared hit=27
+         ->  Seq Scan on asociado (actual rows=2000 loops=1)
+               Filter: (jass_id = '576f5d9c-161f-b232-751f-c34a85e326cc'::uuid)
+               Buffers: shared hit=27
+ Planning:
+   Buffers: shared hit=26
+ Planning Time: 0.208 ms
+ Execution Time: 2.836 ms
+(14 rows)
+=== Q6 aislamiento: la misma consulta con OTRA JASS fijada no ve filas
+              set_config              
+--------------------------------------
+ db150d1a-d2cb-28c7-60eb-175257b27280
+(1 row)
+ filas_visibles_de_otra_jass 
+-----------------------------
+                           0
+(1 row)
+              set_config              
+--------------------------------------
+ 576f5d9c-161f-b232-751f-c34a85e326cc
+(1 row)
+ filas_visibles_de_la_propia_jass 
+----------------------------------
+                                3
+(1 row)
