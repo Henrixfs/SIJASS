@@ -1,14 +1,15 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { CLAVE_E2E, CONSEJO_B, NOMBRE_JASS_B } from './datos.js';
 import { NOMBRE_BASE } from './playwright.config.js';
 
-export const CLAVE_E2E = 'Clave-E2E-segura-123';
-export const CORREO_CONSEJO_B = 'consejo@otra-jass.pe';
+export { CLAVE_E2E } from './datos.js';
 
 /**
- * Deja una base nueva `sijass_e2e` con el esquema migrado, la JASS de demostración
- * (tesorero, operador, tres asociados con cuenta) y una segunda JASS con su consejo.
+ * Deja una base nueva `sijass_e2e` con el esquema migrado, la cuenta de plataforma, la JASS de
+ * demostración (Consejo, Tesorería, Operadores y tres asociados con cuenta) y una segunda JASS
+ * con su Consejo, creada con el mismo comando que se usa en producción.
  */
 export default async function preparar(): Promise<void> {
   const admin = process.env.ADMIN_DATABASE_URL;
@@ -34,5 +35,16 @@ export default async function preparar(): Promise<void> {
 
   ejecutar(['node_modules/node-pg-migrate/bin/node-pg-migrate.js', 'up', '-m', 'migraciones']);
   ejecutar(['dist/api/cli.js', 'sembrar-demo'], { SIJASS_PERMITIR_DEMO: '1', SIJASS_CLAVE_DEMO: CLAVE_E2E });
-  ejecutar(['dist/api/cli.js', 'crear-jass', 'Otra JASS', CORREO_CONSEJO_B], { SIJASS_CLAVE_INICIAL: CLAVE_E2E });
+  ejecutar(['dist/api/cli.js', 'crear-jass', NOMBRE_JASS_B, CONSEJO_B.documento, CONSEJO_B.nombre], { SIJASS_CLAVE_INICIAL: CLAVE_E2E });
+
+  // El Consejo de la segunda JASS nace con cambio de clave pendiente (como en producción). Las
+  // pruebas de aislamiento solo necesitan que entre; el primer ingreso se prueba con cuentas
+  // creadas desde la propia interfaz en `flujo-acceso.spec.ts`.
+  const base = new pg.Client({ connectionString: url.toString() });
+  await base.connect();
+  try {
+    await base.query('UPDATE usuario SET debe_cambiar_contrasena = false WHERE documento = $1', [CONSEJO_B.documento]);
+  } finally {
+    await base.end();
+  }
 }
