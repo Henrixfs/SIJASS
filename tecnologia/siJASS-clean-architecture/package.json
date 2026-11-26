@@ -6,20 +6,27 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint src",
-    "test": "npm run build && node --test dist/pruebas/unitarias/*.test.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:cobertura": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:nativo": "npm run build && node --test dist/pruebas/unitarias/*.test.js",
     "test:integration": "npm run build && node scripts/exigir-database-url.mjs && node --test --test-concurrency=1 dist/pruebas/integracion/*.test.js",
     "api": "node dist/api/main.js",
     "crear-jass": "node dist/api/cli.js crear-jass",
+    "crear-plataforma": "node dist/api/cli.js crear-plataforma",
+    "asignar-documento": "node dist/api/cli.js asignar-documento",
     "sembrar-demo": "node dist/api/cli.js sembrar-demo",
     "migrar": "node-pg-migrate up -m migraciones",
     "migrar:revertir": "node-pg-migrate down -m migraciones"
   },
   "devDependencies": {
+    "@jest/globals": "^30.5.2",
     "@types/express": "^5.0.6",
     "@types/node": "^22",
     "@types/pg": "^8.23.1",
     "eslint": "^9.39.5",
+    "jest": "^30.5.2",
     "node-pg-migrate": "^9.0.0",
+    "ts-jest": "^29.4.15",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.72.1",
     "yaml": "^2.9.1"
@@ -33,7 +40,8 @@
     "@nestjs/platform-express": "^12.5.1",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "swagger-ui-dist": "^5.36.0"
   },
   "type": "module"
 }

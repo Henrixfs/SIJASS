@@ -8,7 +8,7 @@ import type { Corpus, EstadoCorpus } from '../dominio/asistente/corpus.js';
 import { ADVERTENCIA_EJEMPLO, MENSAJE_FUERA_DE_ALCANCE, MENSAJE_SIN_EVIDENCIA, pideDosisOTratamiento } from '../dominio/asistente/guarda.js';
 import { componerRespuesta, Indice, MAX_PREGUNTA, type Cita } from '../dominio/asistente/recuperacion.js';
 import { ErrorDatoInvalido } from '../dominio/errores.js';
-import { auditar, type DependenciasAcceso } from './acceso/comun.js';
+import { auditar, enJass, type DependenciasAcceso } from './acceso/comun.js';
 
 export type EstadoConsulta = 'respondida' | 'sin-evidencia' | 'fuera-de-alcance';
 
@@ -75,7 +75,7 @@ export class ConsultarAsistente {
     }
 
     // La pregunta y la respuesta no se almacenan: el evento guarda solo el estado y los conteos.
-    await this.d.unidadDeTrabajo.ejecutar((r) =>
+    await enJass(this.d, actor)((r) =>
       auditar(r, actor, { accion: 'asistente.consulta', recurso: 'asistente', detalle: { estado: respuesta.estado, citas: respuesta.citas.length, corpus: respuesta.corpus } }, this.d.reloj.ahora()),
     );
     return respuesta;

@@ -1,5 +1,6 @@
 import { ErrorMedicionDuplicada } from '../dominio/errores.js';
 import type { Medicion } from '../dominio/medicion.js';
+import type { ContextoJass } from '../dominio/puertos.js';
 import type {
   DecoradorRepositorios,
   FiltroMediciones,
@@ -123,7 +124,9 @@ export class UnidadDeTrabajoMemoria implements UnidadDeTrabajo {
     private readonly decorar?: DecoradorRepositorios,
   ) {}
 
-  ejecutar<T>(trabajo: (repos: RepositoriosTransaccion) => Promise<T>): Promise<T> {
+  // El contexto se ignora: la memoria aísla por filtro en cada repositorio (s2a, D11).
+  ejecutar<T>(trabajo: (repos: RepositoriosTransaccion) => Promise<T>, contexto: ContextoJass): Promise<T> {
+    void contexto;
     const resultado = this.almacen.cola.then(() => this.ejecutarEnSerie(trabajo));
     this.almacen.cola = resultado.catch(() => undefined);
     return resultado;

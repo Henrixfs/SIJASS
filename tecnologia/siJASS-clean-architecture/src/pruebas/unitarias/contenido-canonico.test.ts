@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { hashOperacion } from '../../aplicacion/hash-operacion.js';
 import { contenidoCanonico } from '../../dominio/contenido-canonico.js';

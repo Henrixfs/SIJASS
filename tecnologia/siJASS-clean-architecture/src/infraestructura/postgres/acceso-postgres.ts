@@ -3,7 +3,11 @@ import { ErrorConflicto } from '../../dominio/errores.js';
 import type { Asociado, Cuota, Pago, ReversaPago } from '../../dominio/padron.js';
 import type { Reservorio } from '../../dominio/reservorio.js';
 import type {
+  CredencialesNuevas,
+  EstadoJass,
   EventoAuditoria,
+  Jass,
+  MiembroEquipo,
   RepositorioAsociados,
   RepositorioAuditoria,
   RepositorioCuotas,
@@ -14,6 +18,8 @@ import type {
   RepositorioSesiones,
   RepositorioUsuarios,
   ResultadoCreacionPago,
+  ResumenJass,
+  UbicacionJass,
 } from '../../dominio/puertos-acceso.js';
 import type { Consultable } from './consultable.js';
 
@@ -34,13 +40,61 @@ async function conConflictos<T>(operacion: () => Promise<T>, porRestriccion: Rea
 
 const iso = (valor: Date | string | null): string | null => (valor === null ? null : new Date(valor).toISOString());
 
+interface FilaJass {
+  id: string;
+  nombre: string;
+  estado: EstadoJass;
+  departamento: string | null;
+  provincia: string | null;
+  distrito: string | null;
+  centro_poblado: string | null;
+}
+const aJass = (f: FilaJass): Jass => ({
+  id: f.id,
+  nombre: f.nombre,
+  estado: f.estado,
+  departamento: f.departamento,
+  provincia: f.provincia,
+  distrito: f.distrito,
+  centroPoblado: f.centro_poblado,
+});
+
 export class JassPostgres implements RepositorioJass {
   constructor(private readonly db: Consultable) {}
-  async crear(jass: { id: string; nombre: string }): Promise<void> {
-    await conConflictos(() => this.db.query('INSERT INTO jass (id, nombre) VALUES ($1, $2)', [jass.id, jass.nombre]), { jass_pkey: 'jass-duplicada' });
+  async crear(jass: { id: string; nombre: string } & Partial<UbicacionJass>): Promise<void> {
+    await conConflictos(
+      () =>
+        this.db.query('INSERT INTO jass (id, nombre, departamento, provincia, distrito, centro_poblado) VALUES ($1, $2, $3, $4, $5, $6)', [
+          jass.id,
+          jass.nombre,
+          jass.departamento ?? null,
+          jass.provincia ?? null,
+          jass.distrito ?? null,
+          jass.centroPoblado ?? null,
+        ]),
+      { jass_pkey: 'jass-duplicada', jass_nombre_ubicacion_key: 'jass-duplicada' },
+    );
   }
   async existe(id: string): Promise<boolean> {
     const { rowCount } = await this.db.query('SELECT 1 FROM jass WHERE id = $1', [id]);
+    return rowCount === 1;
+  }
+  async buscar(id: string): Promise<Jass | undefined> {
+    const { rows } = await this.db.query<FilaJass>('SELECT * FROM jass WHERE id = $1', [id]);
+    return rows[0] ? aJass(rows[0]) : undefined;
+  }
+  async listar(): Promise<ResumenJass[]> {
+    const { rows } = await this.db.query<FilaJass & { cuentas_activas: string }>(
+      `SELECT j.*,
+              (SELECT count(*) FROM membresia m JOIN usuario u ON u.id = m.usuario_id
+                WHERE m.jass_id = j.id AND m.estado = 'activa' AND u.estado = 'activo') AS cuentas_activas
+         FROM jass j
+        ORDER BY lower(j.nombre) COLLATE "C", j.id`,
+    );
+    return rows.map((f) => ({ ...aJass(f), cuentasActivas: Number(f.cuentas_activas) }));
+  }
+  async cambiarEstado(id: string, estado: EstadoJass): Promise<boolean> {
+    const { rowCount } = await this.db.query('UPDATE jass SET estado = $2 WHERE id = $1', [id, estado]);
     return rowCount === 1;
   }
 }
@@ -63,19 +117,27 @@ export class ReservoriosJassPostgres implements RepositorioReservoriosJass {
 
 interface FilaUsuario {
   id: string;
-  correo: string;
+  documento: string | null;
+  nombre: string | null;
+  correo: string | null;
   hash_contrasena: string;
   estado: 'activo' | 'inactivo';
   intentos_fallidos: number;
   bloqueado_hasta: Date | null;
+  clave_generada: boolean;
+  debe_cambiar_contrasena: boolean;
 }
 const aUsuario = (f: FilaUsuario): Usuario => ({
   id: f.id,
+  documento: f.documento,
+  nombre: f.nombre,
   correo: f.correo,
   hashContrasena: f.hash_contrasena,
   estado: f.estado,
   intentosFallidos: f.intentos_fallidos,
   bloqueadoHasta: iso(f.bloqueado_hasta),
+  claveGenerada: f.clave_generada,
+  debeCambiarContrasena: f.debe_cambiar_contrasena,
 });
 
 export class UsuariosPostgres implements RepositorioUsuarios {
@@ -83,11 +145,17 @@ export class UsuariosPostgres implements RepositorioUsuarios {
   async crear(u: Usuario): Promise<void> {
     await conConflictos(
       () =>
-        this.db.query('INSERT INTO usuario (id, correo, hash_contrasena, estado, intentos_fallidos, bloqueado_hasta) VALUES ($1, $2, $3, $4, $5, $6)', [
-          u.id, u.correo, u.hashContrasena, u.estado, u.intentosFallidos, u.bloqueadoHasta,
-        ]),
-      { usuario_correo_key: 'correo-duplicado' },
+        this.db.query(
+          `INSERT INTO usuario (id, documento, nombre, correo, hash_contrasena, estado, intentos_fallidos, bloqueado_hasta, clave_generada, debe_cambiar_contrasena)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [u.id, u.documento, u.nombre, u.correo, u.hashContrasena, u.estado, u.intentosFallidos, u.bloqueadoHasta, u.claveGenerada, u.debeCambiarContrasena],
+        ),
+      { usuario_correo_key: 'correo-duplicado', usuario_documento_key: 'documento-con-acceso' },
     );
+  }
+  async buscarPorDocumento(documento: string): Promise<Usuario | undefined> {
+    const { rows } = await this.db.query<FilaUsuario>('SELECT * FROM usuario WHERE documento = $1', [documento]);
+    return rows[0] ? aUsuario(rows[0]) : undefined;
   }
   async buscarPorCorreo(correo: string): Promise<Usuario | undefined> {
     const { rows } = await this.db.query<FilaUsuario>('SELECT * FROM usuario WHERE correo = $1', [correo]);
@@ -96,6 +164,27 @@ export class UsuariosPostgres implements RepositorioUsuarios {
   async buscarPorId(id: string): Promise<Usuario | undefined> {
     const { rows } = await this.db.query<FilaUsuario>('SELECT * FROM usuario WHERE id = $1', [id]);
     return rows[0] ? aUsuario(rows[0]) : undefined;
+  }
+  async actualizarCredenciales(id: string, nuevas: CredencialesNuevas): Promise<void> {
+    const { rowCount } = await this.db.query(
+      `UPDATE usuario
+          SET hash_contrasena = $2, clave_generada = $3, debe_cambiar_contrasena = $4,
+              intentos_fallidos = 0, bloqueado_hasta = NULL
+        WHERE id = $1`,
+      [id, nuevas.hashContrasena, nuevas.claveGenerada, nuevas.debeCambiarContrasena],
+    );
+    if (rowCount !== 1) throw new Error(`usuario inexistente: ${id}`);
+  }
+  async cambiarEstado(id: string, estado: 'activo' | 'inactivo'): Promise<boolean> {
+    const { rowCount } = await this.db.query('UPDATE usuario SET estado = $2 WHERE id = $1', [id, estado]);
+    return rowCount === 1;
+  }
+  async asignarDocumento(id: string, documento: string, nombre: string): Promise<boolean> {
+    const { rowCount } = await conConflictos(
+      () => this.db.query('UPDATE usuario SET documento = $2, nombre = $3 WHERE id = $1', [id, documento, nombre]),
+      { usuario_documento_key: 'documento-con-acceso' },
+    );
+    return rowCount === 1;
   }
   async registrarFallo(id: string, umbral: number, bloqueadoHasta: string) {
     // Atómico: dos fallos concurrentes se suman y ninguno pisa el contador del otro.
@@ -118,7 +207,7 @@ export class UsuariosPostgres implements RepositorioUsuarios {
 interface FilaMembresia {
   id: string;
   usuario_id: string;
-  jass_id: string;
+  jass_id: string | null;
   perfil: Perfil;
   rol: Rol | null;
   asociado_id: string | null;
@@ -146,6 +235,26 @@ export class MembresiasPostgres implements RepositorioMembresias {
   async desactivarDeUsuario(usuarioId: string): Promise<boolean> {
     const { rowCount } = await this.db.query("UPDATE membresia SET estado = 'inactiva' WHERE usuario_id = $1 AND estado = 'activa'", [usuarioId]);
     return rowCount === 1;
+  }
+  async listarPersonal(jassId: string): Promise<MiembroEquipo[]> {
+    const { rows } = await this.db.query<{ usuario_id: string; nombre: string | null; documento: string | null; rol: Rol; m_estado: string; u_estado: string }>(
+      `SELECT m.usuario_id, u.nombre, u.documento, m.rol, m.estado AS m_estado, u.estado AS u_estado
+         FROM membresia m JOIN usuario u ON u.id = m.usuario_id
+        WHERE m.jass_id = $1 AND m.perfil = 'personal'
+        ORDER BY CASE m.rol WHEN 'consejo' THEN 0 WHEN 'tesorero' THEN 1 ELSE 2 END, lower(u.nombre) COLLATE "C", m.usuario_id`,
+      [jassId],
+    );
+    return rows.map((f) => ({
+      usuarioId: f.usuario_id,
+      nombre: f.nombre ?? '',
+      documento: f.documento ?? '',
+      rol: f.rol,
+      estado: f.m_estado === 'activa' && f.u_estado === 'activo' ? 'activo' : 'inactivo',
+    }));
+  }
+  async listarDeAsociados(jassId: string): Promise<Membresia[]> {
+    const { rows } = await this.db.query<FilaMembresia>("SELECT * FROM membresia WHERE jass_id = $1 AND perfil = 'asociado'", [jassId]);
+    return rows.map(aMembresia);
   }
 }
 
@@ -187,6 +296,9 @@ export class SesionesPostgres implements RepositorioSesiones {
   }
   async revocarFamilia(familiaId: string, ahora: string): Promise<void> {
     await this.db.query('UPDATE sesion SET revocada_en = $2 WHERE familia_id = $1 AND revocada_en IS NULL', [familiaId, ahora]);
+  }
+  async revocarDeUsuario(usuarioId: string, ahora: string): Promise<void> {
+    await this.db.query('UPDATE sesion SET revocada_en = $2 WHERE usuario_id = $1 AND revocada_en IS NULL', [usuarioId, ahora]);
   }
 }
 
@@ -252,6 +364,10 @@ export class CuotasPostgres implements RepositorioCuotas {
     const { rows } = await this.db.query<FilaCuota>('SELECT * FROM cuota WHERE jass_id = $1 AND asociado_id = $2 ORDER BY periodo', [jassId, asociadoId]);
     return rows.map(aCuota);
   }
+  async listarPorJass(jassId: string): Promise<Cuota[]> {
+    const { rows } = await this.db.query<FilaCuota>('SELECT * FROM cuota WHERE jass_id = $1 ORDER BY periodo', [jassId]);
+    return rows.map(aCuota);
+  }
 }
 
 interface FilaPago {
@@ -313,6 +429,10 @@ export class PagosPostgres implements RepositorioPagos {
         WHERE p.jass_id = $1 AND c.asociado_id = $2 ORDER BY p.pagado_en, p.id`,
       [jassId, asociadoId],
     );
+    return rows.map(aPago);
+  }
+  async listarPorJass(jassId: string): Promise<Pago[]> {
+    const { rows } = await this.db.query<FilaPago>(`SELECT ${COLUMNAS_PAGO} FROM pago p WHERE p.jass_id = $1 ORDER BY p.pagado_en, p.id`, [jassId]);
     return rows.map(aPago);
   }
   async marcarRevertido(jassId: string, id: string): Promise<boolean> {

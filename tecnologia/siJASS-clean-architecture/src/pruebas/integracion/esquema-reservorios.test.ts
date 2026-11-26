@@ -1,6 +1,6 @@
 /** Restricciones del esquema `0003` por SQL directo (tarea 1.1 de s1c). */
 import { randomUUID } from 'node:crypto';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import type pg from 'pg';
 import { crearPool } from './entorno.js';

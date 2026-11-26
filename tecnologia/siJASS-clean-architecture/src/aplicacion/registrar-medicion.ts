@@ -79,7 +79,7 @@ export class RegistrarMedicion {
         };
         await operaciones.registrarResultado(actor.jassId, operationId, resultado);
         return { resultado: 'accepted', operationId, medicion: resultado };
-      });
+      }, { jassId: actor.jassId });
     } catch (error) {
       // Paso 5: un dato inválido es `rejected`; cualquier otro error (incluido
       // ErrorMedicionDuplicada) es un fallo reintentable y se propaga.

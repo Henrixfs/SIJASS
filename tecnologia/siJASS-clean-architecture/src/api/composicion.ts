@@ -7,6 +7,8 @@ import { UnidadDeTrabajoPostgres } from '../infraestructura/postgres/unidad-de-t
 import { UnidadDeTrabajoAccesoPostgres } from '../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
 import { ContrasenasScrypt } from '../infraestructura/seguridad/contrasenas-scrypt.js';
 import { TokensHs256 } from '../infraestructura/seguridad/tokens-hs256.js';
+import { GeneradorClavesAleatorio, palabrasDeClaveDeEntorno } from '../infraestructura/seguridad/generador-claves.js';
+import { LimitadorDeIntentosMemoria } from '../infraestructura/limitador-memoria.js';
 import { GeneradorIdsAleatorio, RelojSistema } from '../infraestructura/sistema.js';
 import type { ConfiguracionApi } from './config.js';
 
@@ -25,6 +27,8 @@ export function componer(config: Pick<ConfiguracionApi, 'databaseUrl' | 'jwtSecr
     ids: new GeneradorIdsAleatorio(),
     contrasenas: new ContrasenasScrypt(),
     tokens: new TokensHs256(config.jwtSecret),
+    claves: new GeneradorClavesAleatorio(palabrasDeClaveDeEntorno(process.env)),
+    limitador: new LimitadorDeIntentosMemoria(),
   };
   return { pool, dependencias, casos: construirCasos(dependencias, new UnidadDeTrabajoPostgres(pool), cargarCorpus(config.corpusDir ?? fileURLToPath(DIRECTORIO_CORPUS_EJEMPLO))) };
 }

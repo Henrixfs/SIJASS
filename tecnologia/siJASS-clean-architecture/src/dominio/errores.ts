@@ -88,3 +88,35 @@ export class ErrorConflicto extends ErrorDominio {
     super(codigo, detalle ? `${codigo}: ${detalle}` : codigo);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Errores de acceso por documento y multi-JASS (s2a-acceso-dni-multi-jass).
+// ---------------------------------------------------------------------------
+
+/** Las credenciales son correctas pero el tipo de acceso elegido no es el de la cuenta: HTTP 409. */
+export class ErrorTipoDeAccesoDistinto extends ErrorDominio {
+  constructor(readonly tipoReal: 'asociado' | 'administrador') {
+    super('tipo-de-acceso-distinto', 'el tipo de acceso elegido no corresponde a la cuenta');
+  }
+}
+
+/** La JASS de la cuenta está suspendida por la plataforma: HTTP 403. */
+export class ErrorJassSuspendida extends ErrorDominio {
+  constructor() {
+    super('jass-suspendida', 'la JASS está suspendida');
+  }
+}
+
+/** La cuenta debe cambiar su clave antes de usar el sistema: HTTP 403. */
+export class ErrorCambioDeClavePendiente extends ErrorDominio {
+  constructor() {
+    super('cambio-de-clave-pendiente', 'debe cambiar su clave antes de continuar');
+  }
+}
+
+/** Un mismo origen superó el máximo de intentos de inicio de sesión: HTTP 429. */
+export class ErrorLimiteDeOrigen extends ErrorDominio {
+  constructor(readonly reintentarEnSegundos: number) {
+    super('demasiados-intentos', 'demasiados intentos desde este origen');
+  }
+}

@@ -7,7 +7,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { validarManifiesto } from '../../dominio/asistente/corpus.js';
 import { SECRETO_PRUEBAS } from '../entorno-acceso.js';

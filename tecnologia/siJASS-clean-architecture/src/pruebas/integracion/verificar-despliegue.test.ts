@@ -8,7 +8,7 @@ import http from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { crearPool } from './entorno.js';
 import { iniciarApi, type Api } from './entorno-api.js';

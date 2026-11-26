@@ -1,5 +1,5 @@
 /** Contrato OpenAPI ↔ controladores (s1e, tarea 1.1, spec `contrato-openapi`). */
-import { describe, test } from 'node:test';
+import { describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { cargarOpenApi, comparar, METODOS, rutasDelDocumento } from '../contrato-openapi-util.js';
 import { rutasDeLosControladores } from '../../api/rutas-declaradas.js';
@@ -28,9 +28,9 @@ describe('contrato OpenAPI', () => {
     assert.deepEqual(inexistentes, [], `rutas documentadas que ningún controlador implementa: ${inexistentes.join(', ')}`);
   });
 
-  test('hay 24 operaciones y todas están bajo /v1', () => {
+  test('hay 35 operaciones y todas están bajo /v1', () => {
     const rutas = rutasDelDocumento(doc);
-    assert.equal(rutas.length, 24);
+    assert.equal(rutas.length, 35);
     assert.ok(rutas.every((r) => r.split(' ')[1].startsWith('/v1/')));
   });
 

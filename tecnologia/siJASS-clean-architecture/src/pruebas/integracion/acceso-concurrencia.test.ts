@@ -3,7 +3,7 @@
  * juntos superan la cuota, rotación simultánea de un refresco y fallos de inicio de sesión
  * simultáneos. Cada escenario se repite 10 veces para descartar fallos intermitentes.
  */
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { ErrorDatoInvalido, ErrorNoAutenticado } from '../../dominio/errores.js';
 import { UnidadDeTrabajoAccesoPostgres } from '../../infraestructura/postgres/unidad-de-trabajo-acceso-postgres.js';
@@ -96,7 +96,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
   test(`rotación simultánea del mismo refresco: solo una renovación prospera (${RONDAS} rondas)`, async () => {
     const esc = await sembrarEscenario(e);
     for (let ronda = 0; ronda < RONDAS; ronda++) {
-      const s = await e.casos.autenticar.ejecutar({ correo: esc.tesoreroA.correo, contrasena: CLAVE });
+      const s = await e.casos.autenticar.ejecutar({ documento: esc.tesoreroA.documento, contrasena: CLAVE });
       const intentos = await Promise.allSettled(Array.from({ length: 5 }, () => e.casos.renovar.ejecutar({ tokenRefresco: s.tokenRefresco })));
       assert.equal(intentos.filter((i) => i.status === 'fulfilled').length, 1, `ronda ${ronda}`);
       for (const i of intentos) if (i.status === 'rejected') assert.ok(i.reason instanceof ErrorNoAutenticado);
@@ -106,7 +106,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
   test(`fallos de inicio de sesión simultáneos se suman sin perderse (${RONDAS} rondas)`, async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const esc = await sembrarEscenario(e);
-      await Promise.allSettled(Array.from({ length: 4 }, () => e.casos.autenticar.ejecutar({ correo: esc.operadorA.correo, contrasena: 'incorrecta-123' })));
+      await Promise.allSettled(Array.from({ length: 4 }, () => e.casos.autenticar.ejecutar({ documento: esc.operadorA.documento, contrasena: 'incorrecta-123' })));
       const { rows } = await pool.query('SELECT intentos_fallidos FROM usuario WHERE id = $1', [esc.operadorA.usuarioId]);
       assert.equal(rows[0].intentos_fallidos, 4, `ronda ${ronda}: se perdió algún intento`);
     }

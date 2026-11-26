@@ -2,9 +2,9 @@
  * Pruebas HTTP de autenticación, padrón, cuotas, pagos, reversas y del flujo principal
  * «el tesorero registra un pago y el asociado ve su saldo actualizado» (tareas 4.2 y 4.4).
  */
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
-import { nuevaClave } from '../entorno-acceso.js';
+import { nuevaClave, nuevoDni } from '../entorno-acceso.js';
 import { crearPool } from './entorno.js';
 import { crearMundo, type Mundo } from './entorno-api.js';
 
@@ -20,7 +20,7 @@ describe('API — autenticación', () => {
   });
 
   test('login correcto: 200 con tokens, perfil y rol', async () => {
-    const r = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { correo: m.esc.tesoreroA.correo, contrasena: 'Clave-de-prueba-123' } });
+    const r = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { documento: m.esc.tesoreroA.documento, contrasena: 'Clave-de-prueba-123' } });
     assert.equal(r.estado, 200);
     assert.equal(r.cuerpo.perfil, 'personal');
     assert.equal(r.cuerpo.rol, 'tesorero');
@@ -30,8 +30,8 @@ describe('API — autenticación', () => {
   });
 
   test('credenciales inválidas: 401 con el mismo cuerpo para correo desconocido y contraseña errónea', async () => {
-    const a = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { correo: m.esc.operadorA.correo, contrasena: 'mala-contrasena-1' } });
-    const b = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { correo: 'nadie@prueba.pe', contrasena: 'mala-contrasena-1' } });
+    const a = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { documento: m.esc.operadorA.documento, contrasena: 'mala-contrasena-1' } });
+    const b = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { documento: '99999999', contrasena: 'mala-contrasena-1' } });
     assert.equal(a.estado, 401);
     assert.equal(b.estado, 401);
     assert.equal(a.texto, b.texto);
@@ -39,7 +39,7 @@ describe('API — autenticación', () => {
   });
 
   test('cuerpo ausente, no objeto o con tipos inválidos → 401 de credenciales, nunca 500', async () => {
-    for (const cuerpo of [undefined, 'texto', 42, [], null, { correo: 1, contrasena: 2 }]) {
+    for (const cuerpo of [undefined, 'texto', 42, [], null, { documento: 1, contrasena: 2 }]) {
       const r = await m.api.peticion('POST', '/v1/auth/login', cuerpo === undefined ? {} : { cuerpo });
       assert.ok([400, 401].includes(r.estado), `estado ${r.estado}`);
     }
@@ -53,7 +53,7 @@ describe('API — autenticación', () => {
   });
 
   test('refresh rota el token; el anterior ya no sirve y su reutilización cierra la familia', async () => {
-    const s1 = await m.api.iniciarSesion(m.esc.consejoA.correo);
+    const s1 = await m.api.iniciarSesion(m.esc.consejoA.documento);
     const r2 = await m.api.peticion('POST', '/v1/auth/refresh', { cuerpo: { tokenRefresco: s1.tokenRefresco } });
     assert.equal(r2.estado, 200);
     assert.notEqual(r2.cuerpo.tokenRefresco, s1.tokenRefresco);
@@ -62,7 +62,7 @@ describe('API — autenticación', () => {
   });
 
   test('logout invalida la sesión: 204 y luego el refresh responde 401', async () => {
-    const s = await m.api.iniciarSesion(m.esc.consejoA.correo);
+    const s = await m.api.iniciarSesion(m.esc.consejoA.documento);
     assert.equal((await m.api.peticion('POST', '/v1/auth/logout', { cuerpo: { tokenRefresco: s.tokenRefresco } })).estado, 204);
     assert.equal((await m.api.peticion('POST', '/v1/auth/refresh', { cuerpo: { tokenRefresco: s.tokenRefresco } })).estado, 401);
     assert.equal((await m.api.peticion('POST', '/v1/auth/logout', { cuerpo: { tokenRefresco: 'desconocido' } })).estado, 204);
@@ -75,9 +75,18 @@ describe('API — autenticación', () => {
     }
   });
 
-  test('GET /v1/yo devuelve perfil y rol, y no la JASS', async () => {
+  test('GET /v1/yo devuelve perfil, rol, nombre, DNI enmascarado y nombre de la JASS, sin identificadores', async () => {
     const r = await m.api.peticion('GET', '/v1/yo', { token: m.token.operadorA });
-    assert.deepEqual(r.cuerpo, { perfil: 'personal', rol: 'operador' });
+    assert.equal(r.estado, 200);
+    assert.deepEqual(Object.keys(r.cuerpo).sort(), ['debeCambiarContrasena', 'documento', 'jass', 'nombre', 'perfil', 'rol']);
+    assert.equal(r.cuerpo.perfil, 'personal');
+    assert.equal(r.cuerpo.rol, 'operador');
+    assert.equal(r.cuerpo.nombre, 'Operador A');
+    assert.equal(r.cuerpo.documento, `•••••${m.esc.operadorA.documento.slice(-3)}`);
+    assert.deepEqual(Object.keys(r.cuerpo.jass), ['nombre']);
+    assert.equal(r.cuerpo.debeCambiarContrasena, false);
+    assert.ok(!JSON.stringify(r.cuerpo).includes(m.esc.operadorA.documento), 'el DNI no viaja completo');
+    assert.ok(!JSON.stringify(r.cuerpo).includes(m.esc.jassA), 'el identificador de la JASS no viaja');
   });
 
   test('cabeceras seguras, sin x-powered-by, y 404 y 500 genéricos', async () => {
@@ -103,16 +112,16 @@ describe('API — bloqueo de cuenta (avanza el reloj, por eso usa su propio mund
   });
 
   test('bloqueo: tras 5 fallos el siguiente intento responde 429 con Retry-After, aunque la contraseña sea correcta', async () => {
-    const correo = m.esc.asociadoA2.cuenta.correo;
+    const documento = m.esc.asociadoA2.cuenta.documento;
     for (let i = 0; i < 5; i++) {
-      assert.equal((await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { correo, contrasena: 'mala-contrasena-1' } })).estado, 401);
+      assert.equal((await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { documento, contrasena: 'mala-contrasena-1' } })).estado, 401);
     }
-    const r = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { correo, contrasena: 'Clave-de-prueba-123' } });
+    const r = await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { documento, contrasena: 'Clave-de-prueba-123' } });
     assert.equal(r.estado, 429);
     assert.ok(Number(r.cabeceras.get('retry-after')) > 0);
     assert.equal(r.cuerpo.codigo, 'cuenta-bloqueada');
     m.api.entorno.reloj.avanzar(15 * 60_000 + 1000);
-    assert.equal((await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { correo, contrasena: 'Clave-de-prueba-123' } })).estado, 200);
+    assert.equal((await m.api.peticion('POST', '/v1/auth/login', { cuerpo: { documento, contrasena: 'Clave-de-prueba-123' } })).estado, 200);
   });
 });
 
@@ -231,14 +240,16 @@ describe('API — padrón, cuotas, pagos y portal', () => {
   });
 
   test('baja lógica por HTTP (204): sin pagos nuevos (409) y el asociado conserva su historial', async () => {
-    const nuevo = await post('/v1/asociados', m.token.tesoreroA, { nombre: 'Baja Http', documento: 'BAJA-HTTP' });
-    assert.equal((await post(`/v1/asociados/${nuevo.cuerpo.id}/acceso`, m.token.tesoreroA, { correo: `baja.${nuevo.cuerpo.id.slice(0, 6)}@prueba.pe`, contrasena: 'Clave-de-prueba-123' })).estado, 201);
+    const documento = nuevoDni();
+    const nuevo = await post('/v1/asociados', m.token.tesoreroA, { nombre: 'Baja Http', documento });
+    const acceso = await post(`/v1/asociados/${nuevo.cuerpo.id}/acceso`, m.token.tesoreroA, {});
+    assert.equal(acceso.estado, 201);
     await post('/v1/cuotas/generar', m.token.tesoreroA, { periodo: '2026-10', importeCentimos: 700 });
     const cuotaNueva = (await get(`/v1/asociados/${nuevo.cuerpo.id}/estado-de-cuenta`, m.token.tesoreroA)).cuerpo.cuotas[0].id;
     assert.equal((await post(`/v1/asociados/${nuevo.cuerpo.id}/baja`, m.token.tesoreroA, {})).estado, 204);
     const r = await post('/v1/pagos', m.token.tesoreroA, { cuotaId: cuotaNueva, importeCentimos: 10, comprobante: 'X' }, { 'Idempotency-Key': nuevaClave() });
     assert.equal(r.estado, 409);
-    const sesion = await m.api.iniciarSesion(`baja.${nuevo.cuerpo.id.slice(0, 6)}@prueba.pe`);
+    const sesion = await m.api.iniciarSesion(documento, acceso.cuerpo.claveTemporal);
     const saldo = await get('/v1/portal/saldo', sesion.tokenAcceso);
     assert.equal(saldo.estado, 200);
     assert.equal(saldo.cuerpo.asociado.estado, 'baja');

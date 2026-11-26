@@ -1,6 +1,6 @@
 /** Contraseñas `scrypt` y tokens HS256 (tarea 2.1, spec `acceso-por-perfiles`). */
 import { createHmac, randomUUID } from 'node:crypto';
-import { describe, test } from 'node:test';
+import { describe, test } from '../marco.js';
 import { strict as assert } from 'node:assert';
 import { ContrasenasScrypt } from '../../infraestructura/seguridad/contrasenas-scrypt.js';
 import { TokensHs256 } from '../../infraestructura/seguridad/tokens-hs256.js';
