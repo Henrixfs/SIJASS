@@ -95,7 +95,13 @@ export type Permiso =
   | 'asistente.consultar'
   | 'acceso-asociado.restablecer'
   | 'equipo.gestionar'
-  | 'jass.gestionar';
+  | 'jass.gestionar'
+  | 'incidencias.reportar'
+  | 'incidencias.leer-propias'
+  | 'incidencias.leer'
+  | 'incidencias.gestionar'
+  | 'incidencias.reglas.leer'
+  | 'incidencias.reglas.modificar';
 
 const PERSONAL_CON_PADRON: readonly Rol[] = ['tesorero', 'consejo'];
 const TODO_EL_PERSONAL: readonly Rol[] = ['consejo', 'tesorero', 'operador'];
@@ -121,6 +127,14 @@ const REGLAS: Readonly<Record<Permiso, { readonly perfil: Perfil; readonly roles
   'acceso-asociado.restablecer': { perfil: 'personal', roles: PERSONAL_CON_PADRON },
   'equipo.gestionar': { perfil: 'personal', roles: ['consejo'] },
   'jass.gestionar': { perfil: 'plataforma' },
+  // s1f: el asociado reporta y ve solo lo suyo; todo el personal consulta; Consejo y Operación
+  // atienden (Tesorería solo lee); solo el Consejo cambia la matriz de prioridad.
+  'incidencias.reportar': { perfil: 'asociado' },
+  'incidencias.leer-propias': { perfil: 'asociado' },
+  'incidencias.leer': { perfil: 'personal', roles: TODO_EL_PERSONAL },
+  'incidencias.gestionar': { perfil: 'personal', roles: ['consejo', 'operador'] },
+  'incidencias.reglas.leer': { perfil: 'personal', roles: TODO_EL_PERSONAL },
+  'incidencias.reglas.modificar': { perfil: 'personal', roles: ['consejo'] },
 };
 
 export function tienePermiso(actor: ActorAutenticado, permiso: Permiso): boolean {

@@ -1484,6 +1484,537 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Incidencias",
+      "item": [
+        {
+          "name": "GET /v1/incidencias/reglas-prioridad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/reglas-prioridad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                "reglas-prioridad"
+              ],
+              "variable": []
+            },
+            "description": "Matriz vigente de prioridad sugerida por categoría y alcance (todo el personal; sin configurar, la versión 0)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /v1/incidencias/reglas-prioridad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 0,\n  \"reglas\": {\n    \"fuga\": {\n      \"individual\": \"baja\",\n      \"varias-viviendas\": \"baja\",\n      \"general\": \"baja\",\n      \"desconocido\": \"baja\"\n    },\n    \"interrupcion\": {\n      \"individual\": \"baja\",\n      \"varias-viviendas\": \"baja\",\n      \"general\": \"baja\",\n      \"desconocido\": \"baja\"\n    },\n    \"averia\": {\n      \"individual\": \"baja\",\n      \"varias-viviendas\": \"baja\",\n      \"general\": \"baja\",\n      \"desconocido\": \"baja\"\n    },\n    \"presion\": {\n      \"individual\": \"baja\",\n      \"varias-viviendas\": \"baja\",\n      \"general\": \"baja\",\n      \"desconocido\": \"baja\"\n    },\n    \"calidad-observada\": {\n      \"individual\": \"baja\",\n      \"varias-viviendas\": \"baja\",\n      \"general\": \"baja\",\n      \"desconocido\": \"baja\"\n    },\n    \"otra\": {\n      \"individual\": \"baja\",\n      \"varias-viviendas\": \"baja\",\n      \"general\": \"baja\",\n      \"desconocido\": \"baja\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/reglas-prioridad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                "reglas-prioridad"
+              ],
+              "variable": []
+            },
+            "description": "Sustituye la matriz completa de 24 combinaciones (solo el Consejo); la versión enviada debe ser la vigente"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 422)', () => pm.expect([200, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/incidencias",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoria\": \"fuga\",\n  \"alcanceReportado\": \"individual\",\n  \"descripcion\": \"x\",\n  \"observadaEn\": \"2026-11-25T08:00:00-05:00\",\n  \"ubicacion\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias"
+              ],
+              "variable": []
+            },
+            "description": "Reporte de un asociado; guarda la prioridad sugerida y la regla aplicada, con la prioridad confirmada nula"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 201, 401, 403, 409, 422)', () => pm.expect([200, 201, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/incidencias",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias"
+              ],
+              "variable": []
+            },
+            "description": "El asociado ve solo las suyas; el personal, las de su JASS. De la más reciente a la más antigua"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 422)', () => pm.expect([200, 401, 403, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/incidencias/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Detalle (el asociado, solo la suya y sin prioridad ni responsable)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403)', () => pm.expect([200, 401, 403]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/incidencias/{id}/historial",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id/historial",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id",
+                "historial"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Historial cronológico; el asociado ve solo los eventos públicos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 422)', () => pm.expect([200, 401, 403, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/incidencias/{id}/estado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": 1,\n  \"estado\": \"en-atencion\",\n  \"detalle\": \"texto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id",
+                "estado"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "registrada → en-atencion, en-atencion → cerrada (con la acción) y cerrada → en-atencion (con el motivo); Consejo y Operación"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 422)', () => pm.expect([200, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/incidencias/{id}/prioridad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": 1,\n  \"prioridad\": \"baja\",\n  \"motivo\": \"texto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id/prioridad",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id",
+                "prioridad"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Confirma la sugerencia o elige otra prioridad con motivo; la sugerencia original se conserva (Consejo y Operación)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 422)', () => pm.expect([200, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/incidencias/{id}/responsable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": 1,\n  \"responsableId\": \"00000000-0000-4000-8000-000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id/responsable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id",
+                "responsable"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Asigna personal activo de la JASS (o null para quitarlo); Consejo y Operación"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 422)', () => pm.expect([200, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/incidencias/{id}/acciones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision\": 1,\n  \"descripcion\": \"x\",\n  \"visibilidad\": \"publica\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id/acciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id",
+                "acciones"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Anota una acción pública (la familia la ve) o interna; Consejo y Operación"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 422)', () => pm.expect([200, 401, 403, 409, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /v1/incidencias/{id}/foto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "If-Match",
+                "value": "texto"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id/foto",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id",
+                "foto"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Adjunta o sustituye la foto (JPEG o PNG hasta 5 MiB, sin metadatos); el autor, Consejo u Operación"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 409, 413, 415, 422)', () => pm.expect([200, 401, 403, 409, 413, 415, 422]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/incidencias/{id}/foto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/incidencias/:id/foto",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "incidencias",
+                ":id",
+                "foto"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "00000000-0000-4000-8000-000000000000"
+                }
+              ]
+            },
+            "description": "Bytes de la foto con los permisos del reporte y `Cache-Control no-store`"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el estado está declarado en el contrato (200, 401, 403, 404)', () => pm.expect([200, 401, 403, 404]).to.include(pm.response.code));",
+                  "pm.test('responde en menos de 2 s', () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -13,6 +13,7 @@ import {
   UsuariosPostgres,
 } from './acceso-postgres.js';
 import type { Consultable } from './consultable.js';
+import { IncidenciasPostgres } from './incidencias-postgres.js';
 
 export function repositoriosAccesoPostgres(db: Consultable): RepositoriosAcceso {
   return {
@@ -25,6 +26,7 @@ export function repositoriosAccesoPostgres(db: Consultable): RepositoriosAcceso 
     cuotas: new CuotasPostgres(db),
     pagos: new PagosPostgres(db),
     auditoria: new AuditoriaPostgres(db),
+    incidencias: new IncidenciasPostgres(db),
   };
 }
 

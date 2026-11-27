@@ -4,6 +4,7 @@ import { AlmacenAccesoMemoria, UnidadDeTrabajoAccesoMemoria } from '../../infrae
 import { suitePadron } from '../contrato/casos-padron.js';
 import { suiteAsistente } from '../contrato/casos-asistente.js';
 import { suiteReservorios } from '../contrato/casos-reservorios.js';
+import { suiteIncidencias } from '../contrato/casos-incidencias.js';
 
 describe('padrón, cuotas y pagos (memoria)', () => {
   const almacen = new AlmacenAccesoMemoria();
@@ -18,4 +19,9 @@ describe('reservorios (memoria)', () => {
 describe('asistente documental (memoria)', () => {
   const almacen = new AlmacenAccesoMemoria();
   suiteAsistente((decorar) => new UnidadDeTrabajoAccesoMemoria(almacen, decorar));
+});
+
+describe('incidencias (memoria)', () => {
+  const almacen = new AlmacenAccesoMemoria();
+  suiteIncidencias((decorar) => new UnidadDeTrabajoAccesoMemoria(almacen, decorar));
 });

@@ -10,6 +10,7 @@ import { suiteIdentidad } from '../contrato/casos-identidad.js';
 import { suitePadron } from '../contrato/casos-padron.js';
 import { suiteAsistente } from '../contrato/casos-asistente.js';
 import { suiteReservorios } from '../contrato/casos-reservorios.js';
+import { suiteIncidencias } from '../contrato/casos-incidencias.js';
 import { crearPool } from './entorno.js';
 
 describe('acceso y padrón (PostgreSQL)', () => {
@@ -25,4 +26,5 @@ describe('acceso y padrón (PostgreSQL)', () => {
   describe('padrón, cuotas, pagos y portal', () => suitePadron(fabrica));
   describe('reservorios (s1c)', () => suiteReservorios(fabrica));
   describe('asistente documental (s1d)', () => suiteAsistente(fabrica));
+  describe('incidencias (s1f)', () => suiteIncidencias(fabrica));
 });

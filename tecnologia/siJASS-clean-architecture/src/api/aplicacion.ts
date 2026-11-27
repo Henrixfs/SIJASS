@@ -47,11 +47,13 @@ export async function crearAplicacion(opciones: OpcionesAplicacion): Promise<INe
   app.disable('x-powered-by');
   if (opciones.confiarEnProxy === true) app.set('trust proxy', 1);
   app.useBodyParser('json', { limit: '100kb' });
+  // Fotos de incidencias (s1f): el cuerpo binario llega como Buffer; más de 5 MiB responde 413.
+  app.useBodyParser('raw', { type: ['image/jpeg', 'image/png'], limit: '5mb' });
   app.use(cabecerasSeguras);
   app.useGlobalGuards(new GuardiaAcceso(opciones.casos));
   app.useGlobalFilters(new FiltroErrores(opciones.casos, opciones.registrar));
   if (opciones.origenesPermitidos && opciones.origenesPermitidos.length > 0) {
-    app.enableCors({ origin: [...opciones.origenesPermitidos], methods: ['GET', 'POST'], allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'] });
+    app.enableCors({ origin: [...opciones.origenesPermitidos], methods: ['GET', 'POST', 'PUT'], allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'If-Match'] });
   }
   // Antes del respaldo de la SPA: `/docs` no es una ruta de la interfaz.
   montarDocumentacion(app, opciones.archivoOpenapi);

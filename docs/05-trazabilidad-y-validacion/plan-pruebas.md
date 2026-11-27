@@ -44,6 +44,24 @@ PT13 se cubre ya para asociados, cuotas, pagos y portal (`s1b`) y para reservori
 
 Es evidencia **local**; la de **GitHub Actions** se cita aparte: [PR #13](https://github.com/Henrixfs/SIJASS/pull/13), commit `3557c48`, [ejecución 45854454728](https://github.com/Henrixfs/SIJASS/actions/runs/45854454728): `Prototipo` (Node 22, 24 y 26), `Documentación`, `Integración (PostgreSQL)`, `Interfaz y E2E (navegador)` e `Imagen del contenedor` en verde (7 de 7). Un intento anterior del commit `6c37c99` ([ejecución 45853607502](https://github.com/Henrixfs/SIJASS/actions/runs/45853607502)) falló en una prueba de interfaz que no esperaba los datos de red; se corrigió en `3557c48`. Prueba nueva del Sprint: `/docs` (Swagger UI), la caché HTTP del catálogo (`ETag`, `304` y errores en `no-store`) y la equivalencia del listado del padrón con el estado de cuenta individual.
 
+### Verificación de `s1f-backend-incidencias` (2026-11-26, en local)
+
+| Comprobación | Resultado |
+|---|---|
+| `npm run lint`, `npm run build` y `npm run test:cobertura` en `tecnologia/siJASS-clean-architecture/` | Código 0; 522 pruebas unitarias, 0 fallos; cobertura global 98,4 % de líneas y 92,1 % de ramas (umbral 90 % y 85 %) |
+| `npm run migrar`, `npm run migrar:revertir` y `npm run migrar` sobre una base nueva y desechable | Código 0; la migración `0006` se aplica, se revierte y se vuelve a aplicar |
+| `npm run test:integration` contra PostgreSQL 16 en Docker | Código 0; 434 pruebas de integración, 0 fallos |
+| `pg_dump` de la base de pruebas y `pg_restore` en una base desechable | Mismo número de incidencias, eventos, fotos y versiones de reglas; las cinco políticas de seguridad por filas y los dos disparadores del historial presentes |
+| `node scripts/generar-postman.mjs --verificar` y `node scripts/verificar-docs.mjs` | La colección (47 peticiones) coincide con el contrato; verificación documental correcta |
+| `openspec validate s1f-backend-incidencias --strict` | Válido |
+
+Es evidencia **local**: no hay ejecución de CI del cambio todavía, y no incluye interfaz (el cambio es solo backend). La foto se valida por su firma y se guarda sin metadatos, pero el sistema **no** analiza su contenido.
+
+| PT | Prueba de `s1f` | Nivel |
+|---|---|---|
+| PT29 | Incidencias: [`incidencia-dominio.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/incidencia-dominio.test.ts) (24 combinaciones de la matriz, ciclo de atención y foto), [`casos-incidencias.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/contrato/casos-incidencias.ts) sobre memoria y PostgreSQL y [`api-incidencias.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/api-incidencias.test.ts) por HTTP | Contrato / Seguridad |
+| PT30 | Concurrencia e historial: [`incidencias-postgres.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/integracion/incidencias-postgres.test.ts) (diez creaciones con la misma clave, dos modificaciones de la misma revisión, reglas y fotos simultáneas, historial de solo inserción y seguridad por filas de las tablas nuevas) | Integración |
+
 ### Verificación de `s2a-acceso-dni-multi-jass` (2026-11-25, en local)
 
 | Comprobación | Resultado |
@@ -150,7 +168,7 @@ Esta tabla es evidencia **local**. Evidencia **de GitHub Actions** (aparte): CI 
 | PT21 | Calidad documental | Enlaces relativos, identificadores, sintaxis Mermaid y coherencia de la matriz | Sin enlaces rotos ni identificadores huérfanos | Transversal | Enlaces relativos e identificadores (HU, RF, RNF, ADR, PT, DT y criterios C01–C16): automatizados con `scripts/verificar-docs.mjs` en el job `documentacion` del [CI](https://github.com/Henrixfs/SIJASS/actions/runs/41888011941) (PR #3, fusionado a `main`). Sintaxis Mermaid y coherencia semántica de la matriz: siguen siendo manuales (última ejecución 2026-10-28) |
 | PT22 | Rendimiento | Guardado local de 50 mediciones en un teléfono de gama baja del piloto | Percentil 95 ≤ 2 s | RNF02 | Pendiente |
 | PT23 | Usabilidad | Prueba de tareas con operadores reales | Tasa de éxito, tiempo y errores registrados | RNF06 | Pendiente |
-| PT24 | Privacidad | Fotografía con metadatos de ubicación; consulta al asistente | Metadatos eliminados; URLs temporales; ninguna solicitud al LLM contiene datos personales | RF03, RF13, RNF10 | Pendiente |
+| PT24 | Privacidad | Fotografía con metadatos de ubicación; consulta al asistente | Metadatos eliminados; URLs temporales; ninguna solicitud al LLM contiene datos personales | RF03, RF13, RNF10 | Prototipo parcial: la foto de una incidencia pierde EXIF (JPEG) y los fragmentos de texto (PNG) antes de guardarse y se lee con `no-store` (verificado en local, `s1f`); el asistente y las URLs temporales siguen pendientes |
 | PT25 | Contrato | Pruebas de contrato OpenAPI y adición de un cliente o módulo nuevo | Contrato cumplido sin modificar el dominio | RNF07 | Prototipo para el contrato HTTP (verificado en local y en CI, `s1e`: [`contrato-openapi.test.ts`](../../tecnologia/siJASS-clean-architecture/src/pruebas/unitarias/contrato-openapi.test.ts) compara el [documento OpenAPI](../api/openapi.yaml) con los controladores y con los estados observados); la prueba de «añadir un cliente o módulo sin modificar el dominio» sigue pendiente |
 | PT26 | Seguridad | Ingreso por DNI con tipo de acceso equivocado, clave generada tolerante a mayúsculas, bloqueo de cuenta y límite por origen, cambio obligatorio de clave, restablecimiento y JASS suspendida | Sin sesión con el tipo equivocado; el servidor solo permite cambiar la clave mientras esté pendiente; el restablecimiento quita el bloqueo y cierra sesiones; ninguna clave en bitácora ni errores | RF01, RNF05 | Prototipo (verificado en local, `s2a`: ver arriba) |
 | PT27 | Seguridad | Consulta o escritura de la JASS A sobre filas de la JASS B directamente en la base, y transacción de negocio sin JASS | Sin filas visibles, inserción rechazada y plataforma sin acceso a datos de negocio | RF01–RF03, RNF05 | Prototipo (verificado en local, `s2a`: seguridad por filas con el rol `sijass_app`) |

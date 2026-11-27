@@ -18,6 +18,20 @@ import { ConsultarCatalogo, ConsultarHistorial, RegistrarMedicionAutorizada } fr
 import { RegistrarMedicion } from './registrar-medicion.js';
 import { CrearReservorio, ListarReservorios } from './reservorios.js';
 import { ConsultarSalud } from './salud.js';
+import {
+  ActualizarReglasPrioridad,
+  AsignarResponsableIncidencia,
+  CambiarEstadoIncidencia,
+  ConfirmarPrioridadIncidencia,
+  ConsultarIncidencia,
+  ConsultarReglasPrioridad,
+  HistorialIncidencia,
+  LeerFotoIncidencia,
+  ListarIncidencias,
+  RegistrarAccionIncidencia,
+  RegistrarIncidencia,
+  SubirFotoIncidencia,
+} from './incidencias.js';
 import { ConsultarAsistente, ListarDocumentosAsistente, type RedactorRespuesta } from './asistente.js';
 import type { Corpus } from '../dominio/asistente/corpus.js';
 import type { UnidadDeTrabajo } from '../dominio/puertos.js';
@@ -63,6 +77,18 @@ export interface Casos {
   readonly asistente: ConsultarAsistente;
   readonly documentosAsistente: ListarDocumentosAsistente;
   readonly salud: ConsultarSalud;
+  readonly registrarIncidencia: RegistrarIncidencia;
+  readonly listarIncidencias: ListarIncidencias;
+  readonly consultarIncidencia: ConsultarIncidencia;
+  readonly historialIncidencia: HistorialIncidencia;
+  readonly cambiarEstadoIncidencia: CambiarEstadoIncidencia;
+  readonly confirmarPrioridad: ConfirmarPrioridadIncidencia;
+  readonly asignarResponsable: AsignarResponsableIncidencia;
+  readonly registrarAccionIncidencia: RegistrarAccionIncidencia;
+  readonly subirFotoIncidencia: SubirFotoIncidencia;
+  readonly leerFotoIncidencia: LeerFotoIncidencia;
+  readonly reglasPrioridad: ConsultarReglasPrioridad;
+  readonly actualizarReglasPrioridad: ActualizarReglasPrioridad;
 }
 
 /**
@@ -112,5 +138,17 @@ export function construirCasos(d: DependenciasAcceso, unidadMediciones: UnidadDe
     asistente: new ConsultarAsistente(d, corpus, redactor),
     documentosAsistente: new ListarDocumentosAsistente(corpus),
     salud: new ConsultarSalud(d.unidadDeTrabajo),
+    registrarIncidencia: new RegistrarIncidencia(d),
+    listarIncidencias: new ListarIncidencias(d),
+    consultarIncidencia: new ConsultarIncidencia(d),
+    historialIncidencia: new HistorialIncidencia(d),
+    cambiarEstadoIncidencia: new CambiarEstadoIncidencia(d),
+    confirmarPrioridad: new ConfirmarPrioridadIncidencia(d),
+    asignarResponsable: new AsignarResponsableIncidencia(d),
+    registrarAccionIncidencia: new RegistrarAccionIncidencia(d),
+    subirFotoIncidencia: new SubirFotoIncidencia(d),
+    leerFotoIncidencia: new LeerFotoIncidencia(d),
+    reglasPrioridad: new ConsultarReglasPrioridad(d),
+    actualizarReglasPrioridad: new ActualizarReglasPrioridad(d),
   };
 }
