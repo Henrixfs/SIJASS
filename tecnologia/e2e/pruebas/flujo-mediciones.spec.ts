@@ -1,53 +1,57 @@
 import { expect, test, type Page } from '@playwright/test';
 import { CONSEJO, CONSEJO_B, OPERADOR, TESORERO } from '../datos.js';
-import { persona, tokenDe } from '../ayudas.js';
+import { irA, persona, tokenDe } from '../ayudas.js';
 
 const NOMBRE_RESERVORIO = 'Reservorio E2E';
 
-async function abrirMediciones(page: Page) {
-  // Todos los roles de personal tienen la pestaña; `click` espera a que aparezca.
-  await page.getByRole('link', { name: 'Mediciones' }).click();
-  await expect(page.getByRole('heading', { name: 'Mediciones de cloro residual' })).toBeVisible();
+/** «El agua» y, si se indica, el reservorio elegido en su lista con foto. */
+async function abrirAgua(page: Page, reservorio?: string) {
+  await irA(page, 'El agua');
+  await expect(page.getByRole('heading', { name: 'El agua', level: 1 })).toBeVisible();
+  if (reservorio) await page.getByRole('group', { name: 'Reservorios' }).getByRole('button', { name: new RegExp(reservorio) }).click();
 }
 
 test.describe.configure({ mode: 'serial' });
 
 test('el consejo crea un reservorio, el operador registra una medición y la ve en el historial, y el consejo la consulta sin formulario', async ({ browser }) => {
   const consejo = await persona(browser, CONSEJO);
-  await abrirMediciones(consejo.page);
-  await consejo.page.getByLabel('Nuevo reservorio').fill(NOMBRE_RESERVORIO);
-  await consejo.page.getByRole('button', { name: 'Crear reservorio' }).click();
-  await expect(consejo.page.getByText('Reservorio creado.')).toBeVisible();
+  await abrirAgua(consejo.page);
+  await consejo.page.getByRole('button', { name: 'Nuevo reservorio' }).click();
+  const alta = consejo.page.getByRole('dialog', { name: 'Nuevo reservorio' });
+  await alta.getByLabel('Nombre del reservorio').fill(NOMBRE_RESERVORIO);
+  await alta.getByRole('button', { name: 'Crear reservorio' }).click();
+  await expect(consejo.page.getByTestId('aviso-ok')).toHaveText(`${NOMBRE_RESERVORIO} quedó creado`);
 
-  // El operador entra directo a Mediciones (no tiene padrón) y registra la lectura.
+  // El operador no tiene padrón; en «El agua» elige el reservorio y anota la lectura.
   const operador = await persona(browser, OPERADOR);
-  await expect(operador.page.getByRole('button', { name: 'Asociados' })).toHaveCount(0);
-  await expect(operador.page.getByRole('heading', { name: 'Mediciones de cloro residual' })).toBeVisible();
+  await expect(operador.page.getByRole('navigation', { name: 'Secciones del personal' }).getByRole('link', { name: 'Asociados' })).toHaveCount(0);
+  await abrirAgua(operador.page, NOMBRE_RESERVORIO);
   await expect(operador.page.getByTestId('aviso-no-dictamen')).toContainText('no dictamina la calidad del agua');
-  await operador.page.locator('select[name="reservorio"]').selectOption({ label: NOMBRE_RESERVORIO });
-  await operador.page.getByLabel('Método').selectOption('comparador-dpd');
-  await operador.page.getByLabel('Cloro residual (mg/L)').fill('0,65');
   await operador.page.getByRole('button', { name: 'Registrar lectura' }).click();
-  await expect(operador.page.getByText('Lectura de 0,65 mg/L registrada.')).toBeVisible();
-  const filaOperador = operador.page.getByTestId('tabla-mediciones').getByRole('row').nth(1);
-  await expect(filaOperador).toContainText('0,65 mg/L');
-  await expect(filaOperador).toContainText('Comparador de color con reactivo DPD');
+  const lectura = operador.page.getByRole('dialog', { name: 'Nueva lectura' });
+  await expect(lectura.getByRole('button', { name: NOMBRE_RESERVORIO })).toHaveAttribute('aria-pressed', 'true');
+  await lectura.getByRole('button', { name: 'Comparador de color con reactivo DPD' }).click();
+  await lectura.getByLabel('Cloro residual (mg/L)').fill('0,65');
+  await lectura.getByRole('button', { name: 'Guardar lectura' }).click();
+  await expect(operador.page.getByTestId('aviso-ok')).toHaveText('Lectura guardada');
+  const filaOperador = operador.page.getByTestId('tabla-mediciones').locator('.fam').first();
+  await expect(filaOperador).toContainText('0.65 mg/L');
+  await expect(filaOperador).toContainText('Comparador DPD');
   await expect(filaOperador).toContainText('Vigente');
+  await expect(operador.page.getByTestId('aviso-no-dictamen')).toContainText('no califica el agua');
 
-  // El consejo, en su navegador, selecciona el reservorio y consulta; no ve el formulario de registro.
+  // El consejo, en su navegador, consulta el reservorio; no puede registrar lecturas.
   await consejo.page.reload();
-  await abrirMediciones(consejo.page);
-  await consejo.page.locator('select[name="reservorio"]').selectOption({ label: NOMBRE_RESERVORIO });
-  await expect(consejo.page.getByTestId('tabla-mediciones')).toContainText('0,65 mg/L');
-  await expect(consejo.page.getByRole('form', { name: 'Registrar medición' })).toHaveCount(0);
+  await abrirAgua(consejo.page, NOMBRE_RESERVORIO);
+  await expect(consejo.page.getByTestId('tabla-mediciones')).toContainText('0.65 mg/L');
+  await expect(consejo.page.getByRole('button', { name: 'Registrar lectura' })).toHaveCount(0);
 
-  // El tesorero también consulta, sin formulario ni alta de reservorios.
+  // El tesorero también consulta, sin registrar ni crear reservorios.
   const tesorero = await persona(browser, TESORERO);
-  await abrirMediciones(tesorero.page);
-  await tesorero.page.locator('select[name="reservorio"]').selectOption({ label: NOMBRE_RESERVORIO });
-  await expect(tesorero.page.getByTestId('tabla-mediciones')).toContainText('0,65 mg/L');
-  await expect(tesorero.page.getByRole('form', { name: 'Registrar medición' })).toHaveCount(0);
-  await expect(tesorero.page.getByRole('form', { name: 'Crear reservorio' })).toHaveCount(0);
+  await abrirAgua(tesorero.page, NOMBRE_RESERVORIO);
+  await expect(tesorero.page.getByTestId('tabla-mediciones')).toContainText('0.65 mg/L');
+  await expect(tesorero.page.getByRole('button', { name: 'Registrar lectura' })).toHaveCount(0);
+  await expect(tesorero.page.getByRole('button', { name: 'Nuevo reservorio' })).toHaveCount(0);
 
   for (const p of [consejo, operador, tesorero]) await p.contexto.close();
 });
@@ -61,10 +65,11 @@ test('el consejo de otra JASS no ve reservorios ni mediciones, y el servidor le 
   }, tokenConsejo);
 
   const otra = await persona(browser, CONSEJO_B);
-  await abrirMediciones(otra.page);
+  await abrirAgua(otra.page);
   await expect(otra.page.getByTestId('sin-reservorios')).toBeVisible();
-  expect(await otra.page.textContent('body')).not.toContain(NOMBRE_RESERVORIO);
-  expect(await otra.page.textContent('body')).not.toContain('0,65');
+  const cuerpo = await otra.page.textContent('body');
+  expect(cuerpo).not.toContain(NOMBRE_RESERVORIO);
+  expect(cuerpo).not.toMatch(/0[.,]65/);
 
   const tokenOtra = await tokenDe(otra.page);
   const respuestas = await otra.page.evaluate(async ({ id, token }) => {

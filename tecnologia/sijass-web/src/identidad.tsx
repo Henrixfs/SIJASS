@@ -1,8 +1,8 @@
-import { BookOpen, ClipboardList, Droplet, FlaskConical, LayoutGrid, Landmark, Mountain, UserCog, UserRound, UsersRound, Wallet } from 'lucide-react';
+import { BookOpen, ClipboardList, Droplet, FlaskConical, LayoutGrid, Landmark, Megaphone, Mountain, UserCog, UserRound, UsersRound, Wallet } from 'lucide-react';
 
 const iconos = {
   inicio: LayoutGrid, asociados: UsersRound, equipo: UserCog, cuotas: Wallet, reservorios: Landmark,
-  mediciones: FlaskConical, campo: ClipboardList, asistente: BookOpen, perfil: UserRound,
+  mediciones: FlaskConical, campo: ClipboardList, asistente: BookOpen, perfil: UserRound, reportes: Megaphone,
 };
 
 export function IconoModulo({ id }: { id: string }) {

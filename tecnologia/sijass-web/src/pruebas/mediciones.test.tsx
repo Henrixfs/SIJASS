@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, describe, expect, test, vi } from 'vitest';
 import { App } from '../App';
@@ -8,7 +8,7 @@ import { ahoraEnLima, formatearInstante, parsearValor, tomadaEnLima } from '../l
 
 // Vite transforma los módulos diferidos al primer import. Esa preparación pertenece al setup de jsdom.
 beforeAll(async () => {
-  await Promise.all([import('../paginas/Personal'), import('../paginas/Mediciones')]);
+  await Promise.all([import('../paginas/Personal')]);
 });
 
 const json = (estado: number, cuerpo?: unknown) =>
@@ -36,6 +36,7 @@ function montar(rol: string, opciones: { reservorios?: unknown[]; mediciones?: u
     if (r === `/v1/reservorios/${RES_ID}/mediciones`) return opciones.historial403 ? json(403, { codigo: 'acceso-denegado', mensaje: 'Acceso denegado' }) : json(200, { mediciones: opciones.mediciones ?? [medicion] });
     if (r === '/v1/mediciones' && metodo === 'POST') return json(201, { medicionId: 'm2', revision: 1, registradaEn: '2026-11-19T15:00:00.000Z' });
     if (r === '/v1/asociados') return json(200, { asociados: [] });
+    if (r.startsWith('/v1/incidencias')) return json(200, { incidencias: [] });
     return json(404, { codigo: 'no-encontrado', mensaje: 'x' });
   });
   const usuario = userEvent.setup();
@@ -67,58 +68,59 @@ describe('conversión de lo que escribe la persona', () => {
   });
 });
 
-describe('interfaz de mediciones', () => {
-  test('el operador puede revisar el catálogo y abrir el formulario de campo desde el menú', async () => {
-    const { usuario } = montar('operador');
-    await ingresar(usuario);
-    await usuario.click(await screen.findByRole('link', { name: 'Reservorios' }));
-    expect(await screen.findByText('Reservorio Central')).toBeVisible();
-    await usuario.click(screen.getByRole('link', { name: 'Operaciones de campo' }));
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    expect(await screen.findByRole('form', { name: 'Registrar medición' })).toBeInTheDocument();
-  });
+const irAlAgua = async (usuario: ReturnType<typeof userEvent.setup>) => {
+  await usuario.click(await screen.findByRole('link', { name: 'El agua' }));
+  await screen.findByRole('heading', { name: 'El agua' });
+};
+const abrirLectura = async (usuario: ReturnType<typeof userEvent.setup>) => {
+  await usuario.click(await screen.findByRole('button', { name: 'Registrar lectura' }));
+  return within(await screen.findByRole('dialog', { name: 'Nueva lectura' }));
+};
 
-  test('el operador solo ve la pestaña Mediciones, con el formulario y el aviso de no dictamen', async () => {
+describe('interfaz de «El agua»', () => {
+  test('el operador ve el reservorio con su foto, sus lecturas y el aviso de no dictamen; no ve el padrón', async () => {
     const { usuario } = montar('operador');
     await ingresar(usuario);
-    expect(await screen.findByRole('heading', { name: 'Mediciones de cloro residual' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Asociados' })).not.toBeInTheDocument();
+    await irAlAgua(usuario);
+    expect(screen.getByRole('button', { name: /Reservorio Central/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByTestId('tabla-mediciones')).toHaveTextContent('0.65 mg/L');
+    expect(screen.getByTestId('tabla-mediciones')).toHaveTextContent('Comparador DPD');
+    expect(screen.getByTestId('aviso-no-dictamen')).toHaveTextContent('no califica el agua');
+    expect(screen.queryByRole('link', { name: 'Asociados' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Generar cuotas' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('aviso-no-dictamen')).toHaveTextContent('no dictamina la calidad del agua ni indica dosis');
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    expect(await screen.findByRole('form', { name: 'Registrar medición' })).toBeInTheDocument();
-    expect(await screen.findByText('0,65 mg/L')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nuevo reservorio' })).not.toBeInTheDocument();
   });
 
   test('registra la lectura con valor decimal, unidad, hora de Lima con desplazamiento e Idempotency-Key, y refresca el historial', async () => {
     const { usuario, llamadas } = montar('operador');
     await ingresar(usuario);
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    await screen.findByRole('form', { name: 'Registrar medición' });
-    await usuario.selectOptions(screen.getByLabelText('Método'), 'colorimetro');
-    await usuario.type(screen.getByLabelText('Cloro residual (mg/L)'), '0,8');
-    const toma = screen.getByLabelText(/Fecha y hora de la toma/);
+    await irAlAgua(usuario);
+    const cajon = await abrirLectura(usuario);
+    expect(cajon.getByRole('form', { name: 'Registrar medición' })).toBeInTheDocument();
+    expect(cajon.getByRole('button', { name: 'Reservorio Central' })).toHaveAttribute('aria-pressed', 'true');
+    await usuario.click(await cajon.findByRole('button', { name: 'Colorímetro' }));
+    await usuario.type(cajon.getByLabelText('Cloro residual (mg/L)'), '0,8');
+    const toma = cajon.getByLabelText(/Fecha y hora de la toma/);
     await usuario.clear(toma);
     await usuario.type(toma, '2026-11-19T09:30');
-    await usuario.click(screen.getByRole('button', { name: 'Registrar lectura' }));
-    await screen.findByText('Lectura de 0,8 mg/L registrada.');
+    await usuario.click(cajon.getByRole('button', { name: 'Guardar lectura' }));
+    expect(await screen.findByTestId('aviso-ok')).toHaveTextContent('Lectura guardada');
     const envio = llamadas.find((l) => l.metodo === 'POST' && l.ruta === '/v1/mediciones')!;
     expect(envio.cuerpo).toEqual({ reservorioId: RES_ID, metodo: 'colorimetro', valor: 0.8, unidad: 'mg/L', tomadaEn: '2026-11-19T09:30:00-05:00' });
     expect(envio.cabeceras['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/);
-    expect(llamadas.filter((l) => l.ruta === `/v1/reservorios/${RES_ID}/mediciones`).length).toBeGreaterThanOrEqual(2);
+    await waitFor(() => expect(llamadas.filter((l) => l.ruta === `/v1/reservorios/${RES_ID}/mediciones`).length).toBeGreaterThanOrEqual(2));
   });
 
-  test('un valor inválido o sin método no envía nada y explica el error', async () => {
+  test('un valor inválido no envía nada y lo explica junto al campo', async () => {
     const { usuario, llamadas } = montar('operador');
     await ingresar(usuario);
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    await screen.findByRole('form', { name: 'Registrar medición' });
-    await usuario.type(screen.getByLabelText('Cloro residual (mg/L)'), '1.2345');
-    await usuario.click(screen.getByRole('button', { name: 'Registrar lectura' }));
-    expect(await screen.findByTestId('aviso-error')).toHaveTextContent('método');
-    await usuario.selectOptions(screen.getByLabelText('Método'), 'comparador-dpd');
-    await usuario.click(screen.getByRole('button', { name: 'Registrar lectura' }));
-    expect(await screen.findByTestId('aviso-error')).toHaveTextContent('valor en mg/L');
+    await irAlAgua(usuario);
+    const cajon = await abrirLectura(usuario);
+    await cajon.findByRole('button', { name: 'Colorímetro' });
+    await usuario.type(cajon.getByLabelText('Cloro residual (mg/L)'), '1.2345');
+    await usuario.click(cajon.getByRole('button', { name: 'Guardar lectura' }));
+    expect(await cajon.findByRole('alert')).toHaveTextContent('Escribe un número de 0 en adelante');
+    expect(cajon.getByLabelText('Cloro residual (mg/L)')).toHaveAttribute('aria-invalid', 'true');
     expect(llamadas.some((l) => l.metodo === 'POST' && l.ruta === '/v1/mediciones')).toBe(false);
   });
 
@@ -131,56 +133,57 @@ describe('interfaz de mediciones', () => {
       if (r === '/v1/reservorios') return json(200, { reservorios: [{ id: RES_ID, nombre: 'Reservorio Central' }] });
       if (r === '/v1/mediciones/catalogo') return json(200, catalogo);
       if (r === `/v1/reservorios/${RES_ID}/mediciones`) return json(200, { mediciones: [] });
+      if (r.startsWith('/v1/incidencias')) return json(200, { incidencias: [] });
       if (r === '/v1/mediciones' && init?.method === 'POST') return json(422, { codigo: 'toma-posterior-a-recepcion', mensaje: 'toma-posterior-a-recepcion' });
       return json(404, {});
     });
     const usuario = userEvent.setup();
     render(<App api={new ClienteApi(peticion as unknown as typeof fetch)} />);
     await ingresar(usuario);
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    await screen.findByRole('form', { name: 'Registrar medición' });
-    await usuario.selectOptions(screen.getByLabelText('Método'), 'comparador-dpd');
-    await usuario.type(screen.getByLabelText('Cloro residual (mg/L)'), '0.5');
-    await usuario.click(screen.getByRole('button', { name: 'Registrar lectura' }));
-    expect(await screen.findByTestId('aviso-error')).toHaveTextContent('toma-posterior-a-recepcion');
-    expect(screen.getByLabelText('Cloro residual (mg/L)')).toHaveValue('0.5');
+    await irAlAgua(usuario);
+    expect(await screen.findByText('Sin lecturas todavía', { selector: 'b' })).toBeVisible();
+    const cajon = await abrirLectura(usuario);
+    await cajon.findByRole('button', { name: 'Colorímetro' });
+    await usuario.type(cajon.getByLabelText('Cloro residual (mg/L)'), '0.5');
+    await usuario.click(cajon.getByRole('button', { name: 'Guardar lectura' }));
+    expect(await cajon.findByTestId('aviso-error')).toHaveTextContent('toma-posterior-a-recepcion');
+    expect(cajon.getByLabelText('Cloro residual (mg/L)')).toHaveValue('0.5');
   });
 
-  test('el consejo ve el historial, no el formulario de registro, y puede crear reservorios', async () => {
+  test('el Consejo ve el historial, no registra lecturas y puede crear reservorios', async () => {
     const { usuario, llamadas } = montar('consejo');
     await ingresar(usuario);
-    await screen.findByRole('heading', { name: 'Asociados' }); // el consejo entra al padrón por defecto
-    await usuario.click(screen.getByRole('link', { name: 'Mediciones' }));
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    expect(await screen.findByText('0,65 mg/L')).toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'Registrar medición' })).not.toBeInTheDocument();
-    await usuario.type(screen.getByLabelText('Nuevo reservorio'), 'Reservorio Norte');
-    await usuario.click(screen.getByRole('button', { name: 'Crear reservorio' }));
-    await screen.findByText('Reservorio creado.');
+    await irAlAgua(usuario);
+    expect(await screen.findByTestId('tabla-mediciones')).toHaveTextContent('0.65 mg/L');
+    expect(screen.queryByRole('button', { name: 'Registrar lectura' })).not.toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Nuevo reservorio' }));
+    const cajon = within(await screen.findByRole('dialog', { name: 'Nuevo reservorio' }));
+    await usuario.type(cajon.getByLabelText('Nombre del reservorio'), 'Reservorio Norte');
+    await usuario.click(cajon.getByRole('button', { name: 'Crear reservorio' }));
+    expect(await screen.findByTestId('aviso-ok')).toHaveTextContent('Reservorio Norte quedó creado');
     expect(llamadas.find((l) => l.metodo === 'POST' && l.ruta === '/v1/reservorios')!.cuerpo).toEqual({ nombre: 'Reservorio Norte' });
   });
 
-  test('el tesorero ve el historial sin formulario ni alta de reservorios', async () => {
+  test('Tesorería ve el historial sin registrar lecturas ni crear reservorios', async () => {
     const { usuario } = montar('tesorero');
     await ingresar(usuario);
-    await screen.findByRole('heading', { name: 'Asociados' });
-    await usuario.click(screen.getByRole('link', { name: 'Mediciones' }));
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    await screen.findByText('0,65 mg/L');
-    expect(screen.queryByRole('form', { name: 'Registrar medición' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('form', { name: 'Crear reservorio' })).not.toBeInTheDocument();
+    await irAlAgua(usuario);
+    expect(await screen.findByTestId('tabla-mediciones')).toHaveTextContent('0.65 mg/L');
+    expect(screen.queryByRole('button', { name: 'Registrar lectura' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nuevo reservorio' })).not.toBeInTheDocument();
   });
 
   test('sin reservorios se explica qué hacer según el rol', async () => {
     const { usuario } = montar('operador', { reservorios: [] });
     await ingresar(usuario);
-    expect(await screen.findByTestId('sin-reservorios')).toHaveTextContent('Pida al consejo');
+    await irAlAgua(usuario);
+    expect(await screen.findByTestId('sin-reservorios')).toHaveTextContent('Pide al Consejo');
   });
 
   test('si el servidor niega el historial (403) se muestra un aviso y ningún dato', async () => {
     const { usuario } = montar('operador', { historial403: true });
     await ingresar(usuario);
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
+    await irAlAgua(usuario);
     expect(await screen.findByText('Su rol no tiene acceso a este historial.')).toBeInTheDocument();
     expect(screen.queryByTestId('tabla-mediciones')).not.toBeInTheDocument();
   });
@@ -188,11 +191,12 @@ describe('interfaz de mediciones', () => {
   test('no existe ningún control de dosis ni de estimación por imagen', async () => {
     const { usuario } = montar('operador');
     await ingresar(usuario);
-    await usuario.selectOptions(await screen.findByLabelText('Reservorio'), RES_ID);
-    await screen.findByRole('form', { name: 'Registrar medición' });
+    await irAlAgua(usuario);
+    const cajon = await abrirLectura(usuario);
+    await cajon.findByRole('button', { name: 'Colorímetro' });
     const texto = document.body.textContent ?? '';
     expect(texto).not.toMatch(/dosis (recomendada|sugerida)|calcular dosis|subir foto|fotograf/i);
     expect(document.querySelector('input[type="file"]')).toBeNull();
-    await waitFor(() => expect(screen.getByTestId('aviso-no-dictamen')).toBeInTheDocument());
+    expect(cajon.getByText(/no mide ni califica el agua/)).toBeInTheDocument();
   });
 });

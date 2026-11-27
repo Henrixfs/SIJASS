@@ -1,4 +1,4 @@
-import type { Browser, Page } from '@playwright/test';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
 import { CLAVE_E2E, type Cuenta, type TipoDeAcceso } from './datos.js';
 
 const NOMBRE_BOTON: Record<TipoDeAcceso, string> = { asociado: 'Soy asociado', administrador: 'Soy administrador' };
@@ -23,6 +23,21 @@ export async function persona(browser: Browser, cuenta: Pick<Cuenta, 'documento'
   // Sin esperar el ingreso, una navegación inmediata cortaría la solicitud de inicio de sesión.
   await page.waitForURL(/\/(personal|portal|plataforma)$/);
   return { contexto, page };
+}
+
+/** Abre una sección del menú del personal (el menú se abre al pasar el puntero). */
+export async function irA(page: Page, seccion: string): Promise<void> {
+  await page.getByRole('navigation', { name: 'Secciones del personal' }).getByRole('link', { name: seccion, exact: true }).click();
+  await page.mouse.move(900, 400);
+}
+
+/** Abre la cuenta de un asociado desde el padrón: un cajón con su nombre. */
+export async function abrirCuenta(page: Page, documento: string, nombre: string): Promise<Locator> {
+  await irA(page, 'Asociados');
+  await page.getByTestId(`fila-${documento}`).getByRole('button', { name: 'Ver cuenta' }).click();
+  const cajon = page.getByRole('dialog', { name: nombre });
+  await expect(cajon).toBeVisible();
+  return cajon;
 }
 
 /** Lee un token de acceso nuevo desde la sesión del navegador, para probar la API como lo haría un cliente. */

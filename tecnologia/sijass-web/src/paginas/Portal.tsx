@@ -1,36 +1,37 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Clock, CalendarDays, Inbox, Info, House, TriangleAlert, UserRound, Wallet, WalletCards, X } from 'lucide-react';
+/**
+ * Portal de las familias (maqueta v3): un celular. Inicio con saldo y gotas, «Reportar un problema»,
+ * cuotas, pagos, perfil con avatar y el reporte en tres pasos. En una pantalla grande el celular se
+ * muestra sobre la laguna; en el celular ocupa toda la pantalla.
+ */
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react';
 import type { SaldoPortal, VistaCuota, VistaPago } from '../api/tipos';
-import { useApp } from '../contexto';
+import { mensajeDeError, useApp } from '../contexto';
 import { useCarga, useEnvio } from '../hooks';
 import { formatearSoles } from '../lib/dinero';
-import { fechaCorta, iniciales, periodoLargo, periodoTitulo, soloMes } from '../lib/periodos';
-import { Marca } from '../identidad';
-import { Importe } from '../Importe';
-import { Boton, Carga, Dialogo, ErrorConsulta, SinPermiso } from '../ui';
+import { ALCANCES, CATEGORIAS, ESTADO_FAMILIA, FRASES, fechaHora, textoEvento, type Alcance, type Categoria, type EventoIncidencia, type Incidencia } from '../lib/incidencias';
+import { horaLima } from '../lib/periodos';
+import { nuevoUuid } from '../lib/uuid';
+import { CANTIDAD_AVATARES } from '../altiplano/avatares';
+import { Av, Avisos, Bt, Cargando, Gotas, Ic, IconoCat, Olas, useAvisar, type NombreIcono } from '../v3/base';
+import { cuando, mesDe, primerNombre } from '../v3/datos';
+import { createPortal } from 'react-dom';
 import { CambiarClave } from './CambiarClave';
-import './portal.css';
 
-interface Datos {
-  saldo: SaldoPortal;
-  cuotas: VistaCuota[];
-  pagos: VistaPago[];
-}
+interface Datos { saldo: SaldoPortal; cuotas: VistaCuota[]; pagos: VistaPago[] }
 
-const RUTAS = {
-  inicio: '/portal',
-  pagos: '/portal/pagos',
-  historial: '/portal/historial',
-  reportes: '/portal/reportes',
-  perfil: '/portal/perfil',
-} as const;
+const RUTAS = { inicio: '/portal', cuotas: '/portal/cuotas', reportar: '/portal/reportar', pagos: '/portal/pagos', perfil: '/portal/perfil', reportes: '/portal/reportes' } as const;
 type Pantalla = keyof typeof RUTAS;
-
-const TITULOS: Record<Pantalla, string> = { inicio: 'Inicio', pagos: 'Estado de pagos', historial: 'Historial de pagos', reportes: 'Reportes', perfil: 'Mi perfil' };
+const ALIAS: Record<string, Pantalla> = { '/portal/historial': 'pagos' };
+const TITULOS: Record<Pantalla, string> = { inicio: 'Inicio', cuotas: 'Mis cuotas', reportar: 'Reportar un problema', pagos: 'Mis pagos', perfil: 'Mi perfil', reportes: 'Mis reportes' };
+const PESTANAS: Array<[Pantalla, NombreIcono, string]> = [['inicio', 'home', 'Inicio'], ['cuotas', 'wallet', 'Cuotas'], ['reportar', 'megafono', 'Reportar'], ['pagos', 'recibo', 'Pagos'], ['perfil', 'persona', 'Perfil']];
+const ICONO_ALCANCE: Record<Alcance, NombreIcono> = { individual: 'a-casa', 'varias-viviendas': 'a-casas', general: 'a-zona', desconocido: 'a-nose' };
+const LUGARES = ['Mi casa', 'Camino principal', 'Cerca de la escuela'];
+const LIMITE_FOTO = 5 * 1024 * 1024;
+const CLAVE_AVATAR = 'sijass.avatar-portal';
 
 function pantallaDe(ruta: string): Pantalla | null {
   const limpia = ruta.replace(/\/+$/, '') || '/portal';
-  return (Object.keys(RUTAS) as Pantalla[]).find((p) => RUTAS[p] === limpia) ?? null;
+  return ALIAS[limpia] ?? (Object.keys(RUTAS) as Pantalla[]).find((p) => RUTAS[p] === limpia) ?? null;
 }
 
 function Enlace({ a, className, children, ...resto }: { a: string; className?: string; children: ReactNode; 'aria-current'?: 'page'; 'aria-label'?: string }) {
@@ -43,277 +44,326 @@ function Enlace({ a, className, children, ...resto }: { a: string; className?: s
   return <a href={a} className={className} onClick={alPulsar} {...resto}>{children}</a>;
 }
 
-function Ondas() {
-  return (
-    <svg className="portal-ondas" viewBox="0 0 390 200" preserveAspectRatio="xMaxYMax slice" aria-hidden="true" focusable="false">
-      <g fill="none" stroke="#2cc5ae" strokeLinecap="round">
-        <path d="M60 190 C120 170 190 175 250 130 C300 92 340 100 390 40" strokeWidth="1.6" />
-        <path d="M80 200 C150 185 215 190 275 150 C320 118 360 125 390 80" strokeWidth="1" strokeOpacity=".5" />
-      </g>
-      <circle cx="268" cy="118" r="11" fill="#2cc5ae" fillOpacity=".2" />
-      <circle cx="268" cy="118" r="4" fill="#44e0c4" />
-      <circle cx="348" cy="62" r="3" fill="#9af0dd" />
-    </svg>
-  );
+/** Barra de estado del celular: decorativa, solo en el marco de pantalla grande. */
+const Hora = () => <div className="hora" aria-hidden="true"><span>{horaLima(new Date()).replace(/^0/, '')}</span><span>▂▄▆ ▮</span></div>;
+
+/** El avatar lo elige cada persona; se recuerda en este celular. */
+function useMiAvatar(): [number, (n: number) => void] {
+  const [n, setN] = useState(() => {
+    try { const v = Number(localStorage.getItem(CLAVE_AVATAR)); return Number.isInteger(v) && v >= 0 && v < CANTIDAD_AVATARES ? v : 0; } catch { return 0; }
+  });
+  return [n, (v) => { setN(v); try { localStorage.setItem(CLAVE_AVATAR, String(v)); } catch { /* solo esta sesión */ } }];
 }
 
-function Estado({ tipo, titulo, children }: { tipo: 'info' | 'ok' | 'error' | 'vacio'; titulo: string; children: ReactNode }) {
-  const Icono = { info: Info, ok: Check, error: TriangleAlert, vacio: Inbox }[tipo];
+function CabSimple({ titulo, atras, avatar }: { titulo: string; atras?: string; avatar: number }) {
   return (
-    <div className={`portal-estado ${tipo}`} role={tipo === 'error' ? 'alert' : 'status'}>
-      <span className="portal-estado-icono"><Icono size={18} aria-hidden="true" /></span>
-      <div><strong>{titulo}</strong><span>{children}</span></div>
+    <div className="p-top">
+      <Hora />
+      <div className="p-tit">
+        {atras && <Enlace a={atras} className="p-atras" aria-label="Volver"><Ic n="volver" /></Enlace>}
+        <h1 tabIndex={-1} data-titulo-pantalla>{titulo}</h1>
+        <Av indice={avatar} tam="s" />
+      </div>
+      <Olas />
     </div>
   );
 }
 
-function pendiente(cuotas: VistaCuota[]): VistaCuota | null {
-  return [...cuotas].filter((c) => c.pendienteCentimos > 0).sort((a, b) => a.periodo.localeCompare(b.periodo))[0] ?? null;
+function Avance({ estado }: { estado: Incidencia['estado'] }) {
+  const n = { registrada: 1, 'en-atencion': 2, cerrada: 3 }[estado];
+  return (
+    <ol className="avance" aria-label={`Avance: ${ESTADO_FAMILIA[estado]}`}>
+      {['Enviado', 'En atención', 'Atendido'].map((t, k) => <li key={t} className={k < n ? 'hecho' : ''}><i><Ic n={k < n ? 'check' : 'gota'} /></i>{t}</li>)}
+    </ol>
+  );
 }
 
-function NombreCuota({ c }: { c: VistaCuota }) {
-  return <>{periodoTitulo(c.periodo)}</>;
-}
+// ───────────────────────── Pantallas ─────────────────────────
 
-function EstadoCuota({ c }: { c: VistaCuota }) {
-  const texto = c.estado === 'pagada' ? 'Pagada' : c.estado === 'parcial' ? 'Pago parcial' : 'Pendiente';
-  return <span className={`portal-estado-texto ${c.estado === 'pagada' ? 'ok' : 'aviso'}`}>{texto}</span>;
-}
-
-function Inicio({ datos }: { datos: Datos }) {
+function Inicio({ datos, reportes, avatar }: { datos: Datos; reportes: Incidencia[] | null; avatar: number }) {
   const { sesion } = useApp();
-  const primero = datos.saldo.asociado.nombre.trim().split(/\s+/)[0] ?? '';
-  const proxima = pendiente(datos.cuotas);
-  const recientes = datos.pagos.slice(0, 3);
-  const [detalle, setDetalle] = useState<VistaCuota | null>(null);
+  const s = datos.saldo.saldoCentimos;
+  const conSaldo = datos.cuotas.filter((c) => c.pendienteCentimos > 0).length;
   return (
     <>
-      <h1 tabIndex={-1} data-titulo-pantalla>Hola, <span data-testid="nombre-asociado">{primero}</span></h1>
-      <p className="portal-sub" data-testid="portal-jass">{sesion?.jass ? `${sesion.jass.nombre} · ` : ''}Tu cuenta de agua al periodo {datos.saldo.periodoActual}.</p>
-      {datos.saldo.asociado.estado === 'baja' && <Estado tipo="info" titulo="Cuenta dada de baja">Solo puedes consultar tu historial.</Estado>}
-      <section className="portal-tarjeta cuota-inicio" aria-label="Cuota pendiente">
-        {proxima ? (
-          <>
-            <div className="cuota-inicio-cabecera">
-              <span className="portal-icono"><WalletCards size={20} aria-hidden="true" /></span>
-              <div><strong>Cuota de {soloMes(proxima.periodo)}</strong><span>{periodoTitulo(proxima.periodo)}</span></div>
-              <span className="portal-chip aviso"><i aria-hidden="true" />{proxima.estado === 'parcial' ? 'Pago parcial' : 'Pendiente'}</span>
+      <div className="cab-m">
+        <div className="img" role="img" aria-label="Laguna 69, Áncash: foto referencial" /><div className="v" /><Hora />
+        <div className="t"><Av indice={avatar} tam="l" /><div><h1 tabIndex={-1} data-titulo-pantalla>Hola, <span data-testid="nombre-asociado">{primerNombre(datos.saldo.asociado.nombre)}</span></h1><p data-testid="portal-jass">{sesion?.jass?.nombre ?? 'Tu JASS'}</p></div></div>
+        <Olas />
+      </div>
+      <div className="p-scroll sube">
+        <div className="estado">
+          <span className={`chip ${s > 0 ? 'pen' : 'ok'}`}><Ic n={s > 0 ? 'gota' : 'check'} />{s > 0 ? `Tienes ${conSaldo} ${conSaldo === 1 ? 'cuota' : 'cuotas'} por pagar` : 'Estás al día'}</span>
+          <div className="n" data-testid="saldo">{formatearSoles(Math.max(0, s))}</div>
+          {s < 0 && <p data-testid="a-favor">Saldo a tu favor: {formatearSoles(-s)}</p>}
+          {datos.saldo.asociado.estado === 'baja' && <p>Cuenta dada de baja: solo puedes consultar tu historial.</p>}
+          <Gotas cuotas={datos.cuotas} />
+        </div>
+        <Enlace a={RUTAS.reportar} className="reportar"><span className="r-i"><Ic n="megafono" /></span><span><b>Reportar un problema</b><small>Fuga, agua turbia, sin agua…</small></span><Ic n="flecha" /></Enlace>
+        <div className="lista-m">
+          <h2 className="h3">Mis reportes {reportes && reportes.length > 0 && <Enlace a={RUTAS.reportes} className="ver-todo">Ver todos</Enlace>}</h2>
+          {reportes === null ? <Cargando /> : reportes.length === 0 ? <p className="p-nota">Todavía no has reportado nada.</p> : reportes.slice(0, 2).map((i) => (
+            <Enlace key={i.id} a={RUTAS.reportes} className="p-inc"><IconoCat categoria={i.categoria} tam="s" /><span><b>{CATEGORIAS[i.categoria].texto}</b><small>{cuando(i.creadaEn)}</small></span><span className={`chip e-${i.estado}`}>{ESTADO_FAMILIA[i.estado]}</span></Enlace>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Cuotas({ datos, avatar }: { datos: Datos; avatar: number }) {
+  const ordenadas = [...datos.cuotas].sort((a, b) => b.periodo.localeCompare(a.periodo));
+  return (
+    <>
+      <CabSimple titulo="Mis cuotas" avatar={avatar} />
+      <div className="p-scroll">
+        <div className="estado plano"><span className="etq">Saldo</span><div className="n" data-testid="saldo">{formatearSoles(Math.max(0, datos.saldo.saldoCentimos))}</div><Gotas cuotas={datos.cuotas} /></div>
+        <div className="lista-m" data-testid="portal-cuotas">
+          {ordenadas.length === 0 && <p className="p-nota">Todavía no tienes cuotas. Cuando tu JASS genere una, la verás aquí.</p>}
+          {ordenadas.map((c) => (
+            <div className="fam" key={c.id}>
+              <span className={`icono ${c.estado === 'pagada' ? '' : 'pen'}`}><Ic n={c.estado === 'pagada' ? 'check' : 'gota'} /></span>
+              <div><b>{mesDe(c.periodo)} {c.periodo.slice(0, 4)}</b><small>{c.estado === 'pagada' ? 'Pagada' : c.estado === 'parcial' ? `Parcial: faltan ${formatearSoles(c.pendienteCentimos)}` : 'Pendiente'}</small></div>
+              <span className="m">{formatearSoles(c.importeCentimos)}</span>
             </div>
-            <div className="cuota-inicio-pie">
-              <div><strong className="portal-monto"><Importe centimos={proxima.pendienteCentimos} /></strong><span>Por pagar</span></div>
-              <Boton variante="primario" onClick={() => setDetalle(proxima)}>Ver cuota</Boton>
+          ))}
+        </div>
+        <p className="p-nota" style={{ padding: '12px 22px' }}>Coordina el pago y el comprobante con tu JASS.</p>
+      </div>
+    </>
+  );
+}
+
+function Pagos({ datos, avatar }: { datos: Datos; avatar: number }) {
+  return (
+    <>
+      <CabSimple titulo="Mis pagos" avatar={avatar} />
+      <div className="p-scroll">
+        <div className="lista-m" data-testid="portal-pagos">
+          {datos.pagos.length === 0 && <p className="p-nota">Todavía no hay pagos registrados.</p>}
+          {datos.pagos.map((p) => (
+            <div className="fam" key={p.id} data-testid={`portal-pago-${p.comprobante}`}>
+              <span className={`icono ${p.estado === 'vigente' ? '' : 'pen'}`}><Ic n={p.estado === 'vigente' ? 'check' : 'revertir'} /></span>
+              <div><b>{mesDe(p.periodo)}</b><small>{cuando(p.pagadoEn)} · {p.comprobante}{p.estado === 'vigente' ? '' : ' · revertido'}</small></div>
+              <span className="m">{formatearSoles(p.importeCentimos)}</span>
             </div>
-          </>
-        ) : (
-          <div className="cuota-inicio-cabecera">
-            <span className="portal-icono ok"><Check size={20} aria-hidden="true" /></span>
-            <div><strong>Estás al día</strong><span>No tienes cuotas pendientes.</span></div>
-          </div>
-        )}
-      </section>
-      <h2>Accesos rápidos</h2>
-      <div className="portal-accesos">
-        <Enlace a={RUTAS.reportes} className="portal-acceso"><span className="portal-icono aviso"><TriangleAlert size={20} aria-hidden="true" /></span>Reportar</Enlace>
-        <Enlace a={RUTAS.historial} className="portal-acceso"><span className="portal-icono ok"><Clock size={20} aria-hidden="true" /></span>Historial</Enlace>
-        <Enlace a={RUTAS.perfil} className="portal-acceso"><span className="portal-icono info"><UserRound size={20} aria-hidden="true" /></span>Mi perfil</Enlace>
+          ))}
+        </div>
+        {datos.pagos.some((p) => p.estado === 'revertido') && <p className="p-nota" style={{ padding: '12px 22px' }}>Los pagos revertidos se conservan; su importe vuelve al saldo.</p>}
       </div>
-      <h2>Actividad reciente</h2>
-      {recientes.length === 0
-        ? <Estado tipo="vacio" titulo="Sin pagos todavía">Cuando la JASS registre un pago, lo verás aquí.</Estado>
-        : (
-          <ul className="portal-lista" aria-label="Actividad reciente">
-            {recientes.map((p) => (
-              <li key={p.id}>
-                <span className={`portal-icono ${p.estado === 'vigente' ? 'ok' : 'neutro'}`}>{p.estado === 'vigente' ? <Check size={18} aria-hidden="true" /> : <Clock size={18} aria-hidden="true" />}</span>
-                <div><strong>Pago de {soloMes(p.periodo)} {p.estado === 'vigente' ? 'recibido' : 'revertido'}</strong></div>
-                <div className="portal-der"><strong>{formatearSoles(p.importeCentimos)}</strong><span>{fechaCorta(p.pagadoEn)}</span></div>
-              </li>
-            ))}
-          </ul>
-        )}
-      {detalle && <DetalleCuota cuota={detalle} cerrar={() => setDetalle(null)} />}
     </>
   );
 }
 
-function DetalleCuota({ cuota, cerrar }: { cuota: VistaCuota; cerrar: () => void }) {
-  const pagada = cuota.estado === 'pagada';
-  return (
-    <Dialogo titulo="Detalle de la cuota" cerrar={cerrar}>
-      <div className="portal-dialogo">
-        <p className="portal-sub">{periodoTitulo(cuota.periodo)}</p>
-        <dl className="portal-datos">
-          <div><dt>Importe de la cuota</dt><dd data-testid="detalle-importe">{formatearSoles(cuota.importeCentimos)}</dd></div>
-          <div><dt>Pagado</dt><dd>{formatearSoles(cuota.pagadoCentimos)}</dd></div>
-          <div><dt>Por pagar</dt><dd className={pagada ? '' : 'aviso'}>{formatearSoles(cuota.pendienteCentimos)}</dd></div>
-        </dl>
-        <Estado tipo={pagada ? 'ok' : 'info'} titulo={pagada ? 'Cuota pagada' : cuota.estado === 'parcial' ? 'Pago parcial' : 'Pago pendiente'}>
-          {pagada ? 'La JASS registró el pago completo de esta cuota.' : 'Coordina el pago y el comprobante con tu JASS.'}
-        </Estado>
-        <div className="portal-dialogo-pie"><Boton onClick={cerrar}><X size={16} aria-hidden="true" /> Cerrar</Boton></div>
-      </div>
-    </Dialogo>
-  );
-}
-
-function Pagos({ datos }: { datos: Datos }) {
-  const { saldo, cuotas } = datos;
-  const debe = saldo.saldoCentimos > 0;
-  const proxima = pendiente(cuotas);
-  const ordenadas = [...cuotas].sort((a, b) => b.periodo.localeCompare(a.periodo));
-  const [detalle, setDetalle] = useState<VistaCuota | null>(null);
-  return (
-    <>
-      <h1 tabIndex={-1} data-titulo-pantalla>Estado de pagos</h1>
-      <p className="portal-sub">Tus cuotas de agua.</p>
-      <section className={`portal-saldo ${debe ? 'debe' : 'aldia'}`} aria-label="Saldo">
-        <Ondas />
-        <span className="portal-saldo-etiqueta"><span className="portal-icono-claro"><Wallet size={18} aria-hidden="true" /></span>{debe ? 'Saldo exigible' : 'Estás al día'}</span>
-        <strong data-testid="saldo"><Importe centimos={Math.max(0, saldo.saldoCentimos)} /></strong>
-        {saldo.saldoCentimos < 0 && <span className="portal-saldo-linea" data-testid="a-favor">Saldo a su favor: {formatearSoles(-saldo.saldoCentimos)}</span>}
-        <span className="portal-saldo-linea">{proxima ? `Cuota de ${periodoLargo(proxima.periodo)}` : `Al periodo ${saldo.periodoActual}`}</span>
-        {proxima && <span className="portal-chip claro"><i aria-hidden="true" />Pendiente de pago</span>}
-      </section>
-      <div className="portal-fila-titulo">
-        <h2 id="portal-cuotas">Mis cuotas</h2>
-        <Enlace a={RUTAS.historial} className="portal-boton-enlace">Ver historial</Enlace>
-      </div>
-      {ordenadas.length === 0
-        ? <Estado tipo="vacio" titulo="Todavía no tienes cuotas">Cuando tu JASS genere una cuota, la verás aquí.</Estado>
-        : (
-          <ul className="portal-lista" aria-labelledby="portal-cuotas" data-testid="portal-cuotas">
-            {ordenadas.map((c) => (
-              <li key={c.id}>
-                <button type="button" className="portal-fila-boton" onClick={() => setDetalle(c)} aria-label={`Ver detalle de la cuota de ${periodoTitulo(c.periodo)}`}>
-                  <span className={`portal-icono ${c.estado === 'pagada' ? 'ok' : 'aviso'}`}>{c.estado === 'pagada' ? <Check size={18} aria-hidden="true" /> : <CalendarDays size={18} aria-hidden="true" />}</span>
-                  <span className="portal-texto"><strong><NombreCuota c={c} /></strong><span>Cuota de agua</span></span>
-                  <span className="portal-der"><strong>{formatearSoles(c.importeCentimos)}</strong><EstadoCuota c={c} /></span>
-                  <ChevronRight className="portal-flecha" size={16} aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      <Estado tipo="info" titulo="Registro de pagos">Coordina el pago y el comprobante con tu JASS.</Estado>
-      {detalle && <DetalleCuota cuota={detalle} cerrar={() => setDetalle(null)} />}
-    </>
-  );
-}
-
-function Historial({ datos }: { datos: Datos }) {
-  const [rango, setRango] = useState<'seis' | 'todo'>('seis');
-  const [estado, setEstado] = useState<'todos' | VistaPago['estado']>('todos');
-  const limite = new Date();
-  limite.setMonth(limite.getMonth() - 6);
-  const filtrados = datos.pagos.filter((p) => (estado === 'todos' || p.estado === estado) && (rango === 'todo' || new Date(p.pagadoEn) >= limite));
-  const hayRevertidos = datos.pagos.some((p) => p.estado === 'revertido');
-  return (
-    <>
-      <h1 tabIndex={-1} data-titulo-pantalla>Historial de pagos</h1>
-      <p className="portal-sub">Revisa tus pagos y sus comprobantes.</p>
-      <div className="portal-filtros">
-        <label><span className="solo-lectores">Periodo</span>
-          <select value={rango} onChange={(e) => setRango(e.target.value as 'seis' | 'todo')}>
-            <option value="seis">Últimos seis meses</option>
-            <option value="todo">Todo el historial</option>
-          </select>
-        </label>
-        <label><span className="solo-lectores">Estado</span>
-          <select value={estado} onChange={(e) => setEstado(e.target.value as typeof estado)}>
-            <option value="todos">Estado: todos</option>
-            <option value="vigente">Estado: vigente</option>
-            <option value="revertido">Estado: revertido</option>
-          </select>
-        </label>
-      </div>
-      <div className="portal-fila-titulo">
-        <h2 id="portal-pagos">Pagos registrados</h2>
-        <span className="portal-contador" aria-live="polite">{filtrados.length} {filtrados.length === 1 ? 'pago' : 'pagos'}</span>
-      </div>
-      {filtrados.length === 0
-        ? <Estado tipo="vacio" titulo="Sin pagos en este periodo">{datos.pagos.length === 0 ? 'Todavía no tienes pagos registrados.' : 'Selecciona otro periodo para ver tus comprobantes.'}</Estado>
-        : (
-          <ul className="portal-lista" aria-labelledby="portal-pagos" data-testid="portal-pagos">
-            {filtrados.map((p) => (
-              <li key={p.id} data-testid={`portal-pago-${p.comprobante}`}>
-                <span className={`portal-icono ${p.estado === 'vigente' ? 'ok' : 'neutro'}`}>{p.estado === 'vigente' ? <Wallet size={18} aria-hidden="true" /> : <Clock size={18} aria-hidden="true" />}</span>
-                <span className="portal-texto"><strong>Pago de {soloMes(p.periodo)}</strong><span>{fechaCorta(p.pagadoEn)} · {p.comprobante}</span></span>
-                <span className="portal-der"><strong className={p.estado === 'vigente' ? 'ok' : ''}>{formatearSoles(p.importeCentimos)}</strong><span className={`portal-estado-texto ${p.estado === 'vigente' ? 'ok' : ''}`}>{p.estado === 'vigente' ? 'Vigente' : 'Revertido'}</span></span>
-              </li>
-            ))}
-          </ul>
-        )}
-      {hayRevertidos && <Estado tipo="info" titulo="Pagos revertidos">Se conservan en el historial. El importe vuelve al saldo.</Estado>}
-    </>
-  );
-}
-
-function Reportes() {
-  return (
-    <>
-      <h1 tabIndex={-1} data-titulo-pantalla>Reportes</h1>
-      <p className="portal-sub">Avisa a tu JASS si tienes un problema con el servicio de agua.</p>
-      <Estado tipo="info" titulo="Próximamente">El envío y el seguimiento de reportes se activará cuando tu JASS habilite las incidencias. Mientras tanto, comunícate con tu JASS.</Estado>
-    </>
-  );
-}
-
-function Perfil({ datos }: { datos: Datos }) {
+function Perfil({ datos, avatar, elegirAvatar }: { datos: Datos; avatar: number; elegirAvatar: (n: number) => void }) {
   const { salir, sesion } = useApp();
-  const [confirmando, setConfirmando] = useState(false);
+  const avisar = useAvisar();
   const [cambiando, setCambiando] = useState(false);
   const { enviando, ejecutar } = useEnvio();
   const activo = datos.saldo.asociado.estado === 'activo';
-  const nombre = datos.saldo.asociado.nombre;
   return (
     <>
-      <h1 tabIndex={-1} data-titulo-pantalla>Mi perfil</h1>
-      <p className="portal-sub">Tus datos y el acceso a tu JASS.</p>
-      <section className="portal-tarjeta portal-identidad" aria-label="Asociado">
-        <span className="portal-avatar" aria-hidden="true">{iniciales(nombre)}</span>
-        <div>
-          <strong className="portal-nombre">{nombre}</strong>
-          <span>Asociado</span>
-          <span className={`portal-chip ${activo ? 'ok' : 'neutro'}`}><i aria-hidden="true" />{activo ? 'Acceso activo' : 'Cuenta dada de baja'}</span>
+      <CabSimple titulo="Mi perfil" avatar={avatar} />
+      <div className="p-scroll">
+        <div className="perfil-c">
+          <Av indice={avatar} tam="xl" />
+          <b>{datos.saldo.asociado.nombre}</b>
+          {sesion?.documento && <small>DNI <span data-testid="portal-documento">{sesion.documento}</span></small>}
+          <span className={`chip ${activo ? 'ok' : 'gris'}`}>{activo ? 'Acceso activo' : 'Cuenta dada de baja'}</span>
         </div>
-      </section>
-      <section className="portal-tarjeta" aria-labelledby="portal-datos">
-        <h2 id="portal-datos">Datos de mi cuenta</h2>
-        <dl className="portal-datos">
-          <div><dt>Nombre</dt><dd>{nombre}</dd></div>
-          {sesion?.documento && <div><dt>DNI</dt><dd data-testid="portal-documento">{sesion.documento}</dd></div>}
-          {sesion?.jass && <div><dt>JASS</dt><dd>{sesion.jass.nombre}</dd></div>}
-          <div><dt>Estado en el padrón</dt><dd>{activo ? 'Activo' : 'Baja'}</dd></div>
-          <div><dt>Periodo actual</dt><dd>{periodoTitulo(datos.saldo.periodoActual)}</dd></div>
-        </dl>
-      </section>
-      <Boton onClick={() => setCambiando(true)}>Cambiar mi clave</Boton>
-      {cambiando && <CambiarClave cerrar={() => setCambiando(false)} />}
-      <button type="button" className="portal-salir" onClick={() => setConfirmando(true)}><ArrowRight size={18} aria-hidden="true" />Cerrar sesión</button>
-      {confirmando && (
-        <Dialogo titulo="Cerrar sesión" cerrar={() => setConfirmando(false)}>
-          <div className="portal-dialogo">
-            <p className="portal-sub">Confirma si quieres salir de SIJASS.</p>
-            <Estado tipo="info" titulo="Tu sesión se cerrará">Podrás volver a ingresar con tu correo.</Estado>
-            <div className="portal-dialogo-pie">
-              <Boton onClick={() => setConfirmando(false)} disabled={enviando}>Cancelar</Boton>
-              <Boton variante="primario" disabled={enviando} onClick={() => void ejecutar(salir)}>{enviando ? 'Saliendo…' : 'Cerrar sesión'}</Boton>
-            </div>
+        <div className="lista-m av-p">
+          <h2 className="h3">Elige tu avatar</h2>
+          <div className="avatares" role="group" aria-label="Avatares">
+            {Array.from({ length: CANTIDAD_AVATARES }, (_, n) => (
+              <button key={n} type="button" aria-pressed={n === avatar} aria-label={`Avatar ${n + 1}`} onClick={() => { elegirAvatar(n); avisar('Avatar actualizado'); }}><Av indice={n} tam="m" /></button>
+            ))}
           </div>
-        </Dialogo>
+          <p className="nota">Se guarda en este celular.</p>
+        </div>
+        <div className="lista-m">
+          <dl className="p-datos">
+            {sesion?.jass && <div><dt>JASS</dt><dd>{sesion.jass.nombre}</dd></div>}
+            <div><dt>Estado en el padrón</dt><dd>{activo ? 'Activo' : 'Baja'}</dd></div>
+            <div><dt>Periodo actual</dt><dd>{mesDe(datos.saldo.periodoActual)} {datos.saldo.periodoActual.slice(0, 4)}</dd></div>
+          </dl>
+        </div>
+        <Bt clase="borde ancho p-salir" ic="candado" onClick={() => setCambiando(true)}>Cambiar mi clave</Bt>
+        {cambiando && createPortal(<CambiarClave cerrar={() => setCambiando(false)} />, document.body)}
+        <Bt clase="borde ancho p-salir" ic="salir" disabled={enviando} onClick={() => void ejecutar(salir)}>{enviando ? 'Saliendo…' : 'Salir'}</Bt>
+      </div>
+    </>
+  );
+}
+
+function HistorialPublico({ id }: { id: string }) {
+  const { api } = useApp();
+  const cargar = useCallback(() => api.solicitar<{ eventos: EventoIncidencia[] }>('GET', `/v1/incidencias/${id}/historial?limite=100`), [api, id]);
+  const { datos } = useCarga(cargar);
+  if (!datos) return null;
+  return <ol className="tiempo">{[...datos.eventos].reverse().map((e, n) => <li key={`${e.creadoEn}-${n}`}><b>{textoEvento(e, true)}</b><small>{fechaHora(e.creadoEn)}</small></li>)}</ol>;
+}
+
+function MisReportes({ reportes, error, avatar, recien }: { reportes: Incidencia[] | null; error: string | null; avatar: number; recien: string | null }) {
+  return (
+    <>
+      <CabSimple titulo="Mis reportes" atras={RUTAS.inicio} avatar={avatar} />
+      <div className="p-scroll">
+        {error && !reportes && <p className="p-aviso error" role="alert">No pudimos cargar tus reportes. {error}</p>}
+        {reportes === null && !error && <Cargando />}
+        {reportes?.length === 0 && <p className="p-nota" style={{ padding: 20 }}>Todavía no has reportado nada.</p>}
+        <ul className="mis-reportes" aria-label="Mis reportes" style={{ listStyle: 'none' }}>
+          {reportes?.slice(0, 10).map((i) => (
+            <li key={i.id} className={`rep-f ${i.id === recien ? 'nuevo' : ''}`} data-testid={`mi-reporte-${i.id}`}>
+              <header><IconoCat categoria={i.categoria} /><div><b>{CATEGORIAS[i.categoria].texto}</b><small>{i.ubicacion} · {cuando(i.creadaEn)}</small></div></header>
+              <Avance estado={i.estado} />
+              <p>«{i.descripcion}»</p>
+              <HistorialPublico id={i.id} />
+            </li>
+          ))}
+        </ul>
+        <Enlace a={RUTAS.reportar} className="bt teal ancho p-salir"><Ic n="megafono" />Nuevo reporte</Enlace>
+      </div>
+    </>
+  );
+}
+
+interface Borrador { paso: 1 | 2 | 3; categoria: Categoria | null; alcance: Alcance | null; ubicacion: string; descripcion: string; cuando: 'hoy' | 'ayer'; foto: File | null }
+const nuevoBorrador = (): Borrador => ({ paso: 1, categoria: null, alcance: null, ubicacion: 'Mi casa', descripcion: '', cuando: 'hoy', foto: null });
+
+function Reportar({ avatar, alEnviar }: { avatar: number; alEnviar: (i: Incidencia) => void }) {
+  const { api, navegar } = useApp();
+  const { enviando, ejecutar } = useEnvio();
+  const [b, setB] = useState<Borrador>(nuevoBorrador);
+  const [error, setError] = useState<string | null>(null);
+  const [enviado, setEnviado] = useState<{ incidencia: Incidencia; avisoFoto: string | null } | null>(null);
+  const [vistaFoto, setVistaFoto] = useState<string | null>(null);
+  const clave = useRef(nuevoUuid());
+  const titulo = useRef<HTMLHeadingElement>(null);
+  const preguntas = ['¿Qué está pasando?', '¿A quiénes afecta?', 'Cuéntanos un poco más'];
+  const ir = (cambios: Partial<Borrador>) => { setError(null); setB((x) => ({ ...x, ...cambios })); };
+  useEffect(() => { titulo.current?.focus({ preventScroll: true }); }, [b.paso, enviado]);
+  const urlFoto = useRef<string | null>(null);
+  useEffect(() => () => { if (urlFoto.current) URL.revokeObjectURL(urlFoto.current); }, []);
+  const ponerFoto = (f: File | null) => {
+    if (urlFoto.current) URL.revokeObjectURL(urlFoto.current);
+    urlFoto.current = f && typeof URL.createObjectURL === 'function' ? URL.createObjectURL(f) : null;
+    setVistaFoto(urlFoto.current);
+    ir({ foto: f });
+  };
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (!b.categoria || !b.alcance) return;
+    if (!b.ubicacion.trim()) return setError('Escribe dónde es.');
+    if (!b.descripcion.trim()) return setError('Toca una frase o escribe qué viste.');
+    const categoria = b.categoria;
+    const alcanceReportado = b.alcance;
+    await ejecutar(async () => {
+      setError(null);
+      const observada = new Date();
+      if (b.cuando === 'ayer') observada.setDate(observada.getDate() - 1);
+      try {
+        const incidencia = await api.solicitar<Incidencia>('POST', '/v1/incidencias', {
+          categoria, alcanceReportado, descripcion: b.descripcion.trim(), ubicacion: b.ubicacion.trim(), observadaEn: observada.toISOString(),
+        }, { 'Idempotency-Key': clave.current });
+        let avisoFoto: string | null = null;
+        if (b.foto) {
+          try {
+            await api.solicitar('PUT', `/v1/incidencias/${incidencia.id}/foto`, b.foto, { 'Idempotency-Key': nuevoUuid(), 'If-Match': String(incidencia.revision) });
+          } catch {
+            avisoFoto = 'Tu reporte se envió, pero la foto no se pudo subir. Puedes mostrarla a tu JASS.';
+          }
+        }
+        setEnviado({ incidencia, avisoFoto });
+        alEnviar(incidencia);
+      } catch (err) {
+        setError(mensajeDeError(err));
+      }
+    });
+  }
+
+  if (enviado) {
+    return (
+      <div className="p-hecho" role="status">
+        <Hora />
+        <span className="gota"><Ic n="check" className="grande" /></span>
+        <h1 ref={titulo} tabIndex={-1} data-titulo-pantalla>¡Enviado a tu JASS!</h1>
+        <p><b>{CATEGORIAS[enviado.incidencia.categoria].texto}</b></p>
+        <p>Aquí verás cómo avanza.</p>
+        {enviado.avisoFoto && <p className="aviso-foto" role="alert">{enviado.avisoFoto}</p>}
+        <Enlace a={RUTAS.reportes} className="bt agua ancho">Ver mi reporte</Enlace>
+        <Enlace a={RUTAS.inicio} className="bt claro ancho">Volver al inicio</Enlace>
+        <Olas />
+      </div>
+    );
+  }
+
+  const atras = () => (b.paso === 1 ? navegar(RUTAS.inicio) : ir({ paso: (b.paso - 1) as 1 | 2 }));
+  return (
+    <>
+      <div className="p-top paso-r">
+        <Hora />
+        <div className="p-tit">
+          <button type="button" className="p-atras" onClick={atras} aria-label={b.paso === 1 ? 'Cancelar el reporte' : 'Volver al paso anterior'}><Ic n="volver" /></button>
+          <div className="p-pasos" role="img" aria-label={`Paso ${b.paso} de 3`}>{[1, 2, 3].map((n) => <i key={n} className={n <= b.paso ? 'hecho' : ''} />)}</div>
+          <Av indice={avatar} tam="s" />
+        </div>
+        <h1 ref={titulo} tabIndex={-1} data-titulo-pantalla>{preguntas[b.paso - 1]}</h1>
+        <Olas />
+      </div>
+      {b.paso === 1 && (
+        <div className="p-scroll"><div className="cats" role="group" aria-label="Qué está pasando">
+          {(Object.keys(CATEGORIAS) as Categoria[]).map((c) => (
+            <button key={c} type="button" className="cat" aria-pressed={b.categoria === c} style={{ ['--c' as string]: CATEGORIAS[c].color }} onClick={() => ir({ categoria: c, paso: 2 })}>
+              <IconoCat categoria={c} tam="xl" /><b>{CATEGORIAS[c].texto}</b><small>{CATEGORIAS[c].ayuda}</small>
+            </button>
+          ))}
+        </div></div>
+      )}
+      {b.paso === 2 && (
+        <div className="p-scroll"><div className="alcs" role="group" aria-label="A quiénes afecta">
+          {(Object.keys(ALCANCES) as Alcance[]).map((a) => (
+            <button key={a} type="button" className="alc" aria-pressed={b.alcance === a} onClick={() => ir({ alcance: a, paso: 3 })}>
+              <span className="a-i"><Ic n={ICONO_ALCANCE[a]} /></span><b>{ALCANCES[a]}</b><Ic n="flecha" />
+            </button>
+          ))}
+        </div></div>
+      )}
+      {b.paso === 3 && b.categoria && (
+        <form className="p-scroll p-form" onSubmit={enviar} noValidate aria-label="Detalle del reporte">
+          <label htmlFor="reporte-donde">¿Dónde es?</label>
+          <div className="rapidas">{LUGARES.map((t) => <button key={t} type="button" onClick={() => ir({ ubicacion: t })}>{t}</button>)}</div>
+          <div className="campo"><input id="reporte-donde" maxLength={300} value={b.ubicacion} autoComplete="off" onChange={(e) => ir({ ubicacion: e.target.value })} /></div>
+          <label htmlFor="reporte-que">¿Qué viste?</label>
+          <div className="rapidas">{FRASES[b.categoria].map((t) => <button key={t} type="button" onClick={() => ir({ descripcion: t })}>{t}</button>)}</div>
+          <div className="campo alto"><textarea id="reporte-que" maxLength={2000} value={b.descripcion} placeholder="Toca una frase o escribe" onChange={(e) => ir({ descripcion: e.target.value })} /></div>
+          <span className="etq" id="reporte-cuando">¿Cuándo lo viste?</span>
+          <div className="segmentos" role="group" aria-labelledby="reporte-cuando">
+            {(['hoy', 'ayer'] as const).map((c) => <button key={c} type="button" aria-pressed={b.cuando === c} onClick={() => ir({ cuando: c })}>{c === 'hoy' ? 'Hoy' : 'Ayer'}</button>)}
+          </div>
+          <label className="foto-b">
+            {vistaFoto ? <><img src={vistaFoto} alt="Foto elegida" /><span>Cambiar foto</span></> : <><Ic n="camara" /><span>Agregar foto <small>(opcional)</small></span></>}
+            <input type="file" accept="image/jpeg,image/png" onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              if (f && (!/^image\/(jpeg|png)$/.test(f.type) || f.size > LIMITE_FOTO)) return setError('La foto debe ser JPG o PNG de hasta 5 MB.');
+              ponerFoto(f);
+            }} />
+          </label>
+          {error && <p className="error" role="alert">{error}</p>}
+          <Bt type="submit" clase="teal ancho enviar" ic="megafono" disabled={enviando}>{enviando ? 'Enviando…' : 'Enviar a mi JASS'}</Bt>
+        </form>
       )}
     </>
   );
 }
 
-const NAVEGACION: Array<{ id: Pantalla; nombre: string; Icono: typeof House }> = [
-  { id: 'inicio', nombre: 'Inicio', Icono: House },
-  { id: 'pagos', nombre: 'Pagos', Icono: Wallet },
-  { id: 'reportes', nombre: 'Reportes', Icono: TriangleAlert },
-  { id: 'perfil', nombre: 'Perfil', Icono: UserRound },
-];
+// ───────────────────────── Armazón ─────────────────────────
 
 export function Portal({ ruta = '/portal' }: { ruta?: string }) {
+  return <div className="v3"><Avisos><PortalCelular ruta={ruta} /></Avisos></div>;
+}
+
+function PortalCelular({ ruta }: { ruta: string }) {
   const { api } = useApp();
   const cargar = useCallback(async (): Promise<Datos> => {
     const [saldo, cuotas, pagos] = await Promise.all([
@@ -323,22 +373,24 @@ export function Portal({ ruta = '/portal' }: { ruta?: string }) {
     ]);
     return { saldo, cuotas: cuotas.cuotas, pagos: pagos.pagos };
   }, [api]);
-  const { datos, error, prohibido, cargando, recargar } = useCarga(cargar);
+  const { datos, error, prohibido, recargar } = useCarga(cargar);
+  const cargarReportes = useCallback(() => api.solicitar<{ incidencias: Incidencia[] }>('GET', '/v1/incidencias?limite=100').then((r) => r.incidencias), [api]);
+  const reportes = useCarga(cargarReportes);
+  const recargarReportes = reportes.recargar;
+  const [avatar, elegirAvatar] = useMiAvatar();
+  const [recien, setRecien] = useState<string | null>(null);
   const [actualizado, setActualizado] = useState(false);
   const saldoPrevio = useRef<number | null>(null);
   const pantalla = pantallaDe(ruta);
-  const principal = useRef<HTMLElement>(null);
+  const telefono = useRef<HTMLDivElement>(null);
   const primeraVez = useRef(true);
-  const cargado = datos !== null;
 
   useEffect(() => {
-    // Al volver a la pestaña se actualiza: así el asociado ve un pago recién registrado.
-    const alVolver = () => {
-      if (document.visibilityState === 'visible') void recargar();
-    };
+    // Al volver a la pestaña se actualiza: así la familia ve un pago recién registrado.
+    const alVolver = () => { if (document.visibilityState === 'visible') { void recargar(); void recargarReportes(); } };
     document.addEventListener('visibilitychange', alVolver);
     return () => document.removeEventListener('visibilitychange', alVolver);
-  }, [recargar]);
+  }, [recargar, recargarReportes]);
 
   useEffect(() => {
     if (!datos) return;
@@ -347,53 +399,48 @@ export function Portal({ ruta = '/portal' }: { ruta?: string }) {
   }, [datos]);
 
   useEffect(() => {
-    // Tras cambiar de pantalla, el foco pasa al título para que lectores de pantalla lo anuncien.
+    // Tras cambiar de pantalla, el foco pasa al título para que los lectores de pantalla lo anuncien.
     if (primeraVez.current) { primeraVez.current = false; return; }
     setActualizado(false);
-    principal.current?.querySelector<HTMLElement>('[data-titulo-pantalla]')?.focus();
-  }, [pantalla, cargado]);
+    telefono.current?.querySelector('.p-scroll')?.scrollTo?.(0, 0);
+    telefono.current?.querySelector<HTMLElement>('[data-titulo-pantalla]')?.focus({ preventScroll: true });
+  }, [pantalla]);
 
   let contenido: ReactNode;
-  if (pantalla === null) contenido = <><h1 tabIndex={-1} data-titulo-pantalla>Página no encontrada</h1><Enlace a={RUTAS.inicio} className="portal-boton-enlace">Volver al inicio</Enlace></>;
-  else if (prohibido) contenido = <SinPermiso />;
-  else if (error && !datos) contenido = <Estado tipo="error" titulo="No pudimos cargar tus datos">Revisa tu conexión e inténtalo de nuevo.</Estado>;
-  else if (cargando && !datos) contenido = <Carga />;
-  else if (datos) {
-    contenido = {
-      inicio: <Inicio datos={datos} />, pagos: <Pagos datos={datos} />, historial: <Historial datos={datos} />,
-      reportes: <Reportes />, perfil: <Perfil datos={datos} />,
-    }[pantalla ?? 'inicio'];
-  }
+  if (pantalla === null) contenido = <><CabSimple titulo="Página no encontrada" avatar={avatar} /><div className="p-scroll"><Enlace a={RUTAS.inicio} className="bt teal ancho p-salir">Volver al inicio</Enlace></div></>;
+  else if (prohibido) contenido = <><CabSimple titulo="Sin acceso" avatar={avatar} /><p className="p-aviso error" data-testid="sin-permiso">Tu cuenta no tiene acceso a esta sección.</p></>;
+  else if (pantalla === 'reportar') contenido = <Reportar key={ruta} avatar={avatar} alEnviar={(i) => { setRecien(i.id); void reportes.recargar(); }} />;
+  else if (pantalla === 'reportes') contenido = <MisReportes reportes={reportes.datos} error={reportes.error} avatar={avatar} recien={recien} />;
+  else if (error && !datos) contenido = <><CabSimple titulo={TITULOS[pantalla]} avatar={avatar} /><div className="p-aviso error" role="alert"><b>No pudimos cargar tus datos</b><p>Revisa tu conexión e inténtalo de nuevo.</p><Bt clase="borde" onClick={() => void recargar()}>Reintentar</Bt></div></>;
+  else if (!datos) contenido = <><CabSimple titulo={TITULOS[pantalla]} avatar={avatar} /><Cargando /></>;
+  else contenido = {
+    inicio: <Inicio datos={datos} reportes={reportes.datos} avatar={avatar} />,
+    cuotas: <Cuotas datos={datos} avatar={avatar} />,
+    pagos: <Pagos datos={datos} avatar={avatar} />,
+    perfil: <Perfil datos={datos} avatar={avatar} elegirAvatar={elegirAvatar} />,
+  }[pantalla];
 
-  const enSecundaria = pantalla === 'historial';
-  const nombre = datos?.saldo.asociado.nombre ?? '';
   return (
-    <div className="portal">
-      <header className="portal-cabecera">
-        {enSecundaria
-          ? <Enlace a={RUTAS.pagos} className="portal-boton-icono" aria-label="Volver a pagos"><ChevronLeft size={20} aria-hidden="true" /></Enlace>
-          : null}
-        <Marca />
-        {nombre && <Enlace a={RUTAS.perfil} className="portal-boton-avatar" aria-label={`Mi perfil, ${nombre}`}>{iniciales(nombre)}</Enlace>}
-      </header>
-      <main id="portal-principal" ref={principal} aria-label={pantalla ? TITULOS[pantalla] : undefined}>
-        {actualizado && (
-          <Estado tipo="ok" titulo="Saldo actualizado">La JASS registró un nuevo pago en tu cuenta.</Estado>
-        )}
-        {error && datos && <ErrorConsulta error="No pudimos actualizar tus datos. Revisa tu conexión e inténtalo de nuevo." recargar={recargar} />}
-        {contenido}
-        {(error && !datos) && <Boton onClick={() => void recargar()}>Reintentar</Boton>}
-        {datos && pantalla === 'pagos' && (
-          <Boton className="portal-actualizar" onClick={() => void recargar()} disabled={cargando}>{cargando ? 'Actualizando…' : 'Actualizar'}</Boton>
-        )}
-      </main>
-      <nav className="portal-menu" aria-label="Secciones del portal">
-        {NAVEGACION.map(({ id, nombre: n, Icono }) => {
-          const activa = pantalla === id || (id === 'pagos' && pantalla === 'historial');
-          return <Enlace key={id} a={RUTAS[id]} aria-current={activa ? 'page' : undefined} className={activa ? 'activa' : ''}><span className="portal-menu-icono"><Icono size={20} aria-hidden="true" /></span>{n}</Enlace>;
-        })}
-      </nav>
+    <div className="esc-portal">
+      <Olas />
+      <div className="telefono" ref={telefono} data-pantalla={pantalla ?? ''}>
+        <main className="p-vista" id="portal-principal" aria-label={pantalla ? TITULOS[pantalla] : 'Portal'}>
+          {actualizado && <p className="p-aviso" role="status">Saldo actualizado: la JASS registró un nuevo pago en tu cuenta.</p>}
+          {error && datos && <p className="p-aviso error" role="alert">No pudimos actualizar tus datos. <Bt clase="borde" onClick={() => void recargar()}>Reintentar</Bt></p>}
+          {contenido}
+        </main>
+        <nav className="barra-m" aria-label="Secciones del portal">
+          {PESTANAS.map(([id, icono, nombre]) => {
+            const activa = pantalla === id || (id === 'inicio' && pantalla === 'reportes');
+            return (
+              <Enlace key={id} a={RUTAS[id]} aria-current={activa ? 'page' : undefined} className={`${activa ? 'on' : ''} ${id === 'reportar' ? 'central' : ''}`}>
+                <i><Ic n={icono} lleno={icono === 'persona'} /></i>{nombre}
+              </Enlace>
+            );
+          })}
+        </nav>
+      </div>
+      <p className="pie-portal">Fotos referenciales: R. M. Cristina y Txolo, CC BY-SA 4.0 · Wikimedia Commons</p>
     </div>
   );
 }
-

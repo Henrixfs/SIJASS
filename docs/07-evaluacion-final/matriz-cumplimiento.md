@@ -89,7 +89,7 @@ S0 **no** cierra ningún criterio por completo; deja C05, C12 y C14 en estado pa
 | Criterio C04 | Cuarto cambio SDD | [Cambio](../../openspec/changes/archive/2026-11-26-s1c-reservorios-mediciones/tasks.md) | Archivar tras fusionar |
 | Criterio C05 | PT13 completo para mediciones y reservorios; 278 + 245 + 84 pruebas | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md) | PT09, PT10, PT19 |
 | Criterio C06 | Segundo flujo E2E en navegador | [`flujo-mediciones.spec.ts`](../../tecnologia/e2e/pruebas/flujo-mediciones.spec.ts) | Operación sin conexión |
-| Criterio C07 | Pantalla de mediciones por rol, con aviso de no dictamen | [`Mediciones.tsx`](../../tecnologia/sijass-web/src/paginas/Mediciones.tsx) | Usabilidad con operadores reales |
+| Criterio C07 | Pantalla «El agua» por rol (lecturas de cloro), con aviso de no dictamen | [`Agua.tsx`](../../tecnologia/sijass-web/src/paginas/Agua.tsx) | Usabilidad con operadores reales |
 | Criterio C09 | Migración `0003` (nombre único por JASS) | [Migración](../../tecnologia/siJASS-clean-architecture/migraciones/0003_reservorios-unicos.sql) | Estrategia de crecimiento |
 | Criterio C14 | Migración `0003` | Repositorio | Evidencia fotográfica |
 

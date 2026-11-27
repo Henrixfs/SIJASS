@@ -1,11 +1,13 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useState } from 'react';
 import { ErrorApi } from '../api/cliente';
 import type { AccesoEntregado } from '../api/tipos';
 import { mensajeDeError, useApp } from '../contexto';
 import { useCarga, useEnvio } from '../hooks';
 import { dniValido, soloDigitos } from '../lib/documento';
-import { Aviso, Boton, Carga, Dialogo, ErrorConsulta, Insignia, SinPermiso, Tabla } from '../ui';
-import { ClaveEntregada } from './ClaveEntregada';
+import { FOTOS } from '../lib/fotos';
+import { SinPermiso } from '../ui';
+import { Av, avatarDePersonal, ordenEnRol, Banda, Bt, Cajon, Campo, Cargando, ClaveV3, Elegibles, FalloCarga, Final, Olas, ROL_V3, Tapa, useAvisar } from '../v3/base';
+import { TituloVista } from './NavegacionPersonal';
 
 interface FilaEquipo {
   usuarioId: string;
@@ -16,158 +18,151 @@ interface FilaEquipo {
   estado: 'activo' | 'inactivo';
 }
 
-const NOMBRE_ROL: Record<FilaEquipo['rol'], string> = { consejo: 'Consejo', tesorero: 'Tesorería', operador: 'Operador' };
+type Tapado = { id: string; paso: 'clave?' | 'desactivar?' } | { id: string; paso: 'clave'; clave: string };
 
-type Accion = { tipo: 'restablecer' | 'desactivar'; fila: FilaEquipo };
-
-/** Equipo de la JASS (Tesorería y Operador): solo lo ve y lo gestiona el Consejo. */
+/** Equipo de la JASS (maqueta v3): tarjetas con avatar e insignia del rol. Solo el Consejo lo gestiona. */
 export function Equipo() {
   const { api } = useApp();
+  const avisar = useAvisar();
   const cargar = useCallback(() => api.solicitar<{ equipo: FilaEquipo[] }>('GET', '/v1/equipo'), [api]);
-  const { datos, error, prohibido, cargando, recargar } = useCarga(cargar);
-  const [nombre, setNombre] = useState('');
-  const [documento, setDocumento] = useState('');
-  const [rol, setRol] = useState<'tesorero' | 'operador'>('tesorero');
-  const [errorDocumento, setErrorDocumento] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
-  const [accion, setAccion] = useState<Accion | null>(null);
-  const [entrega, setEntrega] = useState<{ titulo: string; nombre: string; documento: string | null; clave: string } | null>(null);
+  const { datos, error, prohibido, recargar } = useCarga(cargar);
+  const [tapa, setTapa] = useState<Tapado | null>(null);
+  const [nueva, setNueva] = useState(false);
+  const [falla, setFalla] = useState<string | null>(null);
   const { enviando, ejecutar } = useEnvio();
 
-  async function agregar(e: FormEvent) {
-    e.preventDefault();
-    if (!dniValido(documento)) return setErrorDocumento('El DNI tiene 8 números.');
-    setErrorDocumento(null);
+  async function restablecer(f: FilaEquipo) {
     await ejecutar(async () => {
-      setAviso(null);
+      setFalla(null);
       try {
-        const r = await api.solicitar<AccesoEntregado>('POST', '/v1/equipo', { nombre: nombre.trim(), documento, rol });
-        setEntrega({ titulo: 'Acceso creado', nombre: nombre.trim(), documento, clave: r.claveTemporal });
-        setNombre('');
-        setDocumento('');
+        const r = await api.solicitar<AccesoEntregado>('POST', `/v1/equipo/${f.usuarioId}/restablecer-clave`);
+        setTapa({ id: f.usuarioId, paso: 'clave', clave: r.claveTemporal });
+      } catch (err) {
+        setTapa(null);
+        setFalla(err instanceof ErrorApi && err.estado === 403 ? 'Esa persona ya no es gestionable o no pertenece a tu JASS.' : mensajeDeError(err));
+      }
+    });
+  }
+
+  async function desactivar(f: FilaEquipo) {
+    await ejecutar(async () => {
+      setFalla(null);
+      try {
+        await api.solicitar('POST', `/v1/equipo/${f.usuarioId}/desactivar`);
+        setTapa(null);
+        avisar(`${f.nombre} ya no puede entrar al sistema.`, 'pausa');
         await recargar();
       } catch (err) {
-        if (err instanceof ErrorApi && err.codigo === 'documento-con-acceso') setAviso({ tipo: 'error', texto: 'Ese DNI ya tiene un acceso en el sistema.' });
-        else setAviso({ tipo: 'error', texto: mensajeDeError(err) });
+        setTapa(null);
+        setFalla(err instanceof ErrorApi && err.estado === 403 ? 'Esa persona ya no es gestionable o no pertenece a tu JASS.' : mensajeDeError(err));
       }
     });
   }
 
   if (prohibido) return <SinPermiso />;
+  const equipo = datos?.equipo ?? [];
+  const orden = ordenEnRol(equipo);
   return (
-    <section aria-labelledby="titulo-equipo">
-      <h1 id="titulo-equipo">Equipo</h1>
-      <p className="suave">Las personas de Tesorería y Operadores de tu JASS. Cada una entra con su DNI.</p>
-      {error && <ErrorConsulta error={error} recargar={recargar} />}
-      <form className="tarjeta en-linea" onSubmit={agregar} aria-label="Agregar persona al equipo" noValidate>
-        <h2>Agregar persona</h2>
-        <label>
-          Nombre completo
-          <input name="nombre-equipo" required maxLength={120} value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        </label>
-        <div className="campo-doc">
-          <label htmlFor="documento-equipo">Número de DNI</label>
-          <input id="documento-equipo" name="documento-equipo" inputMode="numeric" maxLength={8} autoComplete="off" value={documento}
-            aria-invalid={errorDocumento !== null} aria-describedby={errorDocumento ? 'error-documento-equipo' : undefined}
-            onChange={(e) => { setDocumento(soloDigitos(e.target.value)); setErrorDocumento(null); }} />
-          {errorDocumento && <span id="error-documento-equipo" className="error-campo" role="alert">{errorDocumento}</span>}
+    <>
+      <TituloVista titulo="Equipo" sub="Solo el Consejo agrega, restablece claves o desactiva" acciones={<Bt clase="teal" ic="mas" onClick={() => setNueva(true)}>Agregar persona</Bt>} />
+      {error && !datos && <FalloCarga texto={error} recargar={() => void recargar()} />}
+      {falla && <p className="error-cajon" role="alert" data-testid="aviso-error">{falla}</p>}
+      {!datos && !error ? <Cargando /> : datos && (
+        <div className="rejilla" data-testid="tabla-equipo" role="list" aria-label="Equipo de la JASS">
+          {equipo.map((p) => {
+            const r = ROL_V3[p.rol] ?? ROL_V3.consejo;
+            const t = tapa?.id === p.usuarioId ? tapa : null;
+            const gestionable = p.rol !== 'consejo' && p.estado === 'activo';
+            return (
+              <article key={p.usuarioId} className={`persona ${p.estado === 'activo' ? '' : 'inactiva'}`} role="listitem" data-testid={`fila-equipo-${p.nombre}`} aria-label={p.nombre}>
+                <div style={{ display: 'contents' }} inert={t !== null}>
+                  <Av indice={avatarDePersonal(p.rol, orden[p.usuarioId])} tam="xl" insignia={r.insignia} />
+                  <b>{p.nombre}</b>
+                  <small>{r.titulo} · DNI {p.documento}</small>
+                  <span className={`chip ${p.estado === 'activo' ? 'ok' : 'gris'}`}>{p.estado === 'activo' ? 'Activo' : 'Desactivado'}</span>
+                  <span className="botones">
+                    {gestionable && <>
+                      <Bt clase="borde" ic="llave" onClick={() => setTapa({ id: p.usuarioId, paso: 'clave?' })} aria-label={`Restablecer la clave de ${p.nombre}`}>Clave</Bt>
+                      <Bt clase="suave" ic="pausa" onClick={() => setTapa({ id: p.usuarioId, paso: 'desactivar?' })} aria-label={`Desactivar a ${p.nombre}`}>Desactivar</Bt>
+                    </>}
+                  </span>
+                </div>
+                <Olas />
+                <Tapa abierta={t !== null}>
+                  {t?.paso === 'clave?' && <>
+                    <h4>¿Restablecer su clave?</h4>
+                    <p>Se genera una clave temporal nueva; la anterior deja de servir y deberá cambiarla al entrar.</p>
+                    <Bt clase="agua" disabled={enviando} onClick={() => void restablecer(p)}>{enviando ? 'Generando…' : 'Sí, restablecer'}</Bt>
+                    <Bt clase="claro" disabled={enviando} onClick={() => setTapa(null)}>Cancelar</Bt>
+                  </>}
+                  {t?.paso === 'clave' && <>
+                    <h4>Clave temporal</h4>
+                    <ClaveV3 clave={t.clave} nombre={p.nombre} documento={p.documento} claras={false} />
+                    <Bt clase="agua" onClick={() => setTapa(null)}>Listo</Bt>
+                  </>}
+                  {t?.paso === 'desactivar?' && <>
+                    <h4>¿Desactivar?</h4>
+                    <p>No podrá ingresar y sus sesiones se cierran ahora. Su historial se conserva.</p>
+                    <Bt clase="peligro" disabled={enviando} onClick={() => void desactivar(p)}>{enviando ? 'Desactivando…' : 'Sí, desactivar'}</Bt>
+                    <Bt clase="claro" disabled={enviando} onClick={() => setTapa(null)}>Cancelar</Bt>
+                  </>}
+                </Tapa>
+              </article>
+            );
+          })}
+          {equipo.length === 0 && <p className="vacio-l">Todavía no hay personas en el equipo.</p>}
         </div>
-        <label>
-          Rol
-          <select name="rol-equipo" value={rol} onChange={(e) => setRol(e.target.value as 'tesorero' | 'operador')}>
-            <option value="tesorero">Tesorería</option>
-            <option value="operador">Operador</option>
-          </select>
-        </label>
-        <Boton type="submit" variante="primario" disabled={enviando || nombre.trim() === ''}>{enviando ? 'Creando…' : 'Agregar'}</Boton>
-      </form>
-      {aviso && <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso>}
-      {cargando && !datos ? <Carga /> : datos && (
-        <Tabla nombre="Equipo de la JASS">
-          <table className="tabla-padron" role="table" data-testid="tabla-equipo">
-            <caption className="solo-lectores">Equipo de la JASS</caption>
-            <thead>
-              <tr><th scope="col">Nombre</th><th scope="col">DNI</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr>
-            </thead>
-            <tbody>
-              {datos.equipo.map((f) => (
-                <tr key={f.usuarioId} data-testid={`fila-equipo-${f.nombre}`}>
-                  <td className="nombre-padron">{f.nombre}</td>
-                  <td className="documento-padron"><span className="etiqueta-compacta" aria-hidden="true">DNI </span>{f.documento}</td>
-                  <td>{NOMBRE_ROL[f.rol]}</td>
-                  <td><Insignia tipo={f.estado === 'activo' ? 'ok' : 'advertencia'}>{f.estado === 'activo' ? 'Activo' : 'Inactivo'}</Insignia></td>
-                  <td className="acciones">
-                    {f.rol !== 'consejo' && f.estado === 'activo' && (
-                      <>
-                        <button type="button" onClick={() => { setAviso(null); setAccion({ tipo: 'restablecer', fila: f }); }}>Restablecer clave</button>
-                        <button type="button" onClick={() => { setAviso(null); setAccion({ tipo: 'desactivar', fila: f }); }}>Desactivar</button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {datos.equipo.length === 0 && <tr><td colSpan={5} className="suave">Todavía no hay personas en el equipo.</td></tr>}
-            </tbody>
-          </table>
-        </Tabla>
       )}
-      {accion && (
-        <ConfirmarAccion
-          accion={accion}
-          cerrar={() => setAccion(null)}
-          alTerminar={(r) => {
-            const { fila, tipo } = accion;
-            setAccion(null);
-            if (tipo === 'restablecer' && r) setEntrega({ titulo: 'Clave restablecida', nombre: fila.nombre, documento: fila.documento, clave: r.claveTemporal });
-            else setAviso({ tipo: 'ok', texto: `${fila.nombre} ya no puede entrar al sistema.` });
-            void recargar();
-          }}
-        />
-      )}
-      {entrega && <ClaveEntregada titulo={entrega.titulo} nombre={entrega.nombre} documento={entrega.documento} clave={entrega.clave} cerrar={() => setEntrega(null)} />}
-    </section>
+      {datos && equipo.length < 5 && <Banda foto={FOTOS.humedal} sobre="Cada persona con su tarea" titulo="El equipo cuida el agua" texto="El Consejo gestiona el equipo · Tesorería registra pagos · Operación anota lecturas" />}
+      {nueva && <CajonPersona cerrar={() => setNueva(false)} alAgregar={() => void recargar()} />}
+    </>
   );
 }
 
-function ConfirmarAccion({ accion, cerrar, alTerminar }: { accion: Accion; cerrar: () => void; alTerminar: (r: AccesoEntregado | null) => void }) {
+function CajonPersona({ cerrar, alAgregar }: { cerrar: () => void; alAgregar: () => void }) {
   const { api } = useApp();
-  const [error, setError] = useState<string | null>(null);
+  const avisar = useAvisar();
+  const [nombre, setNombre] = useState('');
+  const [documento, setDocumento] = useState('');
+  const [rol, setRol] = useState<'tesorero' | 'operador'>('operador');
+  const [errores, setErrores] = useState<{ nombre?: string; documento?: string; general?: string }>({});
+  const [hecho, setHecho] = useState<{ nombre: string; documento: string; clave: string } | null>(null);
   const { enviando, ejecutar } = useEnvio();
-  const restablecer = accion.tipo === 'restablecer';
 
-  async function confirmar(e: FormEvent) {
-    e.preventDefault();
+  async function agregar() {
+    if (!nombre.trim()) return setErrores({ nombre: 'Escribe el nombre.' });
+    if (!dniValido(documento)) return setErrores({ documento: 'El DNI tiene 8 números.' });
     await ejecutar(async () => {
-      setError(null);
+      setErrores({});
       try {
-        if (restablecer) alTerminar(await api.solicitar<AccesoEntregado>('POST', `/v1/equipo/${accion.fila.usuarioId}/restablecer-clave`));
-        else {
-          await api.solicitar('POST', `/v1/equipo/${accion.fila.usuarioId}/desactivar`);
-          alTerminar(null);
-        }
+        const r = await api.solicitar<AccesoEntregado>('POST', '/v1/equipo', { nombre: nombre.trim(), documento, rol });
+        setHecho({ nombre: nombre.trim(), documento, clave: r.claveTemporal });
+        alAgregar();
       } catch (err) {
-        setError(err instanceof ErrorApi && err.estado === 403 ? 'Esa persona ya no es gestionable o no pertenece a tu JASS.' : mensajeDeError(err));
+        setErrores({ general: err instanceof ErrorApi && err.codigo === 'documento-con-acceso' ? 'Ese DNI ya tiene un acceso en el sistema.' : mensajeDeError(err) });
       }
     });
   }
 
+  if (hecho) {
+    const listo = () => { cerrar(); avisar(`${hecho.nombre} ya es parte del equipo`); };
+    return (
+      <Cajon sobre="Consejo" titulo="Acceso creado" texto="Entrega la clave en persona." cerrar={listo} onEnviar={listo} pie={<Bt type="submit" clase="teal">Listo</Bt>}>
+        <Final titulo={`${hecho.nombre} ya es parte del equipo`}>
+          <ClaveV3 clave={hecho.clave} nombre={hecho.nombre} documento={hecho.documento} />
+          <p>Se muestra una sola vez y deberá cambiarla al entrar.</p>
+        </Final>
+      </Cajon>
+    );
+  }
   return (
-    <Dialogo titulo={restablecer ? 'Restablecer clave' : 'Desactivar acceso'} cerrar={() => { if (!enviando) cerrar(); }}>
-      <form onSubmit={confirmar}>
-        <strong>{accion.fila.nombre}</strong> · {NOMBRE_ROL[accion.fila.rol]}
-        <p>
-          {restablecer
-            ? 'Se generará una clave temporal nueva, la anterior dejará de servir y tendrá que cambiarla al entrar.'
-            : '¿Confirmas que esta persona deje de entrar al sistema? Sus sesiones se cerrarán ahora mismo.'}
-        </p>
-        {error && <Aviso tipo="error">{error}</Aviso>}
-        <div className="pie-dialogo">
-          <Boton disabled={enviando} onClick={cerrar}>Cancelar</Boton>
-          <Boton type="submit" variante={restablecer ? 'primario' : 'peligro'} disabled={enviando}>
-            {enviando ? 'Procesando…' : restablecer ? 'Restablecer clave' : 'Desactivar acceso'}
-          </Boton>
-        </div>
-      </form>
-    </Dialogo>
+    <Cajon sobre="Consejo" titulo="Agregar persona" texto="Tesorería u Operación." etiqueta="Agregar persona al equipo" cerrar={() => { if (!enviando) cerrar(); }} onEnviar={() => void agregar()}
+      pie={<><Bt clase="borde" disabled={enviando} onClick={cerrar}>Cancelar</Bt><Bt type="submit" clase="teal" disabled={enviando}>{enviando ? 'Creando…' : 'Agregar'}</Bt></>}>
+      <Campo id="e-nombre" name="nombre-equipo" etiqueta="Nombre completo" maxLength={120} value={nombre} disabled={enviando} error={errores.nombre} onChange={(e) => setNombre(e.target.value)} />
+      <Campo id="documento-equipo" name="documento-equipo" etiqueta="Número de DNI" inputMode="numeric" maxLength={8} value={documento} disabled={enviando} error={errores.documento} onChange={(e) => setDocumento(soloDigitos(e.target.value))} />
+      <Elegibles id="e-rol" etiqueta="Su tarea" clase="segmentos" valor={rol} elegir={setRol} deshabilitado={enviando}
+        opciones={[{ valor: 'tesorero', contenido: 'Tesorería' }, { valor: 'operador', contenido: 'Operación' }]} />
+      {errores.general && <p className="error-cajon" role="alert" data-testid="aviso-error">{errores.general}</p>}
+    </Cajon>
   );
 }

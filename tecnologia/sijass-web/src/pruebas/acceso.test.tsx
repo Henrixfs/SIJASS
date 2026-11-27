@@ -78,9 +78,9 @@ describe('ingreso — dos botones, DNI y clave', () => {
   test('el administrador entra al panel de su rol', async () => {
     const { usuario, llamadas } = montar(como('personal', 'tesorero'));
     await ingresarPorDni(usuario, 'administrador', '10000002');
-    expect(await screen.findByRole('heading', { name: 'Asociados' })).toBeVisible();
+    expect(await screen.findByTestId('rol-actual')).toHaveTextContent('Tesorería');
     expect((tipoLogin(llamadas) as { tipo: string }).tipo).toBe('administrador');
-    expect(screen.getByTestId('rol-actual')).toHaveTextContent('Tesorería');
+    expect(screen.getByRole('link', { name: 'Mi caja' })).toHaveAttribute('aria-current', 'page');
   });
 
   test('tipo equivocado: 409 con el tipo real → mensaje breve y un botón para usar el otro tipo; no hay sesión', async () => {
@@ -179,7 +179,7 @@ describe('cambio de clave', () => {
     await usuario.type(screen.getByLabelText('Clave nueva'), 'Tesoreria-2026-ok');
     await usuario.type(screen.getByLabelText('Repite la clave nueva'), 'Tesoreria-2026-ok');
     await usuario.click(screen.getByRole('button', { name: 'Guardar mi clave' }));
-    expect(await screen.findByRole('heading', { name: 'Asociados' })).toBeVisible();
+    expect(await screen.findByTestId('rol-actual')).toHaveTextContent('Tesorería');
     expect(llamadas.find((l) => l.ruta === '/v1/auth/cambiar-contrasena')?.cuerpo).toEqual({ contrasenaActual: 'cima-tela-pozo', contrasenaNueva: 'Tesoreria-2026-ok' });
   });
 
@@ -215,7 +215,7 @@ describe('cambio de clave', () => {
   test('desde el perfil el cambio es voluntario y se hace en un diálogo', async () => {
     const { usuario, llamadas } = montar((m, r, c) => (r === '/v1/auth/cambiar-contrasena' ? json(200, sesionDe('personal', 'tesorero')) : como('personal', 'tesorero')(m, r, c)));
     await ingresarPorDni(usuario);
-    await usuario.click(await screen.findByRole('link', { name: 'Mi perfil' }));
+    await usuario.click(await screen.findByRole('link', { name: /Mi perfil/ }));
     expect(await screen.findByTestId('perfil-nombre')).toHaveTextContent('Ana Morales');
     expect(screen.getByTestId('perfil-documento')).toHaveTextContent('•••••678');
     await usuario.click(screen.getByRole('button', { name: 'Cambiar mi clave' }));
@@ -234,7 +234,8 @@ describe('nombre de la JASS y de la persona', () => {
     const { usuario } = montar(como('personal', 'consejo'));
     await ingresarPorDni(usuario);
     expect(await screen.findByTestId('nombre-jass')).toHaveTextContent('JASS San Miguel');
-    expect(screen.getByRole('link', { name: 'Mi perfil' })).toBeVisible();
+    expect(screen.getByRole('link', { name: /Mi perfil/ })).toBeVisible();
+    expect(screen.getByTestId('rol-actual')).toHaveTextContent('Consejo');
     expect(document.body.textContent).not.toContain('12345678');
   });
 
@@ -278,10 +279,12 @@ describe('equipo del Consejo', () => {
     await ingresarPorDni(usuario);
     await usuario.click(await screen.findByRole('link', { name: 'Equipo' }));
     expect(await screen.findByTestId('fila-equipo-Carlos Rojas')).toHaveTextContent('•••••002');
-    await usuario.type(screen.getByLabelText('Nombre completo'), 'Julia Flores');
-    await usuario.type(screen.getByLabelText('Número de DNI'), '10000003');
-    await usuario.selectOptions(screen.getByLabelText('Rol'), 'operador');
-    await usuario.click(screen.getByRole('button', { name: 'Agregar' }));
+    await usuario.click(screen.getByRole('button', { name: 'Agregar persona' }));
+    const formulario = within(await screen.findByRole('dialog', { name: 'Agregar persona' }));
+    await usuario.type(formulario.getByLabelText('Nombre completo'), 'Julia Flores');
+    await usuario.type(formulario.getByLabelText('Número de DNI'), '10000003');
+    expect(formulario.getByRole('button', { name: 'Operación' })).toHaveAttribute('aria-pressed', 'true');
+    await usuario.click(formulario.getByRole('button', { name: 'Agregar' }));
     const entrega = await screen.findByRole('dialog', { name: 'Acceso creado' });
     expect(within(entrega).getByTestId('clave-temporal')).toHaveTextContent('faro-mesa-nube');
     expect(llamadas.find((l) => l.metodo === 'POST' && l.ruta === '/v1/equipo')?.cuerpo).toEqual({ nombre: 'Julia Flores', documento: '10000003', rol: 'operador' });
@@ -302,15 +305,16 @@ describe('equipo del Consejo', () => {
     const filaConsejo = await screen.findByTestId('fila-equipo-Ana Morales');
     expect(within(filaConsejo).queryByRole('button')).toBeNull();
     const fila = screen.getByTestId('fila-equipo-Carlos Rojas');
-    await usuario.click(within(fila).getByRole('button', { name: 'Restablecer clave' }));
-    await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
+    await usuario.click(within(fila).getByRole('button', { name: 'Restablecer la clave de Carlos Rojas' }));
+    await usuario.click(within(fila).getByRole('button', { name: 'Cancelar' }));
     expect(llamadas.some((l) => l.ruta.endsWith('/restablecer-clave'))).toBe(false);
-    await usuario.click(within(fila).getByRole('button', { name: 'Restablecer clave' }));
-    await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Restablecer clave' }));
-    expect(await screen.findByTestId('clave-temporal')).toHaveTextContent('lago-arco-sol');
-    await usuario.click(screen.getByRole('button', { name: 'Listo' }));
-    await usuario.click(within(fila).getByRole('button', { name: 'Desactivar' }));
-    await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Desactivar acceso' }));
+    await usuario.click(within(fila).getByRole('button', { name: 'Restablecer la clave de Carlos Rojas' }));
+    await usuario.click(within(fila).getByRole('button', { name: 'Sí, restablecer' }));
+    expect(await within(fila).findByTestId('clave-temporal')).toHaveTextContent('lago-arco-sol');
+    await usuario.click(within(fila).getByRole('button', { name: 'Listo' }));
+    expect(screen.queryByTestId('clave-temporal')).toBeNull();
+    await usuario.click(within(fila).getByRole('button', { name: 'Desactivar a Carlos Rojas' }));
+    await usuario.click(within(fila).getByRole('button', { name: 'Sí, desactivar' }));
     expect(await screen.findByText(/ya no puede entrar al sistema/)).toBeVisible();
     expect(llamadas.some((l) => l.ruta.endsWith('/desactivar'))).toBe(true);
   });
@@ -332,9 +336,9 @@ describe('área de plataforma', () => {
   test('la plataforma entra a su área, ve las JASS sin datos de negocio y no tiene pantallas de padrón, pagos ni mediciones', async () => {
     const { usuario, llamadas } = montar(plataforma());
     await ingresarPorDni(usuario);
-    expect(await screen.findByRole('heading', { name: 'JASS' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Las juntas de agua, en un solo lugar.' })).toBeVisible();
     // La lista llega por red: se espera la fila en vez de suponer que ya está (en CI el encabezado aparece antes que los datos).
-    expect(await screen.findByTestId('fila-jass-JASS Quinua')).toHaveTextContent('Quinua, Huamanga, Ayacucho');
+    expect(await screen.findByTestId('fila-jass-JASS Quinua')).toHaveTextContent('Quinua · Huamanga, Ayacucho');
     expect(screen.getByTestId('fila-jass-JASS Tambo')).toHaveTextContent('Suspendida');
     for (const enlace of ['Asociados', 'Cuotas y pagos', 'Mediciones', 'Reservorios']) expect(screen.queryByRole('link', { name: enlace })).toBeNull();
     expect(llamadas.some((l) => /\/v1\/(asociados|cuotas|pagos|reservorios|mediciones)/.test(l.ruta))).toBe(false);
@@ -347,8 +351,10 @@ describe('área de plataforma', () => {
     await usuario.click(await screen.findByRole('button', { name: /Nueva JASS/ }));
     const form = within(screen.getByRole('dialog', { name: 'Nueva JASS' }));
     await usuario.type(form.getByLabelText('Nombre de la JASS'), 'JASS Pacaycasa');
-    await usuario.type(form.getByLabelText('Distrito'), 'Ayacucho');
-    await usuario.type(form.getByLabelText('Nombre completo'), 'Rosa Consejo');
+    await usuario.click(form.getByRole('button', { name: 'Siguiente' }));
+    await usuario.type(await form.findByLabelText('Distrito'), 'Ayacucho');
+    await usuario.click(form.getByRole('button', { name: 'Siguiente' }));
+    await usuario.type(await form.findByLabelText('Nombre de quien preside el Consejo'), 'Rosa Consejo');
     await usuario.type(form.getByLabelText('Número de DNI'), '10000009');
     await usuario.click(form.getByRole('button', { name: 'Crear JASS' }));
     const entrega = await screen.findByRole('dialog', { name: 'JASS creada' });
@@ -368,7 +374,9 @@ describe('área de plataforma', () => {
     await usuario.click(await screen.findByRole('button', { name: /Nueva JASS/ }));
     const form = within(screen.getByRole('dialog', { name: 'Nueva JASS' }));
     await usuario.type(form.getByLabelText('Nombre de la JASS'), 'JASS X');
-    await usuario.type(form.getByLabelText('Nombre completo'), 'Consejo X');
+    await usuario.click(form.getByRole('button', { name: 'Siguiente' }));
+    await usuario.click(await form.findByRole('button', { name: 'Siguiente' }));
+    await usuario.type(await form.findByLabelText('Nombre de quien preside el Consejo'), 'Consejo X');
     await usuario.type(form.getByLabelText('Número de DNI'), '123');
     await usuario.click(form.getByRole('button', { name: 'Crear JASS' }));
     expect(await form.findByText('El DNI tiene 8 números.')).toBeVisible();
@@ -379,7 +387,7 @@ describe('área de plataforma', () => {
     expect(await form.findByText('Ese DNI ya tiene un acceso en el sistema.')).toBeVisible();
   });
 
-  test('suspender y reactivar piden confirmación; restablecer la clave del Consejo entrega la clave', async () => {
+  test('suspender y restablecer la clave del Consejo piden confirmación; reactivar es inmediato', async () => {
     const { usuario, llamadas } = montar(plataforma((_m, r) => {
       if (r.endsWith('/suspender') || r.endsWith('/reactivar')) return json(204);
       if (r.endsWith('/consejo/restablecer-clave')) return json(200, { usuarioId: 'u', nombre: 'Rosa Consejo', documento: '•••••009', claveTemporal: 'roca-vela-rio' });
@@ -388,17 +396,17 @@ describe('área de plataforma', () => {
     await ingresarPorDni(usuario);
     const quinua = await screen.findByTestId('fila-jass-JASS Quinua');
     await usuario.click(within(quinua).getByRole('button', { name: 'Suspender' }));
-    await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
+    await usuario.click(within(quinua).getByRole('button', { name: 'Cancelar' }));
     expect(llamadas.some((l) => l.ruta.endsWith('/suspender'))).toBe(false);
     await usuario.click(within(quinua).getByRole('button', { name: 'Suspender' }));
-    await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Suspender la JASS' }));
+    await usuario.click(within(quinua).getByRole('button', { name: 'Sí, suspender' }));
     expect(await screen.findByText(/quedó suspendida/)).toBeVisible();
     await usuario.click(within(screen.getByTestId('fila-jass-JASS Tambo')).getByRole('button', { name: 'Reactivar' }));
-    await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivar la JASS' }));
     expect(await screen.findByText(/volvió a estar activa/)).toBeVisible();
-    await usuario.click(within(quinua).getByRole('button', { name: 'Restablecer clave del Consejo' }));
-    await usuario.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Restablecer la clave del Consejo' }));
-    expect(await screen.findByTestId('clave-temporal')).toHaveTextContent('roca-vela-rio');
+    await usuario.click(within(quinua).getByRole('button', { name: 'Restablecer la clave del Consejo de JASS Quinua' }));
+    expect(llamadas.some((l) => l.ruta.endsWith('/consejo/restablecer-clave'))).toBe(false);
+    await usuario.click(within(quinua).getByRole('button', { name: 'Sí, generar clave' }));
+    expect(await within(quinua).findByTestId('clave-temporal')).toHaveTextContent('roca-vela-rio');
   });
 
   test('una cuenta de plataforma que abre una ruta del personal o del portal vuelve a su área, y a la inversa', () => {
@@ -411,24 +419,41 @@ describe('área de plataforma', () => {
 });
 
 describe('padrón — estado del acceso', () => {
-  test('sin acceso ofrece crear; con acceso ofrece restablecer; inactivo no ofrece ninguno', async () => {
+  test('la fila dice si tiene acceso; la cuenta ofrece crear o restablecer, y nada si está inactivo', async () => {
     const filas = [
       { id: '11111111-1111-4111-8111-111111111111', nombre: 'Rosa Sin', documento: '70000001', estado: 'activo', saldoCentimos: 0, acceso: 'sin-acceso' },
       { id: '22222222-2222-4222-8222-222222222222', nombre: 'Luis Con', documento: '70000002', estado: 'activo', saldoCentimos: 0, acceso: 'activo' },
       { id: '33333333-3333-4333-8333-333333333333', nombre: 'Ana Inactiva', documento: '70000003', estado: 'activo', saldoCentimos: 0, acceso: 'inactivo' },
     ];
-    const { usuario } = montar(como('personal', 'tesorero', (m, r) => (m === 'GET' && r === '/v1/asociados' ? json(200, { asociados: filas }) : undefined)));
+    const cuentaDe = (f: typeof filas[number]) => ({ asociado: { id: f.id, nombre: f.nombre, documento: f.documento, estado: 'activo' }, acceso: f.acceso, saldoCentimos: 0, periodoActual: '2026-11', cuotas: [], pagos: [] });
+    const { usuario } = montar(como('personal', 'tesorero', (m, r) => {
+      if (m === 'GET' && r === '/v1/asociados') return json(200, { asociados: filas });
+      const f = filas.find((x) => r === `/v1/asociados/${x.id}/estado-de-cuenta`);
+      return f ? json(200, cuentaDe(f)) : undefined;
+    }));
     await ingresarPorDni(usuario);
-    const sin = await screen.findByTestId('fila-70000001');
-    expect(within(sin).getByText('Sin acceso')).toBeVisible();
-    expect(within(sin).getByRole('button', { name: 'Crear acceso' })).toBeVisible();
-    const con = screen.getByTestId('fila-70000002');
-    expect(within(con).getByText('Con acceso')).toBeVisible();
-    expect(within(con).getByRole('button', { name: 'Restablecer clave' })).toBeVisible();
-    expect(within(con).queryByRole('button', { name: 'Crear acceso' })).toBeNull();
-    const inactiva = screen.getByTestId('fila-70000003');
-    expect(within(inactiva).getByText('Acceso inactivo')).toBeVisible();
-    expect(within(inactiva).queryByRole('button', { name: /Crear acceso|Restablecer clave/ })).toBeNull();
+    await usuario.click(await screen.findByRole('link', { name: 'Asociados' }));
+    expect(await screen.findByTestId('fila-70000001')).toHaveTextContent('sin acceso');
+    expect(screen.getByTestId('fila-70000002')).toHaveTextContent('con acceso');
+    expect(screen.getByTestId('fila-70000003')).toHaveTextContent('acceso inactivo');
+    const abrir = async (dni: string, nombre: string) => {
+      await usuario.click(within(screen.getByTestId(`fila-${dni}`)).getByRole('button', { name: 'Ver cuenta' }));
+      return within(await screen.findByRole('dialog', { name: nombre }));
+    };
+    const cerrar = async (c: ReturnType<typeof within>) => {
+      await usuario.click(c.getAllByRole('button', { name: 'Cerrar' })[0]);
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    };
+    let cuenta = await abrir('70000001', 'Rosa Sin');
+    expect(await cuenta.findByRole('button', { name: 'Crear acceso' })).toBeVisible();
+    await cerrar(cuenta);
+    cuenta = await abrir('70000002', 'Luis Con');
+    expect(await cuenta.findByRole('button', { name: 'Restablecer clave' })).toBeVisible();
+    expect(cuenta.queryByRole('button', { name: 'Crear acceso' })).toBeNull();
+    await cerrar(cuenta);
+    cuenta = await abrir('70000003', 'Ana Inactiva');
+    expect(await cuenta.findByText('Su acceso está inactivo')).toBeVisible();
+    expect(cuenta.queryByRole('button', { name: /Crear acceso|Restablecer clave/ })).toBeNull();
   });
 });
 

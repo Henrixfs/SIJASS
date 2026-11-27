@@ -44,7 +44,7 @@ function montar(consulta: (pregunta: unknown) => Response, corpus: 'ejemplo' | '
 async function abrirAsistente(usuario: ReturnType<typeof userEvent.setup>) {
   await ingresarPorDni(usuario);
   await usuario.click(await screen.findByRole('link', { name: 'Asistente' }));
-  await screen.findByRole('heading', { name: 'Asistente técnico' });
+  await screen.findByRole('heading', { name: 'Asistente documental' });
 }
 
 describe('interfaz del asistente', () => {
@@ -53,7 +53,7 @@ describe('interfaz del asistente', () => {
     await abrirAsistente(usuario);
     expect(await screen.findByTestId('aviso-corpus-ejemplo')).toHaveTextContent('Documentos de EJEMPLO');
     await usuario.type(screen.getByLabelText('Su pregunta'), '¿Cómo se hace la lectura con el comparador DPD?');
-    await usuario.click(screen.getByRole('button', { name: 'Consultar' }));
+    await usuario.click(screen.getByRole('button', { name: 'Preguntar' }));
     const citas = await screen.findByTestId('citas');
     expect(within(citas).getByText('EJEMPLO — Guía DPD')).toBeInTheDocument();
     expect(citas).toHaveTextContent('versión 0.1-ejemplo · página 2');
@@ -66,8 +66,8 @@ describe('interfaz del asistente', () => {
     const { usuario } = montar(() => json(200, { estado: 'sin-evidencia', corpus: 'ejemplo', mensaje: 'No se encontró evidencia suficiente en los documentos disponibles.', citas: [] }));
     await abrirAsistente(usuario);
     await usuario.type(screen.getByLabelText('Su pregunta'), 'capital de Francia');
-    await usuario.click(screen.getByRole('button', { name: 'Consultar' }));
-    expect(await screen.findByRole('heading', { name: 'Sin evidencia' })).toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Preguntar' }));
+    expect(await screen.findByText('No encontré evidencia suficiente')).toBeInTheDocument();
     expect(screen.getByTestId('mensaje-asistente')).toHaveTextContent('No se encontró evidencia');
     expect(screen.queryByTestId('citas')).not.toBeInTheDocument();
   });
@@ -76,8 +76,8 @@ describe('interfaz del asistente', () => {
     const { usuario } = montar(() => json(200, { estado: 'fuera-de-alcance', corpus: 'ejemplo', mensaje: 'SIJASS no calcula dosis ni indica tratamientos del agua. Ese cálculo requiere un protocolo validado y casos de referencia revisados.', citas: [] }));
     await abrirAsistente(usuario);
     await usuario.type(screen.getByLabelText('Su pregunta'), '¿cuánto cloro agrego?');
-    await usuario.click(screen.getByRole('button', { name: 'Consultar' }));
-    expect(await screen.findByRole('heading', { name: 'Fuera de alcance' })).toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Preguntar' }));
+    expect(await screen.findByText('Fuera de alcance')).toBeInTheDocument();
     expect(screen.getByTestId('mensaje-asistente')).toHaveTextContent('protocolo validado');
     expect(screen.queryByTestId('citas')).not.toBeInTheDocument();
   });
@@ -87,7 +87,7 @@ describe('interfaz del asistente', () => {
     const { usuario } = montar(() => json(200, { estado: 'respondida', corpus: 'ejemplo', mensaje: 'm', respuesta: malicioso, citas: [{ ...cita, fragmento: malicioso, documento: '<b>EJEMPLO</b>' }] }));
     await abrirAsistente(usuario);
     await usuario.type(screen.getByLabelText('Su pregunta'), 'lectura');
-    await usuario.click(screen.getByRole('button', { name: 'Consultar' }));
+    await usuario.click(screen.getByRole('button', { name: 'Preguntar' }));
     const citas = await screen.findByTestId('citas');
     expect(citas).toHaveTextContent('<img src=x onerror=');
     expect(citas).toHaveTextContent('<b>EJEMPLO</b>');
@@ -108,9 +108,9 @@ describe('interfaz del asistente', () => {
     const { usuario } = montar(() => (n++ === 0 ? json(200, { estado: 'sin-evidencia', corpus: 'ejemplo', mensaje: 'No se encontró evidencia.', citas: [] }) : json(403, { codigo: 'acceso-denegado', mensaje: 'Acceso denegado' })));
     await abrirAsistente(usuario);
     await usuario.type(screen.getByLabelText('Su pregunta'), 'algo');
-    await usuario.click(screen.getByRole('button', { name: 'Consultar' }));
+    await usuario.click(screen.getByRole('button', { name: 'Preguntar' }));
     await screen.findByTestId('respuesta');
-    await usuario.click(screen.getByRole('button', { name: 'Consultar' }));
+    await usuario.click(screen.getByRole('button', { name: 'Preguntar' }));
     expect(await screen.findByTestId('aviso-error')).toHaveTextContent('Acceso denegado');
     expect(screen.queryByTestId('respuesta')).not.toBeInTheDocument();
   });

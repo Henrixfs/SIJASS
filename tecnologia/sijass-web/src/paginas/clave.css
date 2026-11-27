@@ -1,3 +1,5 @@
+/* Capa antigua: cualquier regla de v3 (sin capa) gana sobre estas. */
+@layer antiguo {
 /* Cambio de clave y entrega de claves temporales (s2a). */
 .pagina-clave { min-height: 100svh; max-width: none; margin: 0; padding: 24px 20px; display: grid; place-items: center; background: #f2f7fa; }
 .tarjeta-clave { width: min(100%, 30rem); padding: 28px 26px; background: #fff; border: 1px solid #e3edf2; border-radius: 28px; box-shadow: 0 18px 50px rgb(8 38 58 / 9%); color: #102b3b; }
@@ -46,4 +48,5 @@
   .tarjeta-impresa dd { margin: 0 0 2mm; font-weight: 700; }
   .tarjeta-impresa .clave-impresa { font: 800 16pt/1.2 'Manrope', system-ui, sans-serif; padding: 2mm 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
   .tarjeta-impresa p { font-size: 9pt; margin: 3mm 0 0; }
+}
 }

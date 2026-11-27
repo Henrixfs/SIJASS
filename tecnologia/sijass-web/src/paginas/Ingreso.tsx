@@ -3,13 +3,14 @@ import { ErrorApi, ErrorTipoDeAcceso, type TipoDeAcceso } from '../api/cliente';
 import { mensajeDeError, useApp } from '../contexto';
 import { inicioDe } from '../lib/rutas';
 import { useEnvio } from '../hooks';
-import { Check, Clock, Eye, EyeOff, ShieldCheck, TriangleAlert, UsersRound } from 'lucide-react';
-import { Marca } from '../identidad';
-import './ingreso.css';
+import { LagunaViva } from '../altiplano/LagunaViva';
+import { FOTOS } from '../lib/fotos';
+import { Av, Ic } from '../v3/base';
+import { oleada } from '../v3/oleada';
 
-const TIPOS: Array<{ id: TipoDeAcceso; titulo: string; detalle: string; Icono: typeof UsersRound }> = [
-  { id: 'asociado', titulo: 'Soy asociado', detalle: 'Consulto mis cuotas y mis pagos.', Icono: UsersRound },
-  { id: 'administrador', titulo: 'Soy administrador', detalle: 'Gestiono mi JASS.', Icono: ShieldCheck },
+const TIPOS: Array<{ id: TipoDeAcceso; titulo: string; detalle: string }> = [
+  { id: 'asociado', titulo: 'Soy asociado', detalle: 'Consulto mis cuotas y mis pagos' },
+  { id: 'administrador', titulo: 'Soy administrador', detalle: 'Gestiono mi JASS' },
 ];
 
 const NOMBRE_TIPO: Record<TipoDeAcceso, string> = { asociado: 'Soy asociado', administrador: 'Soy administrador' };
@@ -23,46 +24,25 @@ type Estado =
 
 function EstadoAcceso({ estado, cambiarTipo }: { estado: Estado; cambiarTipo: (t: TipoDeAcceso) => void }) {
   const cfg = {
-    verificando: { clase: 'info', Icono: Clock, titulo: 'Verificando credenciales…', detalle: 'El botón de ingreso queda temporalmente deshabilitado.' },
-    error: { clase: 'error', Icono: TriangleAlert, titulo: estado.tipo === 'error' ? estado.titulo : '', detalle: estado.tipo === 'error' ? estado.detalle : '' },
-    bloqueado: { clase: 'aviso', Icono: TriangleAlert, titulo: 'Acceso temporalmente bloqueado', detalle: 'Vuelve a intentarlo en 15 minutos.' },
-    suspendida: { clase: 'aviso', Icono: TriangleAlert, titulo: 'Tu JASS está suspendida', detalle: 'Comunícate con SIJASS para volver a usar el sistema.' },
-    ok: { clase: 'exito', Icono: Check, titulo: 'Sesión iniciada', detalle: 'Abriendo tu espacio en SIJASS.' },
+    verificando: { clase: 'info', titulo: 'Verificando credenciales…', detalle: 'El botón de ingreso queda temporalmente deshabilitado.' },
+    error: { clase: 'error', titulo: estado.tipo === 'error' ? estado.titulo : '', detalle: estado.tipo === 'error' ? estado.detalle : '' },
+    bloqueado: { clase: 'aviso', titulo: 'Acceso temporalmente bloqueado', detalle: 'Vuelve a intentarlo en 15 minutos.' },
+    suspendida: { clase: 'aviso', titulo: 'Tu JASS está suspendida', detalle: 'Comunícate con SIJASS para volver a usar el sistema.' },
+    ok: { clase: 'exito', titulo: 'Sesión iniciada', detalle: 'Abriendo tu espacio en SIJASS.' },
   }[estado.tipo];
-  const { Icono } = cfg;
   const esError = estado.tipo === 'error' || estado.tipo === 'bloqueado' || estado.tipo === 'suspendida';
   return (
-    <div className={`estado-acceso ${cfg.clase}`} role={esError ? 'alert' : 'status'} data-testid={esError ? 'error-ingreso' : undefined}>
-      <span className="estado-icono"><Icono size={18} aria-hidden="true" /></span>
-      <div>
-        <strong>{cfg.titulo}</strong>
-        <span>{cfg.detalle}</span>
-        {estado.tipo === 'error' && estado.otroTipo && (
-          <button type="button" className="enlace-tipo" onClick={() => cambiarTipo(estado.otroTipo as TipoDeAcceso)}>Usar «{NOMBRE_TIPO[estado.otroTipo]}»</button>
-        )}
-      </div>
+    <div className={`estado-ingreso ${cfg.clase}`} role={esError ? 'alert' : 'status'} data-testid={esError ? 'error-ingreso' : undefined}>
+      <strong>{cfg.titulo}</strong>
+      <span>{cfg.detalle}</span>
+      {estado.tipo === 'error' && estado.otroTipo && (
+        <button type="button" onClick={() => cambiarTipo(estado.otroTipo as TipoDeAcceso)}>Usar «{NOMBRE_TIPO[estado.otroTipo]}»</button>
+      )}
     </div>
   );
 }
 
-function Ondas() {
-  return (
-    <svg className="ondas" viewBox="0 0 642 340" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-      <path d="M0 270 C90 250 150 240 215 210 C285 178 320 120 392 112 C470 104 560 112 642 20 V340 H0 Z" fill="#0c4a58" fillOpacity=".78" />
-      <path d="M0 300 C100 280 170 280 240 245 C310 210 345 150 420 142 C500 134 580 140 642 70 V340 H0 Z" fill="#12606a" fillOpacity=".62" />
-      <path d="M0 330 C110 310 200 318 290 285 C370 255 410 205 480 198 C550 192 600 196 642 150 V340 H0 Z" fill="#146a73" fillOpacity=".5" />
-      <g fill="none" stroke="#2cc5ae" strokeLinecap="round">
-        <path d="M0 272 C90 252 150 242 215 212 C285 180 320 122 392 114 C470 106 560 114 642 22" strokeWidth="2" />
-        <path d="M0 302 C100 282 170 282 240 247 C310 212 345 152 420 144 C500 136 580 142 642 72" strokeWidth="1.2" strokeOpacity=".7" />
-        <path d="M0 332 C110 312 200 320 290 287 C370 257 410 207 480 200 C550 194 600 198 642 152" strokeWidth="1" strokeOpacity=".45" />
-      </g>
-      <circle cx="328" cy="156" r="14" fill="#2cc5ae" fillOpacity=".18" />
-      <circle cx="328" cy="156" r="5" fill="#44e0c4" />
-      <circle cx="523" cy="133" r="4" fill="#9af0dd" />
-    </svg>
-  );
-}
-
+/** Ingreso (maqueta v3): la laguna con agua viva, el titular y la tarjeta de vidrio en dos pasos. */
 export function Ingreso({ expirada }: { expirada: boolean }) {
   const { api, navegar } = useApp();
   const [tipo, setTipo] = useState<TipoDeAcceso | null>(null);
@@ -77,7 +57,7 @@ export function Ingreso({ expirada }: { expirada: boolean }) {
   function elegir(nuevo: TipoDeAcceso) {
     setTipo(nuevo);
     setEstado(null);
-    window.setTimeout(() => campoDocumento.current?.focus(), 0);
+    window.setTimeout(() => campoDocumento.current?.focus({ preventScroll: true }), 0);
   }
 
   async function enviar(e: FormEvent) {
@@ -94,7 +74,9 @@ export function Ingreso({ expirada }: { expirada: boolean }) {
       try {
         const s = await api.iniciarSesion(documento, contrasena, tipo);
         setEstado({ tipo: 'ok' });
+        // La pantalla cambia ya; la oleada solo acompaña (si esperara, desharía el primer toque de la persona).
         navegar(inicioDe(s.perfil));
+        oleada();
       } catch (err) {
         if (err instanceof ErrorTipoDeAcceso) {
           setEstado({
@@ -113,72 +95,63 @@ export function Ingreso({ expirada }: { expirada: boolean }) {
   }
 
   return (
-    <main className="ingreso">
-      <section className="ingreso-marca" aria-label="SIJASS">
-        <div className="ingreso-marca-contenido">
-          <div className="firma-ingreso"><Marca /><span>Gestión de agua comunitaria</span></div>
-          <div className="mensaje-ingreso">
-            <span className="ingreso-etiqueta">Tu espacio en SIJASS</span>
-            <p className="lema-ingreso">Gestiona el agua de tu comunidad</p>
-            <p className="lema-detalle">Consulta tus cuotas o administra el servicio de tu JASS.</p>
-          </div>
-          <p className="titulo-movil">Gestión de agua comunitaria</p>
-          <p className="lema-movil">Acceso para personal y familias</p>
+    <div className="v3">
+      <main className="esc-ingreso">
+        <LagunaViva foto={FOTOS.llanganuco} className="fondo-ingreso" />
+        <div className="velo" />
+        <div className="arriba"><div className="marca"><span className="gota"><Ic n="gota" /></span>SIJASS</div></div>
+        <div className="mensaje">
+          <span className="kicker"><Ic n="gota" />Gestión de agua comunitaria</span>
+          <p className="lema"><span className="linea"><span>El agua de tu</span></span> <span className="linea"><span>comunidad,</span></span> <span className="linea"><span>en orden.</span></span></p>
+          <p className="sub">Cuotas, pagos y la calidad del agua de tu JASS en un solo lugar. Toca la laguna.</p>
         </div>
-        <Ondas />
-      </section>
-      <div className="ingreso-formulario">
-        <form className="ingreso-tarjeta" onSubmit={enviar} aria-labelledby="titulo-ingreso" noValidate>
-          <h1 id="titulo-ingreso">Iniciar sesión</h1>
-          {expirada && !estado && tipo === null && <EstadoAcceso estado={{ tipo: 'error', titulo: 'Tu sesión expiró', detalle: 'Vuelve a ingresar para continuar.' }} cambiarTipo={elegir} />}
-
+        <p className="credito">Foto: Lagunas de Llanganuco · PsamatheM · CC BY-SA 4.0 · Wikimedia Commons</p>
+        <form className="cristal" onSubmit={enviar} aria-labelledby="titulo-ingreso" noValidate>
           {tipo === null ? (
-            <>
-              <p className="descripcion-ingreso">¿Cómo vas a entrar?</p>
-              <div className="tipos-acceso" role="group" aria-label="¿Cómo vas a entrar?">
-                {TIPOS.map(({ id, titulo, detalle, Icono }) => (
-                  <button key={id} type="button" className="tipo-acceso" onClick={() => elegir(id)}>
-                    <span className="tipo-icono"><Icono size={26} aria-hidden="true" /></span>
-                    <span className="tipo-texto"><strong>{titulo}</strong><small>{detalle}</small></span>
+            <div className="paso izq">
+              <h1 id="titulo-ingreso">Iniciar sesión</h1>
+              {expirada && !estado && <EstadoAcceso estado={{ tipo: 'error', titulo: 'Tu sesión expiró', detalle: 'Vuelve a ingresar para continuar.' }} cambiarTipo={elegir} />}
+              <p className="q">¿Cómo vas a entrar?</p>
+              <div role="group" aria-label="¿Cómo vas a entrar?">
+                {TIPOS.map(({ id, titulo, detalle }) => (
+                  <button key={id} type="button" className="tipo tipo-acceso" onClick={() => elegir(id)}>
+                    <Av indice={id === 'asociado' ? 0 : 3} tam="l" insignia={id === 'administrador' ? 'shield' : undefined} />
+                    <span><strong>{titulo}</strong><small>{detalle}</small></span>
+                    <Ic n="flecha" className="ir" />
                   </button>
                 ))}
               </div>
-            </>
+              <p className="ayuda">¿Necesitas ayuda? <b>Contacta a tu JASS.</b></p>
+            </div>
           ) : (
-            <>
-              <p className="descripcion-ingreso">
-                <span className="tipo-elegido" data-testid="tipo-elegido">{NOMBRE_TIPO[tipo]}</span>
-                <button type="button" className="enlace-tipo" onClick={() => { setTipo(null); setEstado(null); }}>Cambiar</button>
-              </p>
-              <div className="campo-ingreso">
-                <label className="etiqueta-ingreso" htmlFor="documento-ingreso">Número de DNI</label>
-                <input
-                  id="documento-ingreso" ref={campoDocumento} name="documento" inputMode="numeric" pattern="[0-9]*" maxLength={8} autoComplete="username"
+            <div className="paso der">
+              <h1 id="titulo-ingreso">Iniciar sesión</h1>
+              <div className="elegido"><span data-testid="tipo-elegido">{NOMBRE_TIPO[tipo]}</span><button type="button" onClick={() => { setTipo(null); setEstado(null); }}>Cambiar</button></div>
+              <label htmlFor="documento-ingreso">Número de DNI</label>
+              <div className={`campo ${errorDocumento ? 'mal' : ''}`}>
+                <Ic n="users" />
+                <input id="documento-ingreso" ref={campoDocumento} name="documento" inputMode="numeric" pattern="[0-9]*" maxLength={8} autoComplete="username"
                   placeholder="8 números" aria-invalid={errorDocumento !== null} aria-describedby={errorDocumento ? 'error-documento' : undefined}
-                  value={documento} onChange={(e) => { setDocumento(e.target.value.replace(/\D/g, '')); setErrorDocumento(null); }}
-                />
-                {errorDocumento && <span id="error-documento" className="error-campo" role="alert">{errorDocumento}</span>}
+                  value={documento} onChange={(e) => { setDocumento(e.target.value.replace(/\D/g, '')); setErrorDocumento(null); }} />
               </div>
-              <div className="campo-ingreso">
-                <label className="etiqueta-ingreso" htmlFor="clave-ingreso">Clave</label>
-                <span className="campo-clave">
-                  <input
-                    id="clave-ingreso" name="contrasena" type={visible ? 'text' : 'password'} placeholder="Escribe tu clave" autoComplete="current-password"
-                    autoCapitalize="none" autoCorrect="off" spellCheck={false} required aria-describedby="ayuda-clave" value={contrasena} onChange={(e) => setContrasena(e.target.value)}
-                  />
-                  <button className="ver-clave" type="button" aria-label={visible ? 'Ocultar clave' : 'Mostrar clave'} aria-controls="clave-ingreso" aria-pressed={visible} onClick={() => setVisible(!visible)}>
-                    {visible ? <EyeOff aria-hidden="true" size={20} /> : <Eye aria-hidden="true" size={20} />}
-                  </button>
-                </span>
-                <small id="ayuda-clave" className="ayuda-campo">Si te la entregaron en una tarjeta, escríbela tal como está.</small>
+              {errorDocumento && <span id="error-documento" className="error-campo" role="alert">{errorDocumento}</span>}
+              <label htmlFor="clave-ingreso">Clave</label>
+              <div className="campo">
+                <Ic n="candado" />
+                <input id="clave-ingreso" name="contrasena" type={visible ? 'text' : 'password'} placeholder="Escribe tu clave" autoComplete="current-password"
+                  autoCapitalize="none" autoCorrect="off" spellCheck={false} required aria-describedby="ayuda-clave" value={contrasena} onChange={(e) => setContrasena(e.target.value)} />
+                <button className="ver-clave" type="button" aria-label={visible ? 'Ocultar clave' : 'Mostrar clave'} aria-controls="clave-ingreso" aria-pressed={visible} onClick={() => setVisible(!visible)}>
+                  <Ic n="ojo" />
+                </button>
               </div>
+              <p id="ayuda-clave" className="ayuda-c">Si te la entregaron en una tarjeta, escríbela tal como está.</p>
               {estado && <EstadoAcceso estado={estado} cambiarTipo={elegir} />}
-              <button type="submit" className="primario boton-ingreso" disabled={enviando}>{enviando ? 'Ingresando…' : 'Ingresar'}</button>
-            </>
+              <button type="submit" className="bt teal entrar boton-ingreso" disabled={enviando}>{enviando ? 'Ingresando…' : 'Ingresar'} <Ic n="flecha" /></button>
+              <p className="ayuda">¿Necesitas ayuda? <b>Contacta a tu JASS.</b></p>
+            </div>
           )}
-          <p className="ayuda-ingreso"><span>¿Necesitas ayuda?</span> <strong>Contacta a tu JASS.</strong></p>
         </form>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

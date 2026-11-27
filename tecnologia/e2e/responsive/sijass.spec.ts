@@ -33,6 +33,7 @@ async function preparar(page: Page, rol: Rol) {
       'GET /v1/mediciones/catalogo': { unidad: 'mg/L', metodos: [{ codigo: 'dpd', descripcion: 'Comparador DPD' }] },
       [`GET /v1/reservorios/${reservorio.id}/mediciones`]: { mediciones: [] },
       'GET /v1/asistente/documentos': { corpus: 'ejemplo', nombre: 'Ejemplo', documentos: [] },
+      'GET /v1/incidencias': { incidencias: [] },
     };
     if (metodo === 'POST' && pathname === `/v1/pagos/${pago.id}/reversa`) {
       reversas++;
@@ -58,13 +59,14 @@ async function sinDesborde(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 }
 
-async function navegar(page: Page, nombre: string) {
-  const menu = page.getByRole('button', { name: 'Menú' });
-  const navegacion = page.getByRole('navigation', { name: 'Secciones del personal' });
-  // La pantalla del personal se carga bajo demanda: se espera su navegación (o el botón de menú en móvil).
-  await expect(menu.or(navegacion)).toBeVisible();
+async function navegar(page: Page, nombre: string | RegExp) {
+  const menu = page.getByRole('button', { name: 'Menú', exact: true });
+  const riel = page.getByRole('complementary', { name: 'Menú del panel' });
+  // La pantalla del personal se carga bajo demanda: se espera su menú (o el botón «Menú» en pantallas angostas).
+  await expect(menu.or(riel.getByRole('navigation', { name: 'Secciones del personal' })).first()).toBeVisible();
   if (await menu.isVisible() && (await menu.getAttribute('aria-expanded')) === 'false') await menu.click();
-  await navegacion.getByRole('link', { name: nombre, exact: true }).click();
+  await riel.getByRole('link', { name: nombre, exact: typeof nombre === 'string' }).click();
+  await page.mouse.move(5, 5);
 }
 
 for (const width of [320, 360, 390, 768, 1024, 1440]) {
@@ -74,35 +76,33 @@ for (const width of [320, 360, 390, 768, 1024, 1440]) {
     const errores: string[] = [];
     page.on('pageerror', (error) => errores.push(error.message));
     const { reversas } = await preparar(page, 'tesorero');
-    const botonCuenta = page.getByRole('button', { name: 'Ver cuenta' });
+    await navegar(page, 'Asociados');
+    const botonCuenta = page.getByTestId(`fila-${asociado.documento}`).getByRole('button', { name: 'Ver cuenta' });
     await expect(botonCuenta).toBeVisible();
+    expect((await botonCuenta.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await sinDesborde(page);
     await botonCuenta.click();
-    const fila = page.getByTestId(`pago-${pago.comprobante}`);
-    const abrir = fila.getByRole('button', { name: 'Ver detalle' });
-    await expect(abrir).toBeVisible();
-    expect((await abrir.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    const cuenta = page.getByRole('dialog', { name: asociado.nombre });
+    const fila = cuenta.getByTestId(`pago-${pago.comprobante}`);
+    const revertir = fila.getByRole('button', { name: 'Revertir' });
+    await expect(revertir).toBeVisible();
+    expect((await revertir.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await expect(cuenta.getByTestId('saldo-asociado')).toHaveText('S/ 10.00');
+    const caja = await cuenta.boundingBox();
+    expect(caja && caja.x >= 0 && caja.x + caja.width <= width).toBe(true);
     await sinDesborde(page);
-    await expect(page.getByTestId('tabla-pagos')).toHaveCSS('display', width < 1100 ? 'grid' : 'table');
     if (width === 360 || width === 1440) await page.screenshot({ path: info.outputPath(`cuenta-${width}.png`), fullPage: true });
-    await abrir.focus();
-    await page.keyboard.press('Enter');
-    const detalle = page.getByRole('dialog', { name: 'Detalle del pago' });
-    await expect(detalle.getByText(pago.comprobante, { exact: true })).toBeVisible();
-    await page.keyboard.press('Tab');
-    await expect(detalle.getByRole('button', { name: 'Volver al historial' })).toBeFocused();
-    const rect = await detalle.boundingBox();
-    expect(rect && rect.x >= 0 && rect.x + rect.width <= width).toBe(true);
+    // Escape cierra el cajón y el foco vuelve al botón que lo abrió.
     await page.keyboard.press('Escape');
-    await expect(detalle).toHaveCount(0);
-    await expect(abrir).toBeFocused();
-    await abrir.click();
-    await detalle.getByRole('button', { name: 'Reversar pago' }).click();
-    const dialogo = page.getByRole('dialog', { name: 'Reversar pago' });
-    await expect(dialogo.getByRole('heading')).toBeFocused();
-    const textarea = dialogo.getByRole('textbox', { name: 'Motivo de la reversa' });
+    await expect(cuenta).toHaveCount(0);
+    await expect(botonCuenta).toBeFocused();
+    await botonCuenta.click();
+    await revertir.click();
+    const dialogo = page.getByRole('dialog', { name: 'Revertir un pago' });
+    const textarea = dialogo.getByRole('textbox', { name: 'Motivo (obligatorio)' });
+    await expect(textarea).toBeFocused();
     await textarea.fill('  ');
-    const confirmar = dialogo.getByRole('button', { name: 'Confirmar reversa' });
+    const confirmar = dialogo.getByRole('button', { name: 'Revertir pago' });
     await confirmar.click();
     await expect(dialogo.getByRole('alert')).toContainText('1 a 300 caracteres');
     expect(reversas()).toBe(0);
@@ -110,30 +110,33 @@ for (const width of [320, 360, 390, 768, 1024, 1440]) {
     await textarea.fill('Registro duplicado');
     await confirmar.click();
     await expect(page.getByTestId('aviso-ok')).toHaveText('Pago revertido.');
-    await expect(fila).toContainText('Revertido');
-    await expect(page.getByTestId('saldo-asociado')).toContainText('S/ 15.00');
     expect(reversas()).toBe(1);
-    await navegar(page, 'Mi perfil');
+    await page.getByTestId(`fila-${asociado.documento}`).getByRole('button', { name: 'Ver cuenta' }).click();
+    await expect(cuenta.getByTestId(`pago-${pago.comprobante}`)).toContainText('Revertido');
+    await expect(cuenta.getByTestId('saldo-asociado')).toHaveText('S/ 15.00');
+    await cuenta.getByRole('button', { name: 'Cerrar' }).first().click();
+    await navegar(page, /^Mi perfil/);
     await expect(page.getByText('Información de sesión')).toBeVisible();
     await sinDesborde(page);
-    await page.getByRole('link', { name: '← Volver' }).click();
-    await expect(fila).toBeVisible();
+    await page.getByRole('link', { name: 'Volver' }).click();
+    await expect(page.getByTestId(`fila-${asociado.documento}`)).toBeVisible();
     expect(errores).toEqual([]);
   });
 }
 
-test('Consejo, Operador y Asociado tienen recorridos separados', async ({ page, browser }) => {
+test('Consejo, Operación y Asociado tienen recorridos separados', async ({ page, browser }) => {
   await page.setViewportSize({ width: 390, height: 820 });
   const operador = await preparar(page, 'operador');
-  const menu = page.getByRole('button', { name: 'Menú' });
+  const menu = page.getByRole('button', { name: 'Menú', exact: true });
   await menu.click();
-  await page.getByRole('link', { name: 'Operaciones de campo' }).focus();
+  await page.getByRole('link', { name: 'El agua' }).focus();
   await page.keyboard.press('Escape');
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
   await expect(menu).toBeFocused();
-  await navegar(page, 'Operaciones de campo');
-  await page.getByLabel('Reservorio').selectOption(reservorio.id);
+  await navegar(page, 'El agua');
+  await page.getByRole('button', { name: 'Registrar lectura' }).click();
   await expect(page.getByRole('form', { name: 'Registrar medición' })).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.goto(`/personal/asociados/${asociado.id}`);
   await expect(page.getByTestId('sin-permiso')).toBeVisible();
   expect(operador.llamadas.some((ruta) => ruta.startsWith('GET /v1/asociados'))).toBe(false);
@@ -142,10 +145,10 @@ test('Consejo, Operador y Asociado tienen recorridos separados', async ({ page, 
   const consejo = await browser.newPage({ viewport: { width: 768, height: 900 } });
   await preparar(consejo, 'consejo');
   await navegar(consejo, 'Resumen');
-  await expect(consejo.getByRole('heading', { name: 'Dashboard general' })).toBeVisible();
-  await navegar(consejo, 'Reservorios');
-  await expect(consejo.getByRole('form', { name: 'Crear reservorio' })).toBeVisible();
-  await expect(consejo.getByText(reservorio.nombre, { exact: true })).toBeVisible();
+  await expect(consejo.getByRole('heading', { name: /Ana\.$/ })).toBeVisible();
+  await navegar(consejo, 'El agua');
+  await expect(consejo.getByRole('button', { name: 'Nuevo reservorio' })).toBeVisible();
+  await expect(consejo.getByRole('heading', { name: reservorio.nombre }).first()).toBeVisible();
   await navegar(consejo, 'Asistente');
   await expect(consejo.getByRole('form', { name: 'Consultar al asistente' })).toBeVisible();
   await sinDesborde(consejo);
@@ -153,8 +156,8 @@ test('Consejo, Operador y Asociado tienen recorridos separados', async ({ page, 
 
   const familias = await browser.newPage({ viewport: { width: 360, height: 820 } });
   const familia = await preparar(familias, null);
-  await familias.getByRole('navigation', { name: 'Secciones del portal' }).getByRole('link', { name: 'Pagos' }).click();
   await expect(familias.getByTestId('saldo')).toHaveText('S/ 10.00');
+  await familias.getByRole('navigation', { name: 'Secciones del portal' }).getByRole('link', { name: 'Cuotas' }).click();
   await expect(familias.getByTestId('portal-cuotas')).toBeVisible();
   await familias.goto('/personal/campo');
   await expect(familias).toHaveURL(/\/portal$/);
