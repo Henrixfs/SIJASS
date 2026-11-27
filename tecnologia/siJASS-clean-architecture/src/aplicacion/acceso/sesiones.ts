@@ -235,11 +235,17 @@ export class RenovarSesion {
     const ahoraIso = ahora.toISOString();
 
     const resultado: Fallo | Exito = await this.d.unidadDeTrabajo.ejecutar(async (r): Promise<Fallo | Exito> => {
+      const presentada = await r.sesiones.buscarPorHash(hash);
+      if (!presentada) return { fallo: new ErrorNoAutenticado('sesion-invalida') };
+      // Toda escritura sobre las sesiones de un usuario bloquea antes su fila (como el cambio de
+      // clave o la desactivación). Sin esto, renovaciones simultáneas del mismo refresco tomaban
+      // filas de `sesion` y de `usuario` en órdenes distintos y PostgreSQL abortaba por deadlock.
+      const usuario = await r.usuarios.buscarPorIdBloqueando(presentada.usuarioId);
+      // Se relee tras el bloqueo para ver lo que confirmó la renovación que llegó primero.
       const sesion = await r.sesiones.buscarPorHash(hash);
       if (!sesion || sesion.revocadaEn !== null || new Date(sesion.expiraEn).getTime() <= ahora.getTime()) {
         return { fallo: new ErrorNoAutenticado('sesion-invalida') };
       }
-      const usuario = await r.usuarios.buscarPorId(sesion.usuarioId);
       const membresia = usuario ? await r.membresias.activaDeUsuario(sesion.usuarioId) : undefined;
       const actor = membresia ? { jassId: membresia.jassId, usuarioId: sesion.usuarioId } : null;
 
@@ -279,6 +285,7 @@ export class CerrarSesion {
     await this.d.unidadDeTrabajo.ejecutar(async (r) => {
       const sesion = await r.sesiones.buscarPorHash(hash);
       if (!sesion) return;
+      await r.usuarios.buscarPorIdBloqueando(sesion.usuarioId); // mismo orden de bloqueo que RenovarSesion
       await r.sesiones.revocarFamilia(sesion.familiaId, ahora.toISOString());
       const membresia = await r.membresias.activaDeUsuario(sesion.usuarioId);
       await auditar(r, membresia ? { jassId: membresia.jassId, usuarioId: sesion.usuarioId } : null, { accion: 'sesion.cerrada', recurso: 'sesion', recursoId: sesion.usuarioId }, ahora);
