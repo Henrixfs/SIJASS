@@ -8,6 +8,7 @@
 import type { Membresia, Rol, Sesion, Usuario } from './acceso.js';
 import type { Asociado, Cuota, Pago, ReversaPago } from './padron.js';
 import type { Reservorio } from './reservorio.js';
+import type { CategoriaIncidencia, EstadoIncidencia, EventoIncidencia, Incidencia, MatrizPrioridad, Prioridad, ReglasPrioridad, TipoFoto } from './incidencia.js';
 
 export type EstadoJass = 'activa' | 'suspendida';
 
@@ -191,6 +192,84 @@ export interface RepositorioAuditoria {
   listarSinJass(): Promise<EventoAuditoria[]>;
 }
 
+
+// ---------------------------------------------------------------------------
+// Incidencias (s1f-backend-incidencias).
+// ---------------------------------------------------------------------------
+
+export type ResultadoCreacionIncidencia =
+  | { readonly creada: true }
+  | { readonly creada: false; readonly existente: Incidencia };
+
+/** Posición desde la que sigue un listado (orden: más reciente primero). */
+export interface PosicionIncidencia {
+  readonly creadaEn: string;
+  readonly id: string;
+}
+
+export interface FiltroIncidencias {
+  /** Solo las del autor (el asociado ve únicamente las suyas). */
+  readonly autorId?: string;
+  readonly estado?: EstadoIncidencia;
+  readonly categoria?: CategoriaIncidencia;
+  /** Fecha de recepción mínima y máxima (ISO, ambas incluidas). */
+  readonly desde?: string;
+  readonly hasta?: string;
+  readonly despuesDe?: PosicionIncidencia;
+  readonly limite: number;
+}
+
+export interface CambiosIncidencia {
+  readonly estado?: EstadoIncidencia;
+  readonly prioridadConfirmada?: Prioridad;
+  readonly responsableId?: string | null;
+  readonly tieneFoto?: boolean;
+}
+
+export interface EventoGuardado extends EventoIncidencia {
+  /** Orden de inserción; sirve de cursor del historial. */
+  readonly secuencia: number;
+}
+
+export interface FotoGuardada {
+  readonly tipo: TipoFoto;
+  readonly bytes: Buffer;
+  readonly sha256: string;
+}
+
+export type ReservaFoto =
+  | { readonly nueva: true }
+  | { readonly nueva: false; readonly payloadHash: string; readonly resultado: Readonly<Record<string, unknown>> };
+
+export interface RepositorioIncidencias {
+  /**
+   * Inserta la incidencia con su primer evento, salvo que ya exista la misma (jass, autor, clave):
+   * en ese caso devuelve la existente sin modificarla ni registrar el evento.
+   */
+  crear(incidencia: Incidencia, evento: EventoIncidencia): Promise<ResultadoCreacionIncidencia>;
+  buscar(jassId: string, id: string): Promise<Incidencia | undefined>;
+  buscarPorClave(jassId: string, autorId: string, clave: string): Promise<Incidencia | undefined>;
+  /** De la más reciente a la más antigua (y luego por `id` descendente). */
+  listar(jassId: string, filtro: FiltroIncidencias): Promise<Incidencia[]>;
+  /**
+   * Aplica los cambios y suma 1 a la revisión solo si la revisión vigente es `revision`.
+   * Devuelve la incidencia actualizada o `undefined` si la revisión no coincide (o no existe).
+   */
+  actualizar(jassId: string, id: string, revision: number, cambios: CambiosIncidencia): Promise<Incidencia | undefined>;
+  registrarEvento(evento: EventoIncidencia): Promise<void>;
+  /** Eventos en orden de inserción, posteriores a `despuesDe` (secuencia). */
+  listarEventos(jassId: string, incidenciaId: string, opciones: { readonly soloPublicos: boolean; readonly despuesDe?: number; readonly limite: number }): Promise<EventoGuardado[]>;
+  /** Versión vigente de la matriz de la JASS, o `undefined` si nunca se configuró. */
+  reglasVigentes(jassId: string): Promise<ReglasPrioridad | undefined>;
+  /** Guarda una versión nueva; `false` si esa versión ya existe (otra actualización ganó). */
+  guardarReglas(jassId: string, version: number, reglas: MatrizPrioridad, actorId: string, creadaEn: string): Promise<boolean>;
+  guardarFoto(jassId: string, incidenciaId: string, foto: FotoGuardada, actorId: string, guardadaEn: string): Promise<void>;
+  leerFoto(jassId: string, incidenciaId: string): Promise<FotoGuardada | undefined>;
+  /** Reserva la clave de una carga de foto; si ya existía, devuelve su hash y su resultado. */
+  reservarFoto(jassId: string, actorId: string, clave: string, incidenciaId: string, payloadHash: string, creadaEn: string): Promise<ReservaFoto>;
+  registrarResultadoFoto(jassId: string, actorId: string, clave: string, resultado: Readonly<Record<string, unknown>>): Promise<void>;
+}
+
 export interface RepositoriosAcceso {
   readonly jass: RepositorioJass;
   readonly reservorios: RepositorioReservoriosJass;
@@ -201,6 +280,7 @@ export interface RepositoriosAcceso {
   readonly cuotas: RepositorioCuotas;
   readonly pagos: RepositorioPagos;
   readonly auditoria: RepositorioAuditoria;
+  readonly incidencias: RepositorioIncidencias;
 }
 
 /** Costura de pruebas: envuelve los repositorios de cada transacción (p. ej. para inyectar un fallo). */

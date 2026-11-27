@@ -2,8 +2,16 @@ import type { Membresia, Sesion, Usuario } from '../dominio/acceso.js';
 import { ErrorConflicto } from '../dominio/errores.js';
 import type { Asociado, Cuota, Pago, ReversaPago } from '../dominio/padron.js';
 import type { Reservorio } from '../dominio/reservorio.js';
+import type { EventoIncidencia, Incidencia, MatrizPrioridad, ReglasPrioridad } from '../dominio/incidencia.js';
 import type {
+  CambiosIncidencia,
   ContextoTransaccion,
+  EventoGuardado,
+  FiltroIncidencias,
+  FotoGuardada,
+  RepositorioIncidencias,
+  ReservaFoto,
+  ResultadoCreacionIncidencia,
   CredencialesNuevas,
   DecoradorRepositoriosAcceso,
   EstadoJass,
@@ -38,6 +46,11 @@ export interface EstadoAcceso {
   pagos: Map<string, Pago>;
   reversas: Map<string, ReversaPago>;
   auditoria: EventoAuditoria[];
+  incidencias: Map<string, Incidencia>;
+  eventosIncidencia: EventoGuardado[];
+  reglasIncidencia: Array<{ jassId: string; version: number; reglas: MatrizPrioridad }>;
+  fotos: Map<string, FotoGuardada & { jassId: string }>;
+  operacionesFoto: Map<string, { payloadHash: string; resultado: Readonly<Record<string, unknown>> | null }>;
 }
 
 export function estadoAccesoVacio(): EstadoAcceso {
@@ -52,6 +65,11 @@ export function estadoAccesoVacio(): EstadoAcceso {
     pagos: new Map(),
     reversas: new Map(),
     auditoria: [],
+    incidencias: new Map(),
+    eventosIncidencia: [],
+    reglasIncidencia: [],
+    fotos: new Map(),
+    operacionesFoto: new Map(),
   };
 }
 
@@ -67,6 +85,11 @@ function copiar(e: EstadoAcceso): EstadoAcceso {
     pagos: new Map(e.pagos),
     reversas: new Map(e.reversas),
     auditoria: [...e.auditoria],
+    incidencias: new Map(e.incidencias),
+    eventosIncidencia: [...e.eventosIncidencia],
+    reglasIncidencia: [...e.reglasIncidencia],
+    fotos: new Map(e.fotos),
+    operacionesFoto: new Map(e.operacionesFoto),
   };
 }
 
@@ -369,6 +392,86 @@ class AuditoriaMemoria implements RepositorioAuditoria {
   }
 }
 
+/** Más reciente primero; a igual fecha, `id` descendente (igual que el índice de PostgreSQL). */
+const porRecienteYId = (a: Incidencia, b: Incidencia): number =>
+  a.creadaEn === b.creadaEn ? (a.id < b.id ? 1 : -1) : a.creadaEn < b.creadaEn ? 1 : -1;
+
+class IncidenciasMemoria implements RepositorioIncidencias {
+  constructor(private readonly e: EstadoAcceso) {}
+  async crear(i: Incidencia, evento: EventoIncidencia): Promise<ResultadoCreacionIncidencia> {
+    const existente = await this.buscarPorClave(i.jassId, i.autorId, i.claveIdempotencia);
+    if (existente) return { creada: false, existente };
+    this.e.incidencias.set(i.id, Object.freeze({ ...i }));
+    await this.registrarEvento(evento);
+    return { creada: true };
+  }
+  async buscar(jassId: string, id: string): Promise<Incidencia | undefined> {
+    const i = this.e.incidencias.get(id);
+    return i && i.jassId === jassId ? i : undefined;
+  }
+  async buscarPorClave(jassId: string, autorId: string, clave: string): Promise<Incidencia | undefined> {
+    return [...this.e.incidencias.values()].find((i) => i.jassId === jassId && i.autorId === autorId && i.claveIdempotencia === clave);
+  }
+  async listar(jassId: string, f: FiltroIncidencias): Promise<Incidencia[]> {
+    const despues = f.despuesDe;
+    return [...this.e.incidencias.values()]
+      .filter((i) => i.jassId === jassId)
+      .filter((i) => (f.autorId === undefined || i.autorId === f.autorId) && (f.estado === undefined || i.estado === f.estado) && (f.categoria === undefined || i.categoria === f.categoria))
+      .filter((i) => (f.desde === undefined || i.creadaEn >= f.desde) && (f.hasta === undefined || i.creadaEn <= f.hasta))
+      .filter((i) => despues === undefined || i.creadaEn < despues.creadaEn || (i.creadaEn === despues.creadaEn && i.id < despues.id))
+      .sort(porRecienteYId)
+      .slice(0, f.limite);
+  }
+  async actualizar(jassId: string, id: string, revision: number, cambios: CambiosIncidencia): Promise<Incidencia | undefined> {
+    const i = await this.buscar(jassId, id);
+    if (!i || i.revision !== revision) return undefined;
+    const nueva = Object.freeze({ ...i, ...cambios, revision: i.revision + 1 });
+    this.e.incidencias.set(id, nueva);
+    return nueva;
+  }
+  async registrarEvento(evento: EventoIncidencia): Promise<void> {
+    const anterior = this.e.eventosIncidencia.at(-1)?.secuencia ?? 0;
+    this.e.eventosIncidencia.push(Object.freeze({ ...evento, detalle: Object.freeze({ ...evento.detalle }), secuencia: anterior + 1 }));
+  }
+  async listarEventos(jassId: string, incidenciaId: string, o: { soloPublicos: boolean; despuesDe?: number; limite: number }): Promise<EventoGuardado[]> {
+    return this.e.eventosIncidencia
+      .filter((ev) => ev.jassId === jassId && ev.incidenciaId === incidenciaId && (!o.soloPublicos || ev.publico) && (o.despuesDe === undefined || ev.secuencia > o.despuesDe))
+      .slice(0, o.limite);
+  }
+  async reglasVigentes(jassId: string): Promise<ReglasPrioridad | undefined> {
+    const propias = this.e.reglasIncidencia.filter((r) => r.jassId === jassId).sort((a, b) => b.version - a.version);
+    return propias[0] ? { version: propias[0].version, reglas: propias[0].reglas } : undefined;
+  }
+  async guardarReglas(jassId: string, version: number, reglas: MatrizPrioridad): Promise<boolean> {
+    if (this.e.reglasIncidencia.some((r) => r.jassId === jassId && r.version === version)) return false;
+    this.e.reglasIncidencia.push({ jassId, version, reglas });
+    return true;
+  }
+  async guardarFoto(jassId: string, incidenciaId: string, foto: FotoGuardada): Promise<void> {
+    this.e.fotos.set(incidenciaId, { ...foto, jassId });
+  }
+  async leerFoto(jassId: string, incidenciaId: string): Promise<FotoGuardada | undefined> {
+    const f = this.e.fotos.get(incidenciaId);
+    return f && f.jassId === jassId ? { tipo: f.tipo, bytes: f.bytes, sha256: f.sha256 } : undefined;
+  }
+  async reservarFoto(jassId: string, actorId: string, clave: string, _incidenciaId: string, payloadHash: string): Promise<ReservaFoto> {
+    const llave = `${jassId}/${actorId}/${clave}`;
+    const previa = this.e.operacionesFoto.get(llave);
+    if (!previa) {
+      this.e.operacionesFoto.set(llave, { payloadHash, resultado: null });
+      return { nueva: true };
+    }
+    if (previa.resultado === null) throw new Error(`reserva de foto sin resultado: ${llave}`);
+    return { nueva: false, payloadHash: previa.payloadHash, resultado: previa.resultado };
+  }
+  async registrarResultadoFoto(jassId: string, actorId: string, clave: string, resultado: Readonly<Record<string, unknown>>): Promise<void> {
+    const llave = `${jassId}/${actorId}/${clave}`;
+    const previa = this.e.operacionesFoto.get(llave);
+    if (!previa) throw new Error(`operación de foto no reservada: ${llave}`);
+    this.e.operacionesFoto.set(llave, { ...previa, resultado: Object.freeze({ ...resultado }) });
+  }
+}
+
 export function repositoriosAccesoMemoria(e: EstadoAcceso): RepositoriosAcceso {
   return {
     jass: new JassMemoria(e),
@@ -380,6 +483,7 @@ export function repositoriosAccesoMemoria(e: EstadoAcceso): RepositoriosAcceso {
     cuotas: new CuotasMemoria(e),
     pagos: new PagosMemoria(e),
     auditoria: new AuditoriaMemoria(e),
+    incidencias: new IncidenciasMemoria(e),
   };
 }
 

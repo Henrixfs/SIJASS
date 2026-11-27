@@ -79,3 +79,17 @@ El hash canónico de creación incluye el alcance reportado; el mismo actor con 
 ## Migration Plan
 
 Migración aditiva y pruebas en base desechable. Antes de producción, respaldo y restauración ensayados. La reversión tras recibir datos requiere respaldo y autorización; no borrar información de incidencias como rollback automático.
+
+## Decisiones aprobadas (2026-11-26)
+
+El usuario aprobó en el chat, el 2026-11-26, las reglas resumidas así: solo el asociado crea y ve los suyos; Consejo y Operación asignan, confirman o corrigen la prioridad con motivo, anotan acciones, cierran con acción y reabren con motivo; Tesorería solo consulta; solo el Consejo cambia la matriz de prioridad; ciclo `registrada → en-atencion → cerrada → en-atencion` y una cerrada solo se reabre; foto opcional JPEG o PNG de hasta 5 MiB sin metadatos y sin borrado; el asociado no ve prioridad, responsable ni notas internas. Para implementarlas se precisa:
+
+1. **Reserva idempotente en la propia fila.** La clave UUID y el hash canónico de la creación se guardan en la incidencia, con un índice único por JASS, autor y clave: reserva y creación son una sola inserción atómica y la reserva dura lo mismo que la incidencia. Un rechazo de validación no inserta nada y no reserva la clave. La foto usa su propia tabla de operaciones con la misma regla.
+2. **Una incidencia cerrada solo admite reapertura.** Prioridad, responsable, acciones y foto responden `409 incidencia-cerrada`.
+3. **Historial del asociado.** Ve la creación, los cambios de estado, el cierre con la acción, la reapertura con su motivo y las acciones públicas. Prioridad, responsable, acciones internas y cambios de foto quedan para el personal.
+4. **Orden y paginación.** El listado va de la más reciente a la más antigua y filtra por fecha de recepción, estado y categoría; el historial va en orden cronológico. Ambos usan cursor opaco.
+5. **Fecha de observación.** ISO 8601 con zona y no posterior a la recepción más cinco minutos.
+6. **Responsable.** Cuenta activa con membresía de personal activa en la misma JASS; `null` lo desasigna.
+7. **Foto.** Se comprueba la firma real (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`) y se quitan los segmentos `APP1` de un JPEG y los fragmentos `eXIf`, `tEXt`, `iTXt` y `zTXt` de un PNG antes de guardar.
+8. **Sección 5 de tareas.** Cierra el Sprint 0 y no depende de este cambio: queda fuera de esta implementación.
+9. **Límites, retención y recuperación de la foto.** Una foto por incidencia, de hasta 5 MiB, guardada sin metadatos en `incidencia_foto` (PostgreSQL) junto con su SHA-256. Viaja en el mismo respaldo de la base (`pg_dump`) y se recupera al restaurarlo; se comprobó en una base desechable. No hay borrado en este cambio: se conserva mientras exista la incidencia, hasta que se apruebe una política de retención antes del piloto. Si la escritura falla, la transacción se revierte y no queda ni la foto ni su reserva.

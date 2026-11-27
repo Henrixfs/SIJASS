@@ -12,6 +12,8 @@ import {
   ErrorMedicionDuplicada,
   ErrorNoAutenticado,
   ErrorTipoDeAccesoDistinto,
+  ErrorTipoNoAdmitido,
+  ErrorCargaExcesiva,
   ErrorValidacion,
 } from '../dominio/errores.js';
 import { esPublico, permiteCambioPendiente, type SolicitudAutenticada } from './comun.js';
@@ -108,6 +110,14 @@ export class FiltroErrores implements ExceptionFilter {
     }
     if (error instanceof ErrorConflicto || error instanceof ErrorMedicionDuplicada) {
       respuesta.status(409).json({ codigo: error.codigo, mensaje: error.message });
+      return;
+    }
+    if (error instanceof ErrorTipoNoAdmitido) {
+      respuesta.status(415).json({ codigo: error.codigo, mensaje: 'Tipo de contenido no admitido' });
+      return;
+    }
+    if (error instanceof ErrorCargaExcesiva) {
+      respuesta.status(413).json({ codigo: error.codigo, mensaje: 'Solicitud demasiado grande' });
       return;
     }
     if (error instanceof ErrorDatoInvalido || error instanceof ErrorValidacion) {

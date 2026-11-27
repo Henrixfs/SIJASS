@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Inject, NotFoundException, Param, Post, Put, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import type { Casos } from '../aplicacion/casos.js';
 import type { ActorAutenticado, ContextoAcceso, ContextoPlataforma } from '../dominio/acceso.js';
@@ -310,6 +310,107 @@ export class PlataformaController {
   }
 }
 
+/**
+ * Incidencias (s1f). Las rutas de reglas van antes que `:id`; la JASS y el actor salen de la
+ * membresía y cada modificación exige la revisión vigente.
+ */
+@Controller('v1/incidencias')
+export class IncidenciasController {
+  constructor(@Inject(CASOS) private readonly casos: Casos) {}
+
+  @Get('reglas-prioridad')
+  reglas(@ActorActual() actor: ContextoAcceso) {
+    return this.casos.reglasPrioridad.ejecutar(actor);
+  }
+
+  @Put('reglas-prioridad')
+  actualizarReglas(@ActorActual() actor: ContextoAcceso, @Body() body: unknown) {
+    const b = cuerpo(body);
+    return this.casos.actualizarReglasPrioridad.ejecutar(actor, { version: b.version, reglas: b.reglas });
+  }
+
+  /** `201` si crea el reporte; `200` con el original si es un reintento de la misma clave. */
+  @Post()
+  async reportar(
+    @ActorActual() actor: ContextoAcceso,
+    @Body() body: unknown,
+    @Headers('idempotency-key') clave: string | undefined,
+    @Res({ passthrough: true }) respuesta: Response,
+  ) {
+    const { incidencia, duplicado } = await this.casos.registrarIncidencia.ejecutar(actor, cuerpo(body), clave);
+    respuesta.status(duplicado ? 200 : 201);
+    return incidencia;
+  }
+
+  @Get()
+  listar(@ActorActual() actor: ContextoAcceso, @Query() q: Record<string, unknown>) {
+    return this.casos.listarIncidencias.ejecutar(actor, { desde: q.desde, hasta: q.hasta, estado: q.estado, categoria: q.categoria, limite: q.limite, cursor: q.cursor });
+  }
+
+  @Get(':id')
+  consultar(@ActorActual() actor: ContextoAcceso, @Param('id') id: string) {
+    return this.casos.consultarIncidencia.ejecutar(actor, id);
+  }
+
+  @Get(':id/historial')
+  historial(@ActorActual() actor: ContextoAcceso, @Param('id') id: string, @Query() q: Record<string, unknown>) {
+    return this.casos.historialIncidencia.ejecutar(actor, id, { limite: q.limite, cursor: q.cursor });
+  }
+
+  @Post(':id/estado')
+  @HttpCode(200)
+  estado(@ActorActual() actor: ContextoAcceso, @Param('id') id: string, @Body() body: unknown) {
+    const b = cuerpo(body);
+    return this.casos.cambiarEstadoIncidencia.ejecutar(actor, id, { revision: b.revision, estado: b.estado, detalle: b.detalle });
+  }
+
+  @Post(':id/prioridad')
+  @HttpCode(200)
+  prioridad(@ActorActual() actor: ContextoAcceso, @Param('id') id: string, @Body() body: unknown) {
+    const b = cuerpo(body);
+    return this.casos.confirmarPrioridad.ejecutar(actor, id, { revision: b.revision, prioridad: b.prioridad, motivo: b.motivo });
+  }
+
+  @Post(':id/responsable')
+  @HttpCode(200)
+  responsable(@ActorActual() actor: ContextoAcceso, @Param('id') id: string, @Body() body: unknown) {
+    const b = cuerpo(body);
+    return this.casos.asignarResponsable.ejecutar(actor, id, { revision: b.revision, responsableId: b.responsableId });
+  }
+
+  @Post(':id/acciones')
+  @HttpCode(200)
+  accion(@ActorActual() actor: ContextoAcceso, @Param('id') id: string, @Body() body: unknown) {
+    const b = cuerpo(body);
+    return this.casos.registrarAccionIncidencia.ejecutar(actor, id, { revision: b.revision, descripcion: b.descripcion, visibilidad: b.visibilidad });
+  }
+
+  /** Cuerpo binario JPEG o PNG (hasta 5 MiB) con `Idempotency-Key` e `If-Match: <revisión>`. */
+  @Put(':id/foto')
+  @HttpCode(200)
+  async subirFoto(
+    @ActorActual() actor: ContextoAcceso,
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Headers('content-type') tipo: string | undefined,
+    @Headers('idempotency-key') clave: string | undefined,
+    @Headers('if-match') ifMatch: string | undefined,
+  ) {
+    const { resultado } = await this.casos.subirFotoIncidencia.ejecutar(actor, id, body, tipo, clave, ifMatch);
+    return resultado;
+  }
+
+  /** Bytes con el tipo validado al guardarla; `Cache-Control: no-store` como toda la API. */
+  @Get(':id/foto')
+  async leerFoto(@ActorActual() actor: ContextoAcceso, @Param('id') id: string, @Res() respuesta: Response): Promise<void> {
+    const foto = await this.casos.leerFotoIncidencia.ejecutar(actor, id);
+    if (!foto) throw new NotFoundException();
+    respuesta.setHeader('Content-Type', foto.tipo);
+    respuesta.setHeader('Content-Disposition', 'inline');
+    respuesta.status(200).end(foto.bytes);
+  }
+}
+
 export const CONTROLADORES = [
   SaludController,
   AuthController,
@@ -323,4 +424,5 @@ export const CONTROLADORES = [
   ReservoriosController,
   MedicionesController,
   AsistenteController,
+  IncidenciasController,
 ];

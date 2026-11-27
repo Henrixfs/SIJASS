@@ -28,9 +28,9 @@ describe('contrato OpenAPI', () => {
     assert.deepEqual(inexistentes, [], `rutas documentadas que ningún controlador implementa: ${inexistentes.join(', ')}`);
   });
 
-  test('hay 35 operaciones y todas están bajo /v1', () => {
+  test('hay 47 operaciones y todas están bajo /v1', () => {
     const rutas = rutasDelDocumento(doc);
-    assert.equal(rutas.length, 35);
+    assert.equal(rutas.length, 47);
     assert.ok(rutas.every((r) => r.split(' ')[1].startsWith('/v1/')));
   });
 

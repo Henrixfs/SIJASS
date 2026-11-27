@@ -192,6 +192,18 @@ Rampa de seis escalones de 60 s hasta 2.000 usuarios virtuales y mantenimiento d
 
 Total: 86.450 solicitudes (165 por segundo), 2.000 inicios de sesión, **0 errores**. El umbral propio (p95 < 800 ms) se cumple hasta unos 200 usuarios virtuales y no en la meta; el inicio de sesión (`scrypt`) tuvo una mediana de 5,12 s durante la subida. Lectura completa en la [validación de atributos de calidad](validacion-atributos-de-calidad.md).
 
+## 3.8. Aporte de s1f
+
+`s1f-backend-incidencias` ([propuesta](../../openspec/changes/s1f-backend-incidencias/proposal.md)) agrega el backend para que las familias reporten problemas del servicio (fuga, falta de agua, agua turbia, poca presión, averías u otros) y la JASS los atienda: prioridad sugerida por una matriz configurable que confirma una persona, responsable, acciones públicas o internas, cierre y reapertura con historial de solo inserción, y una foto opcional sin metadatos. **No** tiene interfaz todavía y **no** cierra ningún criterio. La evidencia es **local** (2026-11-26); **no hay ejecución de CI** del cambio.
+
+| Criterio | Aporte de s1f | Evidencia **local** | Pendiente visible |
+|---|---|---|---|
+| Criterio C04 | Cambio SDD con especificación de 13 requisitos y decisiones aprobadas registradas antes de implementar | [Diseño](../../openspec/changes/s1f-backend-incidencias/design.md) y [tareas](../../openspec/changes/s1f-backend-incidencias/tasks.md) | Archivar tras la CI; tareas de la sección 5 (Sprint 0) aparte |
+| Criterio C05 | 522 pruebas unitarias y 434 de integración; PT29 y PT30 | [Plan de pruebas](../05-trazabilidad-y-validacion/plan-pruebas.md#verificación-de-s1f-backend-incidencias-2026-11-26-en-local) | Ejecución en CI |
+| Criterio C08 | 12 operaciones nuevas en el contrato OpenAPI (47 en total) y en la colección de Postman | [Contrato](../api/openapi.yaml) | Interfaz que las consuma |
+| Criterio C09 | Migración `0006` aditiva y reversible con seguridad por filas, historial de solo inserción y respaldo restaurado en una base desechable | [`0006`](../../tecnologia/siJASS-clean-architecture/migraciones/0006_incidencias.sql) | Política de retención de fotos antes del piloto |
+| Criterio C14 | Rutas con idempotencia, revisión optimista y auditoría en la misma transacción | Repositorio | Notificaciones a la JASS |
+
 ## 4. Brechas y decisiones abiertas
 
 Criterios sin diseño documentado o con tensión con una decisión vigente. Ninguna se resuelve en esta matriz; cada una exige una decisión explícita y, cuando corresponda, una ADR nueva.

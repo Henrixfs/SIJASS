@@ -12,7 +12,8 @@ info:
     - Las claves temporales (tres palabras) se devuelven **una sola vez**, en la respuesta que las genera.
     - Una cuenta con el cambio de clave pendiente solo puede cambiarla, consultar `yo` o cerrar sesión (`403 cambio-de-clave-pendiente`).
     - Un recurso inexistente y uno de otra JASS devuelven el mismo `403` sin datos.
-    - `Idempotency-Key` (UUID) es obligatorio en `POST /pagos` y `POST /mediciones`.
+    - `Idempotency-Key` (UUID) es obligatorio en `POST /pagos`, `POST /mediciones`, `POST /incidencias` y `PUT /incidencias/{id}/foto`.
+    - Las modificaciones de una incidencia exigen su `revision` vigente (`409 revision-desactualizada` si no coincide).
     - La API publica este mismo documento como **Swagger UI** en `/docs` (autoalojado) y como colección de Postman
       generada desde él (`docs/api/sijass.postman_collection.json`).
     - Una prueba automática (`contrato-openapi.test.ts`) verifica que este documento y los controladores
@@ -31,6 +32,7 @@ tags:
   - name: Portal del asociado
   - name: Reservorios y mediciones
   - name: Asistente
+  - name: Incidencias
 
 paths:
   /v1/salud:
@@ -421,6 +423,158 @@ paths:
         '403': { $ref: '#/components/responses/E403' }
         '422': { $ref: '#/components/responses/E422' }
 
+  /v1/incidencias/reglas-prioridad:
+    get:
+      tags: [Incidencias]
+      operationId: consultarReglasPrioridad
+      summary: Matriz vigente de prioridad sugerida por categoría y alcance (todo el personal; sin configurar, la versión 0)
+      responses:
+        '200': { description: Reglas vigentes, content: { application/json: { schema: { $ref: '#/components/schemas/ReglasPrioridad' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+    put:
+      tags: [Incidencias]
+      operationId: actualizarReglasPrioridad
+      summary: Sustituye la matriz completa de 24 combinaciones (solo el Consejo); la versión enviada debe ser la vigente
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReglasPrioridad' } } } }
+      responses:
+        '200': { description: Nueva versión de las reglas, content: { application/json: { schema: { $ref: '#/components/schemas/ReglasPrioridad' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/incidencias:
+    post:
+      tags: [Incidencias]
+      operationId: reportarIncidencia
+      summary: Reporte de un asociado; guarda la prioridad sugerida y la regla aplicada, con la prioridad confirmada nula
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NuevaIncidencia' } } } }
+      responses:
+        '200': { description: Reintento con la misma clave y el mismo contenido; devuelve el reporte original, content: { application/json: { schema: { $ref: '#/components/schemas/VistaIncidencia' } } } }
+        '201': { description: Reporte registrado, content: { application/json: { schema: { $ref: '#/components/schemas/VistaIncidencia' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+    get:
+      tags: [Incidencias]
+      operationId: listarIncidencias
+      summary: El asociado ve solo las suyas; el personal, las de su JASS. De la más reciente a la más antigua
+      parameters:
+        - { name: desde, in: query, schema: { type: string, format: date-time } }
+        - { name: hasta, in: query, schema: { type: string, format: date-time } }
+        - { name: estado, in: query, schema: { enum: [registrada, en-atencion, cerrada] } }
+        - { name: categoria, in: query, schema: { enum: [fuga, interrupcion, averia, presion, calidad-observada, otra] } }
+        - { $ref: '#/components/parameters/Limite' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200': { description: Página de incidencias, content: { application/json: { schema: { type: object, properties: { incidencias: { type: array, items: { $ref: '#/components/schemas/VistaIncidencia' } }, siguienteCursor: { type: [string, 'null'] } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/incidencias/{id}:
+    get:
+      tags: [Incidencias]
+      operationId: consultarIncidencia
+      summary: Detalle (el asociado, solo la suya y sin prioridad ni responsable)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Incidencia, content: { application/json: { schema: { $ref: '#/components/schemas/VistaIncidencia' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+  /v1/incidencias/{id}/historial:
+    get:
+      tags: [Incidencias]
+      operationId: historialIncidencia
+      summary: Historial cronológico; el asociado ve solo los eventos públicos
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Limite' }, { $ref: '#/components/parameters/Cursor' }]
+      responses:
+        '200': { description: Página de eventos, content: { application/json: { schema: { type: object, properties: { eventos: { type: array, items: { $ref: '#/components/schemas/EventoIncidencia' } }, siguienteCursor: { type: [string, 'null'] } } } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/incidencias/{id}/estado:
+    post:
+      tags: [Incidencias]
+      operationId: cambiarEstadoIncidencia
+      summary: registrada → en-atencion, en-atencion → cerrada (con la acción) y cerrada → en-atencion (con el motivo); Consejo y Operación
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CambioEstadoIncidencia' } } } }
+      responses:
+        '200': { description: Incidencia actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/VistaIncidencia' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/incidencias/{id}/prioridad:
+    post:
+      tags: [Incidencias]
+      operationId: confirmarPrioridadIncidencia
+      summary: Confirma la sugerencia o elige otra prioridad con motivo; la sugerencia original se conserva (Consejo y Operación)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PrioridadIncidencia' } } } }
+      responses:
+        '200': { description: Incidencia actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/VistaIncidencia' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/incidencias/{id}/responsable:
+    post:
+      tags: [Incidencias]
+      operationId: asignarResponsableIncidencia
+      summary: Asigna personal activo de la JASS (o null para quitarlo); Consejo y Operación
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ResponsableIncidencia' } } } }
+      responses:
+        '200': { description: Incidencia actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/VistaIncidencia' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/incidencias/{id}/acciones:
+    post:
+      tags: [Incidencias]
+      operationId: registrarAccionIncidencia
+      summary: Anota una acción pública (la familia la ve) o interna; Consejo y Operación
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AccionIncidencia' } } } }
+      responses:
+        '200': { description: Incidencia actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/VistaIncidencia' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '422': { $ref: '#/components/responses/E422' }
+  /v1/incidencias/{id}/foto:
+    put:
+      tags: [Incidencias]
+      operationId: subirFotoIncidencia
+      summary: Adjunta o sustituye la foto (JPEG o PNG hasta 5 MiB, sin metadatos); el autor, Consejo u Operación
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+        - { name: If-Match, in: header, required: true, schema: { type: string }, description: Revisión vigente de la incidencia }
+      requestBody: { required: true, content: { image/jpeg: { schema: { type: string, format: binary } }, image/png: { schema: { type: string, format: binary } } } }
+      responses:
+        '200': { description: Foto guardada (o resultado original ante un reintento idéntico), content: { application/json: { schema: { $ref: '#/components/schemas/FotoIncidencia' } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '409': { $ref: '#/components/responses/E409' }
+        '413': { $ref: '#/components/responses/E413' }
+        '415': { $ref: '#/components/responses/E415' }
+        '422': { $ref: '#/components/responses/E422' }
+    get:
+      tags: [Incidencias]
+      operationId: leerFotoIncidencia
+      summary: Bytes de la foto con los permisos del reporte y `Cache-Control no-store`
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Foto, content: { image/jpeg: { schema: { type: string, format: binary } }, image/png: { schema: { type: string, format: binary } } } }
+        '401': { $ref: '#/components/responses/E401' }
+        '403': { $ref: '#/components/responses/E403' }
+        '404': { description: La incidencia no tiene foto, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
 components:
   securitySchemes:
     bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token de acceso de 15 minutos }
@@ -428,12 +582,16 @@ components:
     Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     UsuarioId: { name: usuarioId, in: path, required: true, schema: { type: string, format: uuid } }
     IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid }, description: Clave de idempotencia única por JASS }
+    Limite: { name: limite, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    Cursor: { name: cursor, in: query, schema: { type: string }, description: Cursor opaco de la página anterior }
   responses:
     E400: { description: Solicitud mal formada (por ejemplo, JSON inválido), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E401: { description: Sin sesión, token inválido o vencido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E403: { description: 'Sin permiso, recurso inexistente o de otra JASS (indistinguibles), JASS suspendida (`jass-suspendida`) o cambio de clave pendiente (`cambio-de-clave-pendiente`)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E409: { description: Conflicto con el estado actual (duplicado, clave reutilizada, ya revertido), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E422: { description: Dato inválido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E413: { description: Contenido demasiado grande (la foto admite hasta 5 MiB), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    E415: { description: Tipo de contenido no admitido (solo JPEG o PNG, comprobado por la firma), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     E429: { description: Cuenta bloqueada tras 5 intentos fallidos u origen con 50 intentos fallidos en 15 minutos, headers: { Retry-After: { schema: { type: integer } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
   schemas:
     Error:
@@ -646,3 +804,75 @@ components:
           items:
             type: object
             properties: { documentoId: { type: string }, documento: { type: string }, version: { type: string }, pagina: { type: integer }, fragmento: { type: string } }
+
+    NuevaIncidencia:
+      type: object
+      required: [categoria, alcanceReportado, descripcion, observadaEn, ubicacion]
+      additionalProperties: false
+      properties:
+        categoria: { enum: [fuga, interrupcion, averia, presion, calidad-observada, otra] }
+        alcanceReportado: { enum: [individual, varias-viviendas, general, desconocido], description: Declaración de quien reporta; no es una afectación verificada }
+        descripcion: { type: string, minLength: 1, maxLength: 2000 }
+        observadaEn: { type: string, format: date-time, description: ISO 8601 con zona; no posterior a la recepción más 5 minutos }
+        ubicacion: { type: string, minLength: 1, maxLength: 300 }
+    VistaIncidencia:
+      type: object
+      description: El asociado recibe solo los campos del reporte, el estado y la revisión; el personal, además, la sugerencia, la prioridad confirmada, el responsable y quién reportó.
+      properties:
+        id: { type: string, format: uuid }
+        categoria: { enum: [fuga, interrupcion, averia, presion, calidad-observada, otra] }
+        alcanceReportado: { enum: [individual, varias-viviendas, general, desconocido] }
+        descripcion: { type: string }
+        observadaEn: { type: string, format: date-time }
+        ubicacion: { type: string }
+        estado: { enum: [registrada, en-atencion, cerrada] }
+        creadaEn: { type: string, format: date-time, description: Recepción en el servidor }
+        revision: { type: integer }
+        tieneFoto: { type: boolean }
+        sugerencia: { type: object, properties: { prioridad: { enum: [baja, media, alta] }, regla: { type: string, example: 'categoria:fuga/alcance:individual' }, version: { type: integer } } }
+        prioridadConfirmada: { enum: [baja, media, alta, null] }
+        responsableId: { type: [string, 'null'], format: uuid }
+        reportadoPor: { type: object, properties: { asociadoId: { type: string, format: uuid }, nombre: { type: [string, 'null'] } } }
+    EventoIncidencia:
+      type: object
+      properties:
+        tipo: { enum: [creada, estado, prioridad, responsable, accion, foto] }
+        detalle: { type: object, additionalProperties: true }
+        creadoEn: { type: string, format: date-time }
+        publico: { type: boolean, description: Solo para el personal }
+        actorId: { type: string, format: uuid, description: Solo para el personal }
+    CambioEstadoIncidencia:
+      type: object
+      required: [revision, estado]
+      properties: { revision: { type: integer, minimum: 1 }, estado: { enum: [en-atencion, cerrada] }, detalle: { type: string, maxLength: 2000, description: 'Obligatorio al cerrar (acción realizada) y al reabrir (motivo)' } }
+    PrioridadIncidencia:
+      type: object
+      required: [revision, prioridad]
+      properties: { revision: { type: integer, minimum: 1 }, prioridad: { enum: [baja, media, alta] }, motivo: { type: string, maxLength: 300, description: Obligatorio si difiere de la sugerida } }
+    ResponsableIncidencia:
+      type: object
+      required: [revision, responsableId]
+      properties: { revision: { type: integer, minimum: 1 }, responsableId: { type: [string, 'null'], format: uuid } }
+    AccionIncidencia:
+      type: object
+      required: [revision, descripcion, visibilidad]
+      properties: { revision: { type: integer, minimum: 1 }, descripcion: { type: string, minLength: 1, maxLength: 2000 }, visibilidad: { enum: [publica, interna] } }
+    FotoIncidencia:
+      type: object
+      properties: { incidenciaId: { type: string, format: uuid }, tipo: { enum: [image/jpeg, image/png] }, tamano: { type: integer }, sha256: { type: string }, revision: { type: integer } }
+    ReglasPrioridad:
+      type: object
+      required: [version, reglas]
+      properties:
+        version: { type: integer, minimum: 0, description: 'Al actualizar, la versión vigente; la respuesta trae la nueva' }
+        reglas:
+          type: object
+          required: [fuga, interrupcion, averia, presion, calidad-observada, otra]
+          additionalProperties: false
+          properties:
+            fuga: { type: object, required: [individual, varias-viviendas, general, desconocido], additionalProperties: false, properties: { individual: { enum: [baja, media, alta] }, varias-viviendas: { enum: [baja, media, alta] }, general: { enum: [baja, media, alta] }, desconocido: { enum: [baja, media, alta] } } }
+            interrupcion: { type: object, required: [individual, varias-viviendas, general, desconocido], additionalProperties: false, properties: { individual: { enum: [baja, media, alta] }, varias-viviendas: { enum: [baja, media, alta] }, general: { enum: [baja, media, alta] }, desconocido: { enum: [baja, media, alta] } } }
+            averia: { type: object, required: [individual, varias-viviendas, general, desconocido], additionalProperties: false, properties: { individual: { enum: [baja, media, alta] }, varias-viviendas: { enum: [baja, media, alta] }, general: { enum: [baja, media, alta] }, desconocido: { enum: [baja, media, alta] } } }
+            presion: { type: object, required: [individual, varias-viviendas, general, desconocido], additionalProperties: false, properties: { individual: { enum: [baja, media, alta] }, varias-viviendas: { enum: [baja, media, alta] }, general: { enum: [baja, media, alta] }, desconocido: { enum: [baja, media, alta] } } }
+            calidad-observada: { type: object, required: [individual, varias-viviendas, general, desconocido], additionalProperties: false, properties: { individual: { enum: [baja, media, alta] }, varias-viviendas: { enum: [baja, media, alta] }, general: { enum: [baja, media, alta] }, desconocido: { enum: [baja, media, alta] } } }
+            otra: { type: object, required: [individual, varias-viviendas, general, desconocido], additionalProperties: false, properties: { individual: { enum: [baja, media, alta] }, varias-viviendas: { enum: [baja, media, alta] }, general: { enum: [baja, media, alta] }, desconocido: { enum: [baja, media, alta] } } }

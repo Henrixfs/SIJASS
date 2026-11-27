@@ -120,3 +120,21 @@ export class ErrorLimiteDeOrigen extends ErrorDominio {
     super('demasiados-intentos', 'demasiados intentos desde este origen');
   }
 }
+
+// ---------------------------------------------------------------------------
+// Fotos de incidencias (s1f-backend-incidencias).
+// ---------------------------------------------------------------------------
+
+/** El contenido no es de un tipo admitido (o no coincide con el declarado): HTTP 415. */
+export class ErrorTipoNoAdmitido extends ErrorDominio {
+  constructor(detalle = 'solo JPEG o PNG') {
+    super('tipo-no-admitido', detalle);
+  }
+}
+
+/** El contenido supera el límite permitido: HTTP 413. */
+export class ErrorCargaExcesiva extends ErrorDominio {
+  constructor(detalle = 'supera el límite permitido') {
+    super('carga-excesiva', detalle);
+  }
+}
