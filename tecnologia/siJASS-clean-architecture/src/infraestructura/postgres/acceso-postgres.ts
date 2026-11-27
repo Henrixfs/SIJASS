@@ -298,11 +298,25 @@ export class SesionesPostgres implements RepositorioSesiones {
     const { rowCount } = await this.db.query('UPDATE sesion SET usada_en = $2 WHERE id = $1 AND usada_en IS NULL AND revocada_en IS NULL', [id, ahora]);
     return rowCount === 1;
   }
+  // Varias transacciones pueden revocar las mismas sesiones a la vez (los perdedores de una rotación
+  // simultánea revocan la familia). Un UPDATE directo bloquea las filas en el orden en que las
+  // recorre y dos revocaciones podían bloquearse en órdenes distintos (deadlock, visto en CI).
+  // Bloquear primero por `id` da a todas el mismo orden; una fila ya revocada se salta.
   async revocarFamilia(familiaId: string, ahora: string): Promise<void> {
-    await this.db.query('UPDATE sesion SET revocada_en = $2 WHERE familia_id = $1 AND revocada_en IS NULL', [familiaId, ahora]);
+    await this.db.query(
+      `UPDATE sesion SET revocada_en = $2
+        WHERE id IN (SELECT id FROM sesion WHERE familia_id = $1 AND revocada_en IS NULL ORDER BY id FOR UPDATE)
+          AND revocada_en IS NULL`,
+      [familiaId, ahora],
+    );
   }
   async revocarDeUsuario(usuarioId: string, ahora: string): Promise<void> {
-    await this.db.query('UPDATE sesion SET revocada_en = $2 WHERE usuario_id = $1 AND revocada_en IS NULL', [usuarioId, ahora]);
+    await this.db.query(
+      `UPDATE sesion SET revocada_en = $2
+        WHERE id IN (SELECT id FROM sesion WHERE usuario_id = $1 AND revocada_en IS NULL ORDER BY id FOR UPDATE)
+          AND revocada_en IS NULL`,
+      [usuarioId, ahora],
+    );
   }
 }
 
