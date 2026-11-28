@@ -387,7 +387,7 @@ describe('área de plataforma', () => {
     expect(await form.findByText('Ese DNI ya tiene un acceso en el sistema.')).toBeVisible();
   });
 
-  test('suspender y restablecer la clave del Consejo piden confirmación; reactivar es inmediato', async () => {
+  test('suspender, reactivar y restablecer la clave del Consejo piden confirmación', async () => {
     const { usuario, llamadas } = montar(plataforma((_m, r) => {
       if (r.endsWith('/suspender') || r.endsWith('/reactivar')) return json(204);
       if (r.endsWith('/consejo/restablecer-clave')) return json(200, { usuarioId: 'u', nombre: 'Rosa Consejo', documento: '•••••009', claveTemporal: 'roca-vela-rio' });
@@ -401,7 +401,12 @@ describe('área de plataforma', () => {
     await usuario.click(within(quinua).getByRole('button', { name: 'Suspender' }));
     await usuario.click(within(quinua).getByRole('button', { name: 'Sí, suspender' }));
     expect(await screen.findByText(/quedó suspendida/)).toBeVisible();
-    await usuario.click(within(screen.getByTestId('fila-jass-JASS Tambo')).getByRole('button', { name: 'Reactivar' }));
+    const tambo = screen.getByTestId('fila-jass-JASS Tambo');
+    await usuario.click(within(tambo).getByRole('button', { name: 'Reactivar' }));
+    await usuario.click(within(tambo).getByRole('button', { name: 'Cancelar' }));
+    expect(llamadas.some((l) => l.ruta.endsWith('/reactivar'))).toBe(false);
+    await usuario.click(within(tambo).getByRole('button', { name: 'Reactivar' }));
+    await usuario.click(within(tambo).getByRole('button', { name: 'Sí, reactivar' }));
     expect(await screen.findByText(/volvió a estar activa/)).toBeVisible();
     await usuario.click(within(quinua).getByRole('button', { name: 'Restablecer la clave del Consejo de JASS Quinua' }));
     expect(llamadas.some((l) => l.ruta.endsWith('/consejo/restablecer-clave'))).toBe(false);

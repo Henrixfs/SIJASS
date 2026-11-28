@@ -8,9 +8,9 @@ import { formatearSoles } from '../lib/dinero';
 import { FOTOS } from '../lib/fotos';
 import { CATEGORIAS } from '../lib/incidencias';
 import {
-  Av, Banda, Bt, Cargando, Columnas, Estanque, FalloCarga, fotoReservorio, Gotas, Heroe, IconoCat, useAvisar,
+  Av, Banda, Bt, Cargando, Columnas, Estanque, FalloCarga, fotoReservorio, Gotas, Heroe, Ic, IconoCat, useAvisar,
 } from '../v3/base';
-import { cuando, diaLargo, esHoy, mesDe, primerNombre, saludo, useCaja, useIncidencias, useServicio, type Caja } from '../v3/datos';
+import { cuando, diaLargo, esHoy, mesDe, primerNombre, saludo, useCaja, useIncidencias, useServicio, valorCloro, type Caja, type Servicio } from '../v3/datos';
 import { CajonLectura, TarjetaRes } from './Agua';
 import { CajonesCaja, type Pedido } from './Cajones';
 import { ChipEstado, CLAVE_REPORTE, FilaInc } from './Reportes';
@@ -41,6 +41,49 @@ function CifrasCaja({ caja, recargar, error }: { caja: Caja | null; recargar: ()
   if (error && !caja) return <FalloCarga texto={error} recargar={recargar} />;
   if (!caja) return <Cargando texto="Sumando la caja…" />;
   return null;
+}
+
+// ───────────────────────── Actualizar y actividad reciente ─────────────────────────
+
+interface Carga { cargando: boolean; error: string | null; actualizadoEn: number | null; recargar: () => Promise<void> }
+
+/** Pie de cada inicio: cuándo se leyeron los datos y «Actualizar» para volver a pedirlos. */
+function PieActualizar({ cargas }: { cargas: Carga[] }) {
+  const cargando = cargas.some((c) => c.cargando);
+  const leidas = cargas.map((c) => c.actualizadoEn).filter((x): x is number => x !== null);
+  const fallo = !cargando && leidas.length > 0 && cargas.some((c) => c.error);
+  return (
+    <div className="pie-act">
+      <span role="status">
+        {cargando ? 'Actualizando…' : fallo ? 'No se pudo actualizar todo: se muestra lo último que se leyó.'
+          : leidas.length ? `Última actualización: ${cuando(new Date(Math.min(...leidas)).toISOString())}` : ''}
+      </span>
+      <Bt clase="borde" ic="actualizar" disabled={cargando} onClick={() => cargas.forEach((c) => void c.recargar())}>Actualizar</Bt>
+    </div>
+  );
+}
+
+/** Las cinco lecturas vigentes más recientes entre todos los reservorios. */
+function ActividadReciente({ servicio }: { servicio: Servicio }) {
+  const recientes = servicio.reservorios
+    .flatMap((r) => r.vigentes.slice(-5).map((m) => ({ reservorio: r.nombre, m })))
+    .sort((a, b) => Date.parse(b.m.tomadaEn) - Date.parse(a.m.tomadaEn))
+    .slice(0, 5);
+  return (
+    <section className="tarj actividad" aria-labelledby="titulo-actividad">
+      <h3 id="titulo-actividad">Actividad reciente <small>últimas lecturas</small></h3>
+      {recientes.length === 0 && <p className="nota">Todavía no hay mediciones registradas.</p>}
+      <ul>
+        {recientes.map(({ reservorio, m }) => (
+          <li className="fam corta" key={m.id}>
+            <span className="icono-act" aria-hidden="true"><Ic n="flask" /></span>
+            <div><b>Lectura de {reservorio}</b><small>{cuando(m.tomadaEn)}</small></div>
+            <span className="m">{valorCloro(m.valor)} {m.unidad}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 // ───────────────────────── Consejo ─────────────────────────
@@ -96,6 +139,8 @@ function ResumenConsejo() {
           <Bt clase="borde ancho" ic="megafono" onClick={() => ir.a('reportes')}>Atender reportes</Bt>
         </section>
       </div>
+      {servicio.datos && <ActividadReciente servicio={servicio.datos} />}
+      <PieActualizar cargas={[caja, servicio, inc]} />
     </>
   );
 }
@@ -145,6 +190,7 @@ function ResumenTesoreria() {
           </div>
         </>
       )}
+      <PieActualizar cargas={[caja]} />
       <CajonesCaja pedido={pedido} setPedido={setPedido} caja={c} recargar={() => void caja.recargar()} />
     </>
   );
@@ -189,6 +235,8 @@ function ResumenOperacion() {
           {inc.datos && abiertas.length === 0 && <p className="nota">No hay reportes por atender.</p>}
         </div>
       </section>
+      {servicio.datos && lista.length > 0 && <ActividadReciente servicio={servicio.datos} />}
+      <PieActualizar cargas={[servicio, inc]} />
       {lectura && <CajonLectura reservorios={lista} inicial={lectura.id} cerrar={() => setLectura(null)} alGuardar={() => { setLectura(null); avisar('Lectura guardada'); void servicio.recargar(); }} />}
     </>
   );

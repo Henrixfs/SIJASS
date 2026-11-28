@@ -12,7 +12,7 @@ import { ALCANCES, CATEGORIAS, ESTADO_FAMILIA, FRASES, fechaHora, textoEvento, t
 import { horaLima } from '../lib/periodos';
 import { nuevoUuid } from '../lib/uuid';
 import { CANTIDAD_AVATARES } from '../altiplano/avatares';
-import { Av, Avisos, Bt, Cargando, Gotas, Ic, IconoCat, Olas, useAvisar, type NombreIcono } from '../v3/base';
+import { Av, Avisos, Bt, Cargando, Elegibles, Gotas, Ic, IconoCat, Olas, useAvisar, type NombreIcono } from '../v3/base';
 import { cuando, mesDe, primerNombre } from '../v3/datos';
 import { createPortal } from 'react-dom';
 import { CambiarClave } from './CambiarClave';
@@ -80,7 +80,14 @@ function Avance({ estado }: { estado: Incidencia['estado'] }) {
 
 // ───────────────────────── Pantallas ─────────────────────────
 
-function Inicio({ datos, reportes, avatar }: { datos: Datos; reportes: Incidencia[] | null; avatar: number }) {
+interface Refresco { cargando: boolean; actualizar: () => void }
+
+/** Vuelve a pedir saldo, cuotas, pagos y reportes sin recargar la página. */
+function Actualizar({ cargando, actualizar }: Refresco) {
+  return <Bt clase="borde ancho p-salir" ic="actualizar" disabled={cargando} onClick={actualizar}>{cargando ? 'Actualizando…' : 'Actualizar'}</Bt>;
+}
+
+function Inicio({ datos, reportes, avatar, refresco }: { datos: Datos; reportes: Incidencia[] | null; avatar: number; refresco: Refresco }) {
   const { sesion } = useApp();
   const s = datos.saldo.saldoCentimos;
   const conSaldo = datos.cuotas.filter((c) => c.pendienteCentimos > 0).length;
@@ -106,13 +113,15 @@ function Inicio({ datos, reportes, avatar }: { datos: Datos; reportes: Incidenci
             <Enlace key={i.id} a={RUTAS.reportes} className="p-inc"><IconoCat categoria={i.categoria} tam="s" /><span><b>{CATEGORIAS[i.categoria].texto}</b><small>{cuando(i.creadaEn)}</small></span><span className={`chip e-${i.estado}`}>{ESTADO_FAMILIA[i.estado]}</span></Enlace>
           ))}
         </div>
+        <Actualizar {...refresco} />
       </div>
     </>
   );
 }
 
-function Cuotas({ datos, avatar }: { datos: Datos; avatar: number }) {
+function Cuotas({ datos, avatar, refresco }: { datos: Datos; avatar: number; refresco: Refresco }) {
   const ordenadas = [...datos.cuotas].sort((a, b) => b.periodo.localeCompare(a.periodo));
+  const [abierta, setAbierta] = useState<string | null>(null);
   return (
     <>
       <CabSimple titulo="Mis cuotas" avatar={avatar} />
@@ -121,27 +130,57 @@ function Cuotas({ datos, avatar }: { datos: Datos; avatar: number }) {
         <div className="lista-m" data-testid="portal-cuotas">
           {ordenadas.length === 0 && <p className="p-nota">Todavía no tienes cuotas. Cuando tu JASS genere una, la verás aquí.</p>}
           {ordenadas.map((c) => (
-            <div className="fam" key={c.id}>
-              <span className={`icono ${c.estado === 'pagada' ? '' : 'pen'}`}><Ic n={c.estado === 'pagada' ? 'check' : 'gota'} /></span>
-              <div><b>{mesDe(c.periodo)} {c.periodo.slice(0, 4)}</b><small>{c.estado === 'pagada' ? 'Pagada' : c.estado === 'parcial' ? `Parcial: faltan ${formatearSoles(c.pendienteCentimos)}` : 'Pendiente'}</small></div>
-              <span className="m">{formatearSoles(c.importeCentimos)}</span>
+            <div className="cuota-w" key={c.id}>
+              <button type="button" className="fam" aria-expanded={abierta === c.id} aria-controls={abierta === c.id ? `cuota-${c.id}` : undefined}
+                onClick={() => setAbierta(abierta === c.id ? null : c.id)}>
+                <span className={`icono ${c.estado === 'pagada' ? '' : 'pen'}`}><Ic n={c.estado === 'pagada' ? 'check' : 'gota'} /></span>
+                <span className="txt"><b>{mesDe(c.periodo)} {c.periodo.slice(0, 4)}</b><small>{c.estado === 'pagada' ? 'Pagada' : c.estado === 'parcial' ? `Parcial: faltan ${formatearSoles(c.pendienteCentimos)}` : 'Pendiente'}</small></span>
+                <span className="m">{formatearSoles(c.importeCentimos)}</span>
+                <Ic n="flecha" className="ver" />
+              </button>
+              {abierta === c.id && (
+                <dl className="cuota-det" id={`cuota-${c.id}`} data-testid="detalle-cuota">
+                  <div><dt>Importe de la cuota</dt><dd>{formatearSoles(c.importeCentimos)}</dd></div>
+                  <div><dt>Pagado</dt><dd>{formatearSoles(c.pagadoCentimos)}</dd></div>
+                  <div><dt>Por pagar</dt><dd>{formatearSoles(c.pendienteCentimos)}</dd></div>
+                </dl>
+              )}
             </div>
           ))}
         </div>
-        <p className="p-nota" style={{ padding: '12px 22px' }}>Coordina el pago y el comprobante con tu JASS.</p>
+        <p className="p-nota" style={{ padding: '12px 22px' }}>Toca una cuota para ver su detalle. Coordina el pago y el comprobante con tu JASS.</p>
+        <Actualizar {...refresco} />
       </div>
     </>
   );
 }
 
-function Pagos({ datos, avatar }: { datos: Datos; avatar: number }) {
+type Rango = 'todo' | 'seis';
+type EstadoFiltro = 'todos' | VistaPago['estado'];
+
+function Pagos({ datos, avatar, refresco }: { datos: Datos; avatar: number; refresco: Refresco }) {
+  const [rango, setRango] = useState<Rango>('todo');
+  const [estado, setEstado] = useState<EstadoFiltro>('todos');
+  const limite = new Date();
+  limite.setMonth(limite.getMonth() - 6);
+  const filtrados = datos.pagos.filter((p) => (estado === 'todos' || p.estado === estado) && (rango === 'todo' || new Date(p.pagadoEn) >= limite));
   return (
     <>
       <CabSimple titulo="Mis pagos" avatar={avatar} />
       <div className="p-scroll">
+        {datos.pagos.length > 0 && (
+          <div className="filtros-p">
+            <Elegibles id="f-periodo" etiqueta="Periodo" clase="segmentos" valor={rango} elegir={setRango}
+              opciones={[{ valor: 'todo', contenido: 'Todo' }, { valor: 'seis', contenido: 'Últimos 6 meses' }]} />
+            <Elegibles id="f-estado" etiqueta="Estado" clase="segmentos tres" valor={estado} elegir={setEstado}
+              opciones={[{ valor: 'todos', contenido: 'Todos' }, { valor: 'vigente', contenido: 'Vigentes' }, { valor: 'revertido', contenido: 'Revertidos' }]} />
+            <p className="p-nota" aria-live="polite" data-testid="contador-pagos">{filtrados.length} {filtrados.length === 1 ? 'pago' : 'pagos'}</p>
+          </div>
+        )}
         <div className="lista-m" data-testid="portal-pagos">
           {datos.pagos.length === 0 && <p className="p-nota">Todavía no hay pagos registrados.</p>}
-          {datos.pagos.map((p) => (
+          {datos.pagos.length > 0 && filtrados.length === 0 && <p className="p-nota">No hay pagos con ese filtro.</p>}
+          {filtrados.map((p) => (
             <div className="fam" key={p.id} data-testid={`portal-pago-${p.comprobante}`}>
               <span className={`icono ${p.estado === 'vigente' ? '' : 'pen'}`}><Ic n={p.estado === 'vigente' ? 'check' : 'revertir'} /></span>
               <div><b>{mesDe(p.periodo)}</b><small>{cuando(p.pagadoEn)} · {p.comprobante}{p.estado === 'vigente' ? '' : ' · revertido'}</small></div>
@@ -150,6 +189,7 @@ function Pagos({ datos, avatar }: { datos: Datos; avatar: number }) {
           ))}
         </div>
         {datos.pagos.some((p) => p.estado === 'revertido') && <p className="p-nota" style={{ padding: '12px 22px' }}>Los pagos revertidos se conservan; su importe vuelve al saldo.</p>}
+        <Actualizar {...refresco} />
       </div>
     </>
   );
@@ -159,7 +199,10 @@ function Perfil({ datos, avatar, elegirAvatar }: { datos: Datos; avatar: number;
   const { salir, sesion } = useApp();
   const avisar = useAvisar();
   const [cambiando, setCambiando] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
+  const botonSalir = useRef<HTMLDivElement>(null);
   const { enviando, ejecutar } = useEnvio();
+  const quedarse = () => { setSaliendo(false); botonSalir.current?.querySelector('button')?.focus(); };
   const activo = datos.saldo.asociado.estado === 'activo';
   return (
     <>
@@ -189,7 +232,18 @@ function Perfil({ datos, avatar, elegirAvatar }: { datos: Datos; avatar: number;
         </div>
         <Bt clase="borde ancho p-salir" ic="candado" onClick={() => setCambiando(true)}>Cambiar mi clave</Bt>
         {cambiando && createPortal(<CambiarClave cerrar={() => setCambiando(false)} />, document.body)}
-        <Bt clase="borde ancho p-salir" ic="salir" disabled={enviando} onClick={() => void ejecutar(salir)}>{enviando ? 'Saliendo…' : 'Salir'}</Bt>
+        <div ref={botonSalir} style={{ display: 'contents' }}>
+          <Bt clase="borde ancho p-salir" ic="salir" aria-expanded={saliendo} disabled={enviando} onClick={() => setSaliendo(true)}>Salir</Bt>
+        </div>
+        {saliendo && (
+          <div className="confirmar-c p-confirma" role="group" aria-label="Confirmar salida">
+            <p>¿Cerrar tu sesión? Para volver a entrar necesitas tu DNI y tu clave.</p>
+            <div className="botones-cuenta">
+              <Bt clase="teal" autoFocus disabled={enviando} onClick={() => void ejecutar(salir)}>{enviando ? 'Saliendo…' : 'Sí, salir'}</Bt>
+              <Bt clase="borde" disabled={enviando} onClick={quedarse}>Cancelar</Bt>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -373,7 +427,7 @@ function PortalCelular({ ruta }: { ruta: string }) {
     ]);
     return { saldo, cuotas: cuotas.cuotas, pagos: pagos.pagos };
   }, [api]);
-  const { datos, error, prohibido, recargar } = useCarga(cargar);
+  const { datos, error, prohibido, cargando, recargar } = useCarga(cargar);
   const cargarReportes = useCallback(() => api.solicitar<{ incidencias: Incidencia[] }>('GET', '/v1/incidencias?limite=100').then((r) => r.incidencias), [api]);
   const reportes = useCarga(cargarReportes);
   const recargarReportes = reportes.recargar;
@@ -406,6 +460,8 @@ function PortalCelular({ ruta }: { ruta: string }) {
     telefono.current?.querySelector<HTMLElement>('[data-titulo-pantalla]')?.focus({ preventScroll: true });
   }, [pantalla]);
 
+  const refresco: Refresco = { cargando: cargando || reportes.cargando, actualizar: () => { void recargar(); void recargarReportes(); } };
+
   let contenido: ReactNode;
   if (pantalla === null) contenido = <><CabSimple titulo="Página no encontrada" avatar={avatar} /><div className="p-scroll"><Enlace a={RUTAS.inicio} className="bt teal ancho p-salir">Volver al inicio</Enlace></div></>;
   else if (prohibido) contenido = <><CabSimple titulo="Sin acceso" avatar={avatar} /><p className="p-aviso error" data-testid="sin-permiso">Tu cuenta no tiene acceso a esta sección.</p></>;
@@ -414,9 +470,9 @@ function PortalCelular({ ruta }: { ruta: string }) {
   else if (error && !datos) contenido = <><CabSimple titulo={TITULOS[pantalla]} avatar={avatar} /><div className="p-aviso error" role="alert"><b>No pudimos cargar tus datos</b><p>Revisa tu conexión e inténtalo de nuevo.</p><Bt clase="borde" onClick={() => void recargar()}>Reintentar</Bt></div></>;
   else if (!datos) contenido = <><CabSimple titulo={TITULOS[pantalla]} avatar={avatar} /><Cargando /></>;
   else contenido = {
-    inicio: <Inicio datos={datos} reportes={reportes.datos} avatar={avatar} />,
-    cuotas: <Cuotas datos={datos} avatar={avatar} />,
-    pagos: <Pagos datos={datos} avatar={avatar} />,
+    inicio: <Inicio datos={datos} reportes={reportes.datos} avatar={avatar} refresco={refresco} />,
+    cuotas: <Cuotas datos={datos} avatar={avatar} refresco={refresco} />,
+    pagos: <Pagos datos={datos} avatar={avatar} refresco={refresco} />,
     perfil: <Perfil datos={datos} avatar={avatar} elegirAvatar={elegirAvatar} />,
   }[pantalla];
 

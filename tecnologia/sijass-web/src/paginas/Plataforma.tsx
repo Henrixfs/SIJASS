@@ -9,7 +9,7 @@ import { Av, Avisos, Bt, Cajon, Campo, Cargando, ClaveV3, FalloCarga, Final, fon
 
 interface Ubicacion { departamento: string | null; provincia: string | null; distrito: string | null; centroPoblado: string | null }
 interface VistaJass { id: string; nombre: string; estado: 'activa' | 'suspendida'; ubicacion: Ubicacion; cuentasActivas: number }
-type Tapado = { id: string; paso: 'suspender?' | 'clave?' } | { id: string; paso: 'clave'; clave: string; nombre: string; documento: string };
+type Tapado = { id: string; paso: 'suspender?' | 'reactivar?' | 'clave?' } | { id: string; paso: 'clave'; clave: string; nombre: string; documento: string };
 
 const FOTOS_JASS: NombreFoto[] = ['paron', 'bofedales', 'humedal', 'puquio', 'tinajones', 'gocta'];
 
@@ -115,7 +115,7 @@ function PanelPlataforma() {
                           <Bt clase="borde" ic="llave" disabled={!activa} aria-label={`Restablecer la clave del Consejo de ${j.nombre}`} onClick={() => setTapa({ id: j.id, paso: 'clave?' })}>Nueva clave</Bt>
                           {activa
                             ? <Bt clase="suave" ic="pausa" onClick={() => setTapa({ id: j.id, paso: 'suspender?' })}>Suspender</Bt>
-                            : <Bt clase="suave" ic="reanudar" disabled={accion.enviando} onClick={() => void ejecutarAccion(j, 'reactivar')}>Reactivar</Bt>}
+                            : <Bt clase="suave" ic="reanudar" onClick={() => setTapa({ id: j.id, paso: 'reactivar?' })}>Reactivar</Bt>}
                         </div>
                       </div>
                     </div>
@@ -125,6 +125,13 @@ function PanelPlataforma() {
                         <h4>¿Suspender esta JASS?</h4>
                         <p>Sus cuentas no podrán ingresar. Sus datos se conservan.</p>
                         <Bt clase="peligro" disabled={accion.enviando} onClick={() => void ejecutarAccion(j, 'suspender')}>{accion.enviando ? 'Suspendiendo…' : 'Sí, suspender'}</Bt>
+                        <Bt clase="claro" disabled={accion.enviando} onClick={() => setTapa(null)}>Cancelar</Bt>
+                      </>}
+                      {t?.paso === 'reactivar?' && <>
+                        <Ic n="reanudar" className="grande" />
+                        <h4>¿Reactivar esta JASS?</h4>
+                        <p>Sus cuentas podrán volver a entrar con sus claves de siempre.</p>
+                        <Bt clase="agua" disabled={accion.enviando} onClick={() => void ejecutarAccion(j, 'reactivar')}>{accion.enviando ? 'Reactivando…' : 'Sí, reactivar'}</Bt>
                         <Bt clase="claro" disabled={accion.enviando} onClick={() => setTapa(null)}>Cancelar</Bt>
                       </>}
                       {t?.paso === 'clave?' && <>

@@ -473,3 +473,39 @@
 .v3 .pagos-c .fam { flex-wrap: wrap; }
 .v3 .cajon .cab h2:focus { outline: none; }
 .v3 .sin-permiso { padding: 16px 20px; border-radius: 20px; background: var(--av); color: #6E4505; font-weight: 700; }
+
+/* Funciones recuperadas de la interfaz anterior (motivo de reversa, detalle de cuota, filtros, actividad). */
+.v3 .mini-bt.neutro { color: var(--tinta); border-color: #C3D5D4; }
+.v3 .mini-bt.neutro:hover { background: #EAF3F2; }
+.v3 .fam.revertido { opacity: 1; }
+.v3 .fam.revertido > :not(.mini-bt):not(.motivo-r) { opacity: .6; }
+.v3 .pagos-t .fam { flex-wrap: wrap; }
+.v3 .fam.fam > div.motivo-r { flex: 1 0 100%; padding: 12px 14px; border-radius: 14px; background: #F2F7F7; font-size: 14px; }
+.v3 .motivo-r dl { display: grid; gap: 8px; }
+.v3 .motivo-r dt { font-size: 12px; font-weight: 700; color: var(--suave); }
+.v3 .motivo-r dd { margin: 0; overflow-wrap: anywhere; }
+
+.v3 .cuota-w + .cuota-w { border-top: 1px solid var(--linea); }
+.v3 .lista-m .cuota-w > button.fam { width: 100%; min-height: 52px; border-top: 0; text-align: left; font: inherit; color: inherit; }
+.v3 .cuota-w .fam > .txt { flex: 1; min-width: 0; display: block; }
+.v3 .cuota-w .fam .ver { width: 16px; height: 16px; flex: none; color: var(--suave); transition: transform .18s var(--sale); }
+.v3 .cuota-w .fam[aria-expanded="true"] .ver { transform: rotate(90deg); }
+.v3 .cuota-det { display: grid; gap: 6px; margin: 0 0 12px 48px; font-size: 14px; }
+.v3 .cuota-det div { display: flex; justify-content: space-between; gap: 12px; }
+.v3 .cuota-det dt { color: var(--suave); }
+.v3 .cuota-det dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.v3 .filtros-p { margin: 12px 16px 0; padding: 14px 14px 4px; background: #fff; border-radius: 24px; flex: 0 0 auto; }
+.v3 .filtros-p .etq { display: block; margin-bottom: 6px; }
+.v3 .filtros-p .elegibles { margin-bottom: 12px; gap: 8px; }
+.v3 .filtros-p .elegibles > button { min-height: 44px; height: auto; font-size: 14px; padding: 6px; }
+.v3 .filtros-p .p-nota { padding-bottom: 8px; }
+.v3 .p-scroll > .p-confirma { margin: 12px 16px 0; flex: 0 0 auto; }
+
+.v3 .tarj.actividad { flex: none; }
+.v3 .tarj.actividad ul { list-style: none; }
+.v3 .icono-act { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--ok); color: var(--ok-t); flex: none; }
+.v3 .icono-act .ic { width: 18px; height: 18px; }
+.v3 .pie-act { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; flex: none; font-size: 14px; color: var(--suave); }
+.v3 .chips-f { flex-wrap: wrap; }
+.v3 .pagos-c .fam > div:first-child { flex: 1 1 9rem; }

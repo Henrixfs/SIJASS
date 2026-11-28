@@ -40,3 +40,22 @@ El panel del personal y el portal SHALL reproducir las pantallas de la maqueta v
 #### Scenario: Pantalla estrecha
 - **WHEN** el panel o el portal se abren entre 320 y 1440 px de ancho
 - **THEN** no hay desplazamiento horizontal y cada control mide al menos 44 px
+
+### Requirement: Funciones conservadas de la interfaz anterior
+La interfaz v3 SHALL conservar: el motivo y la fecha de cada reversa en la lista de pagos y en la cuenta del asociado; los filtros «Activos» y «De baja» del padrón; la actividad reciente y «Actualizar» en el inicio; y en el portal el detalle de cada cuota, los filtros de pagos por periodo y estado, «Actualizar» y la confirmación antes de salir. Reactivar una JASS SHALL pedir confirmación. La tarjeta de la clave SHALL imprimirse sola en una página.
+
+#### Scenario: Motivo de una reversa
+- **WHEN** Consejo o Tesorería abre «Motivo» en un pago revertido
+- **THEN** ve la fecha y el motivo registrados por el servidor
+
+#### Scenario: Salir desde el portal
+- **WHEN** la familia toca «Salir» y luego «Cancelar»
+- **THEN** la sesión sigue abierta
+
+#### Scenario: Reactivar con confirmación
+- **WHEN** la plataforma toca «Reactivar» en una JASS suspendida
+- **THEN** no se reactiva hasta que confirma
+
+#### Scenario: Imprimir la tarjeta
+- **WHEN** se imprime una clave temporal
+- **THEN** sale una sola página con la tarjeta y sin el resto de la pantalla

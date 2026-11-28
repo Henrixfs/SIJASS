@@ -6,6 +6,7 @@ import {
   createContext, Fragment, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState,
   type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import type { VistaCuota } from '../api/tipos';
 import { indiceAvatar, marcadoAvatar } from '../altiplano/avatares';
 import { Olas } from '../altiplano/componentes';
@@ -294,11 +295,15 @@ export function ClaveV3({ clave, nombre, documento, claras = true }: { clave: st
         <Bt clase="borde" onClick={() => window.print()}>Imprimir tarjeta</Bt>
       </div>
       {copia && <p className="nota" role="status">{copia === 'ok' ? 'Clave copiada.' : 'No se pudo copiar. Escríbela tal como está.'}</p>}
-      <div className="tarjeta-impresa" aria-hidden="true">
-        <h3>SIJASS · Tu acceso</h3>
-        <dl><dt>Nombre</dt><dd>{nombre}</dd>{documento ? <><dt>DNI</dt><dd>{documento}</dd></> : null}<dt>Clave</dt><dd className="clave-impresa">{clave}</dd></dl>
-        <p>Entra con tu DNI y esta clave. Escríbela tal como está. No la compartas.</p>
-      </div>
+      {/* En <body>, para que al imprimir salga sola: ni el cajón ni los estilos de pantalla la recortan. */}
+      {createPortal(
+        <div className="tarjeta-impresa" aria-hidden="true">
+          <h3>SIJASS · Tu acceso</h3>
+          <dl><dt>Nombre</dt><dd>{nombre}</dd>{documento ? <><dt>DNI</dt><dd>{documento}</dd></> : null}<dt>Clave</dt><dd className="clave-impresa">{clave}</dd></dl>
+          <p>Entra con tu DNI y esta clave. Escríbela tal como está. No la compartas.</p>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

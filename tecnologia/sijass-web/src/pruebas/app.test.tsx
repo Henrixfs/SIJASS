@@ -224,7 +224,7 @@ describe('interfaz — ingreso y guardia por perfil', () => {
     expect(await screen.findByText('Todavía no hay pagos registrados.')).toBeVisible();
   });
 
-  test('salir desde el perfil revoca la sesión', async () => {
+  test('salir desde el perfil pide confirmación y revoca la sesión', async () => {
     const { usuario, llamadas } = montar(portalCompleto());
     await ingresar(usuario);
     await screen.findByTestId('nombre-asociado');
@@ -232,8 +232,56 @@ describe('interfaz — ingreso y guardia por perfil', () => {
     expect(await screen.findByRole('heading', { name: 'Mi perfil' })).toBeVisible();
     expect(screen.getByText('Acceso activo')).toBeVisible();
     await usuario.click(screen.getByRole('button', { name: 'Salir' }));
+    await usuario.click(within(screen.getByRole('group', { name: 'Confirmar salida' })).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('group', { name: 'Confirmar salida' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Salir' })).toHaveFocus();
+    expect(llamadas.some((l) => l.ruta === '/v1/auth/logout')).toBe(false);
+    await usuario.click(screen.getByRole('button', { name: 'Salir' }));
+    await usuario.click(screen.getByRole('button', { name: 'Sí, salir' }));
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
     expect(llamadas.some((l) => l.ruta === '/v1/auth/logout')).toBe(true);
+  });
+
+  test('tocar una cuota del portal muestra su detalle y volver a tocarla lo oculta', async () => {
+    const { usuario } = montar(portalCompleto(pagosMuestra));
+    await ingresar(usuario);
+    await screen.findByTestId('nombre-asociado');
+    await usuario.click(menuPortal().getByRole('link', { name: 'Cuotas' }));
+    const cuota = await screen.findByRole('button', { name: /Octubre 2026/ });
+    expect(cuota).toHaveAttribute('aria-expanded', 'false');
+    await usuario.click(cuota);
+    const detalle = screen.getByTestId('detalle-cuota');
+    expect(detalle).toHaveTextContent('Importe de la cuotaS/ 18.00');
+    expect(detalle).toHaveTextContent('PagadoS/ 18.00');
+    expect(detalle).toHaveTextContent('Por pagarS/ 0.00');
+    await usuario.click(cuota);
+    expect(screen.queryByTestId('detalle-cuota')).toBeNull();
+  });
+
+  test('los pagos del portal se filtran por periodo y por estado', async () => {
+    const antiguo = { id: 'p0', cuotaId: 'c-1', periodo: '2024-01', importeCentimos: 1800, pagadoEn: '2024-01-10T15:00:00.000Z', comprobante: 'RC-0001', estado: 'vigente' };
+    const { usuario } = montar(portalCompleto([...pagosMuestra, antiguo]));
+    await ingresar(usuario);
+    await screen.findByTestId('nombre-asociado');
+    await usuario.click(menuPortal().getByRole('link', { name: 'Pagos' }));
+    expect(await screen.findByTestId('contador-pagos')).toHaveTextContent('3 pagos');
+    await usuario.click(within(screen.getByRole('group', { name: 'Periodo' })).getByRole('button', { name: 'Últimos 6 meses' }));
+    expect(screen.queryByTestId('portal-pago-RC-0001')).toBeNull();
+    expect(screen.getByTestId('contador-pagos')).toHaveTextContent('2 pagos');
+    await usuario.click(within(screen.getByRole('group', { name: 'Estado' })).getByRole('button', { name: 'Revertidos' }));
+    expect(screen.queryByTestId('portal-pago-RC-1028')).toBeNull();
+    expect(screen.getByTestId('portal-pago-RC-0810')).toBeVisible();
+    expect(screen.getByTestId('contador-pagos')).toHaveTextContent('1 pago');
+  });
+
+  test('«Actualizar» vuelve a pedir los datos del portal', async () => {
+    const { usuario, llamadas } = montar(portalCompleto(pagosMuestra));
+    await ingresar(usuario);
+    await screen.findByTestId('saldo');
+    const pedidos = () => llamadas.filter((l) => l.ruta === '/v1/portal/saldo').length;
+    const antes = pedidos();
+    await usuario.click(screen.getByRole('button', { name: 'Actualizar' }));
+    await waitFor(() => expect(pedidos()).toBe(antes + 1));
   });
 
   test('el avatar del portal lo elige la persona y se recuerda en el celular', async () => {
@@ -336,11 +384,14 @@ describe('interfaz — ingreso y guardia por perfil', () => {
     expect(dialogo.getByText(/Se muestra una sola vez/)).toBeVisible();
     expect(dialogo.getByRole('button', { name: 'Copiar' })).toBeVisible();
     expect(dialogo.getByRole('button', { name: 'Imprimir tarjeta' })).toBeVisible();
+    // La tarjeta que se imprime cuelga de <body>: así sale sola, fuera del cajón.
+    expect(document.body.querySelector(':scope > .tarjeta-impresa')).toHaveTextContent('rio-luna-maiz');
     const alta = llamadas.find(({ ruta }) => ruta.endsWith('/acceso'));
     expect(alta?.cuerpo).toBeUndefined();
     expect(JSON.stringify(sessionStorage) + JSON.stringify(localStorage)).not.toContain('rio-luna-maiz');
     await usuario.click(dialogo.getAllByRole('button', { name: 'Cerrar' })[0]);
     await waitFor(() => expect(screen.queryByTestId('clave-temporal')).toBeNull());
+    expect(document.body.querySelector('.tarjeta-impresa')).toBeNull();
     await waitFor(() => expect(window.location.pathname).toBe('/personal/asociados'));
   });
 
@@ -459,6 +510,58 @@ describe('interfaz — registro de pagos', () => {
     expect(llamadas.find((l) => l.ruta.endsWith('/reversa'))!.cuerpo).toEqual({ motivo: 'Error de digitación' });
   });
 
+  test('el motivo y la fecha de una reversa se ven desde la lista de pagos y desde la cuenta', async () => {
+    const revertido = { ...pagoVigente, estado: 'revertido' };
+    const { usuario, llamadas } = montar((_m, r, c, h) => loginPersonal()(_m, r, c, h) ??
+      (r === '/v1/asociados' ? json(200, asociados) : r.endsWith('/estado-de-cuenta') ? json(200, cuenta([revertido]))
+        : r === `/v1/pagos/${pagoVigente.id}` ? json(200, { ...revertido, reversa: { motivo: 'Pago duplicado', creadaEn: '2026-11-20T15:00:00.000Z' } }) : undefined));
+    await ingresar(usuario);
+    await irA(usuario, 'Cuotas y pagos');
+    const boton = await screen.findByRole('button', { name: 'Motivo de la reversa del pago REC-1' });
+    expect(llamadas.some((l) => l.ruta === `/v1/pagos/${pagoVigente.id}`)).toBe(false);
+    await usuario.click(boton);
+    const motivo = await screen.findByTestId(`motivo-${pagoVigente.id}`);
+    await waitFor(() => expect(motivo).toHaveTextContent('Pago duplicado'));
+    expect(motivo).toHaveTextContent('20/11');
+    await usuario.click(boton);
+    expect(screen.queryByTestId(`motivo-${pagoVigente.id}`)).toBeNull();
+    const cuentaAbierta = await abrirCuenta(usuario);
+    await usuario.click(await cuentaAbierta.findByRole('button', { name: 'Motivo de la reversa del pago REC-1' }));
+    expect(await cuentaAbierta.findByText('Pago duplicado')).toBeVisible();
+  });
+
+  test('el padrón filtra a los activos y a los dados de baja', async () => {
+    const dos = { asociados: [...asociados.asociados, { id: '99999999-9999-4999-8999-999999999999', nombre: 'Luis Baja', documento: '70000009', estado: 'baja', saldoCentimos: 0, acceso: 'sin-acceso' }] };
+    const { usuario } = montar((_m, r, c, h) => loginPersonal()(_m, r, c, h) ??
+      (r === '/v1/asociados' ? json(200, dos) : r.endsWith('/estado-de-cuenta') ? json(200, cuenta()) : undefined));
+    await ingresar(usuario);
+    await irA(usuario, 'Asociados');
+    const filtros = within(await screen.findByRole('group', { name: 'Filtrar' }));
+    await usuario.click(filtros.getByRole('button', { name: /^De baja/ }));
+    expect(screen.getByTestId('fila-70000009')).toBeVisible();
+    expect(screen.queryByTestId('fila-70000001')).toBeNull();
+    await usuario.click(filtros.getByRole('button', { name: /^Activos/ }));
+    expect(screen.getByTestId('fila-70000001')).toBeVisible();
+    expect(screen.queryByTestId('fila-70000009')).toBeNull();
+  });
+
+  test('el resumen del Consejo muestra las últimas lecturas y «Actualizar» vuelve a pedir los datos', async () => {
+    const { usuario, llamadas } = montar((_m, r, c, h) => loginPersonal('consejo')(_m, r, c, h) ??
+      (r === '/v1/asociados' ? json(200, asociados) : r.endsWith('/estado-de-cuenta') ? json(200, cuenta())
+        : r === '/v1/reservorios' ? json(200, { reservorios: [{ id: 'r1', nombre: 'Reservorio Alto' }] })
+          : r === '/v1/reservorios/r1/mediciones' ? json(200, { mediciones: [{ id: 'm1', metodo: 'comparador-dpd', valor: 0.8, unidad: 'mg/L', tomadaEn: '2026-11-20T15:00:00.000Z', estado: 'vigente' }] })
+            : r.startsWith('/v1/incidencias') ? json(200, { incidencias: [] }) : undefined));
+    await ingresar(usuario);
+    const actividad = await screen.findByRole('region', { name: /Actividad reciente/ });
+    expect(actividad).toHaveTextContent('Lectura de Reservorio Alto');
+    expect(actividad).toHaveTextContent('0.8 mg/L');
+    expect(await screen.findByText(/Última actualización/)).toBeVisible();
+    const pedidos = () => llamadas.filter((l) => l.ruta === '/v1/asociados').length;
+    const antes = pedidos();
+    await usuario.click(screen.getByRole('button', { name: 'Actualizar' }));
+    await waitFor(() => expect(pedidos()).toBe(antes + 1));
+  });
+
   test('un pago revertido se conserva en el historial y ya no ofrece revertir', async () => {
     const revertido = { ...pagoVigente, estado: 'revertido' };
     const { usuario } = montar((_m, r, c, h) => loginPersonal()(_m, r, c, h) ??
@@ -467,7 +570,7 @@ describe('interfaz — registro de pagos', () => {
     await irA(usuario, 'Cuotas y pagos');
     const fila = await screen.findByTestId('pago-REC-1');
     expect(fila).toHaveTextContent('Revertido');
-    expect(within(fila).queryByRole('button', { name: /Revertir/ })).toBeNull();
+    expect(within(fila).queryByRole('button', { name: /^Revertir/ })).toBeNull();
   });
 
   test('una reversa en conflicto no anuncia éxito y vuelve a leer las cuentas', async () => {

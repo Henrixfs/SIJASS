@@ -9,7 +9,7 @@ import { useCaja, type Caja } from '../v3/datos';
 import { CajonesCaja, type Pedido } from './Cajones';
 import { TituloVista } from './NavegacionPersonal';
 
-type Filtro = 'todos' | 'deuda' | 'dia';
+type Filtro = 'todos' | 'deuda' | 'dia' | 'activos' | 'baja';
 const POR_TANDA = 30;
 
 function estadoDe(a: ResumenAsociado, caja: Caja): { texto: string; clase: string } {
@@ -35,10 +35,11 @@ export function Asociados({ cuentaId = null }: { cuentaId?: string | null }) {
   const lista = datos?.asociados ?? [];
   const conSaldo = lista.filter((a) => a.estado === 'activo' && a.saldoCentimos > 0);
   const alDia = lista.filter((a) => a.estado === 'activo' && a.saldoCentimos <= 0);
+  const activos = lista.filter((a) => a.estado === 'activo');
+  const bajas = lista.filter((a) => a.estado === 'baja');
+  const grupos: Record<Filtro, ResumenAsociado[]> = { todos: lista, deuda: conSaldo, dia: alDia, activos, baja: bajas };
   const termino = texto.trim().toLocaleLowerCase('es-PE');
-  const filtrados = lista.filter((a) =>
-    (filtro === 'todos' || (filtro === 'deuda' ? conSaldo.includes(a) : alDia.includes(a)))
-    && `${a.nombre} ${a.documento}`.toLocaleLowerCase('es-PE').includes(termino));
+  const filtrados = grupos[filtro].filter((a) => `${a.nombre} ${a.documento}`.toLocaleLowerCase('es-PE').includes(termino));
   const visibles = filtrados.slice(0, tanda);
   const pedidoActual: Pedido | null = cuentaId ? { tipo: 'cuenta', id: cuentaId } : pedido;
 
@@ -53,7 +54,7 @@ export function Asociados({ cuentaId = null }: { cuentaId?: string | null }) {
           <div className="filtros">
             <label className="buscar"><Ic n="lupa" /><input type="search" placeholder="Buscar por nombre o DNI" aria-label="Buscar asociado por nombre o DNI" value={texto} onChange={(e) => { setTexto(e.target.value); setTanda(POR_TANDA); }} /></label>
             <div className="chips-f" role="group" aria-label="Filtrar">
-              {([['todos', 'Todos', lista.length], ['deuda', 'Con saldo', conSaldo.length], ['dia', 'Al día', alDia.length]] as const).map(([v, n, c]) => (
+              {([['todos', 'Todos', lista.length], ['deuda', 'Con saldo', conSaldo.length], ['dia', 'Al día', alDia.length], ['activos', 'Activos', activos.length], ['baja', 'De baja', bajas.length]] as const).map(([v, n, c]) => (
                 <button key={v} type="button" aria-pressed={filtro === v} onClick={() => { setFiltro(v); setTanda(POR_TANDA); }}>{n}<em>{c}</em></button>
               ))}
             </div>

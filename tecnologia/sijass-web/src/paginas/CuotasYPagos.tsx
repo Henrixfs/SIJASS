@@ -4,7 +4,7 @@ import { formatearSoles } from '../lib/dinero';
 import { SinPermiso } from '../ui';
 import { Av, Bt, Cargando, FalloCarga, Ic, Olas } from '../v3/base';
 import { cuando, mesDe, useCaja } from '../v3/datos';
-import { CajonesCaja, type Pedido } from './Cajones';
+import { CajonesCaja, MotivoReversa, VerMotivo, type Pedido } from './Cajones';
 import { TituloVista } from './NavegacionPersonal';
 
 function Kpi({ nombre, valor, pct, clase, testid }: { nombre: string; valor: number; pct: number; clase: string; testid: string }) {
@@ -21,6 +21,7 @@ export function CuotasYPagos({ cuentaId = null }: { cuentaId?: string | null }) 
   const { navegar } = useApp();
   const caja = useCaja();
   const [pedido, setPedido] = useState<Pedido | null>(null);
+  const [motivoDe, setMotivoDe] = useState<string | null>(null);
   if (caja.prohibido) return <SinPermiso />;
   const datos = caja.datos;
   const t = datos?.totales;
@@ -51,7 +52,8 @@ export function CuotasYPagos({ cuentaId = null }: { cuentaId?: string | null }) 
                 <span className="m">{formatearSoles(p.importeCentimos)}</span>
                 {p.estado === 'vigente'
                   ? <button type="button" className="mini-bt" aria-label={`Revertir el pago ${p.comprobante}`} onClick={() => setPedido({ tipo: 'reversa', pago: p, asociado: { id: p.asociadoId, nombre: p.nombre } })}><Ic n="revertir" />Revertir</button>
-                  : <span className="mini-hueco" />}
+                  : <VerMotivo pago={p} abierto={motivoDe === p.id} alternar={() => setMotivoDe(motivoDe === p.id ? null : p.id)} />}
+                {motivoDe === p.id && <MotivoReversa pagoId={p.id} />}
               </div>
             ))}
           </div>

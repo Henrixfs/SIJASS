@@ -33,6 +33,15 @@
 - [x] 5.6 E2E con la API real y pruebas responsive de 320 a 1440 px.
 - [x] 5.7 Capturas lado a lado con el video y evidencia.
 
+## 6. Funciones recuperadas (pedido del 2026-11-27)
+
+- [x] 6.1 Motivo y fecha de las reversas en «Cuotas y pagos» y en la cuenta del asociado.
+- [x] 6.2 Filtros «Activos» y «De baja» en el padrón y confirmación al reactivar una JASS.
+- [x] 6.3 Portal: detalle de cuota, filtros de pagos, «Actualizar» y confirmación al salir.
+- [x] 6.4 Inicio del personal: actividad reciente (Consejo y Operación) y «Actualizar».
+- [x] 6.5 Tarjeta de la clave: impresión revisada y corregida (salía repetida en dos páginas y sin márgenes).
+- [x] 6.6 Pruebas web y E2E de lo recuperado; revisión a 320 y 1440 px.
+
 ## Evidencia
 
 Ver [evidencia de s2b](../../../docs/diseno/evidencia/s2b-altiplano/README.md): 158 pruebas web, 15 E2E y 23 responsive en local sobre la compilación final (2026-11-27), y las hojas que comparan la maqueta con el sistema. Falta la ejecución en CI.

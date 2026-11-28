@@ -225,7 +225,7 @@ test('la plataforma crea una JASS y su Consejo solo ve lo suyo; al suspenderla, 
   const lista = JSON.parse((await consultar(page, tokenRufino, '/v1/asociados')).cuerpo) as { asociados: unknown[] };
   expect(lista.asociados).toEqual([]);
 
-  // Suspensión (con confirmación): sus cuentas no entran; al reactivarla vuelven a entrar con la misma clave.
+  // Suspensión y reactivación (ambas con confirmación): suspendida no entra; reactivada vuelve a entrar con la misma clave.
   await filaJass.getByRole('button', { name: 'Suspender' }).click();
   await filaJass.getByRole('button', { name: 'Sí, suspender' }).click();
   await expect(plataforma.page.getByTestId('aviso-ok')).toContainText(`${NOMBRE_JASS_NUEVA} quedó suspendida`);
@@ -234,6 +234,7 @@ test('la plataforma crea una JASS y su Consejo solo ve lo suyo; al suspenderla, 
   await ingresar(paginaSuspendida, RUFINO, CLAVE_RUFINO);
   await expect(paginaSuspendida.getByTestId('error-ingreso')).toContainText('Tu JASS está suspendida');
   await filaJass.getByRole('button', { name: 'Reactivar' }).click();
+  await filaJass.getByRole('button', { name: 'Sí, reactivar' }).click();
   await expect(plataforma.page.getByTestId('aviso-ok')).toContainText(`${NOMBRE_JASS_NUEVA} volvió a estar activa`);
   await paginaSuspendida.getByRole('button', { name: 'Ingresar', exact: true }).click();
   await paginaSuspendida.waitForURL(/\/personal$/);

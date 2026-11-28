@@ -18,6 +18,7 @@ const TRAZOS = {
   'llave': '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
   'candado': '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   'pausa': '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  'actualizar': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
   'reanudar': '<path d="m6 3 14 9-14 9z"/>',
   'pin': '<path d="M12 17v5"/><path d="M9 10.760a2 2 0 0 1-1.110 1.790l-1.780.9A2 2 0 0 0 5 15.240V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.760a2 2 0 0 0-1.110-1.790l-1.780-.9A2 2 0 0 1 15 10.760V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
   'equis': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',

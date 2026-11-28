@@ -46,6 +46,8 @@ test('el tesorero cobra y el asociado, en otro navegador, ve su saldo actualizad
   cuenta = await abrirCuenta(tesorero.page, '70000003', 'Ana Ccori');
   await expect(cuenta.getByTestId('saldo-asociado')).toHaveText('S/ 45.00');
   await expect(cuenta.getByTestId('pago-REC-E2E-001')).toContainText('Revertido');
+  await cuenta.getByRole('button', { name: 'Motivo de la reversa del pago REC-E2E-001' }).click();
+  await expect(cuenta.getByRole('region', { name: 'Reversa del pago' })).toContainText('Error de digitación');
   await ana.page.reload();
   await expect(ana.page.getByTestId('portal-pago-REC-E2E-001')).toContainText('revertido');
   await ana.page.getByRole('navigation', { name: 'Secciones del portal' }).getByRole('link', { name: 'Inicio' }).click();

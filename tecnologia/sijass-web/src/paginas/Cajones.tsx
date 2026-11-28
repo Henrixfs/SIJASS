@@ -4,15 +4,42 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import { ErrorApi } from '../api/cliente';
-import type { AccesoEntregado, EstadoDeCuenta, ResumenAsociado, VistaPago } from '../api/tipos';
+import type { AccesoEntregado, EstadoDeCuenta, PagoConReversa, ResumenAsociado, VistaPago } from '../api/tipos';
 import { mensajeDeError, useApp } from '../contexto';
 import { useCarga, useEnvio } from '../hooks';
-import { formatearSoles, parsearSoles } from '../lib/dinero';
+import { fechaPago, formatearSoles, parsearSoles } from '../lib/dinero';
 import { nuevoUuid } from '../lib/uuid';
 import { Av, Bt, Cajon, Campo, Cargando, ClaveV3, Elegibles, Final, Gotas, Ic, useAvisar } from '../v3/base';
 import { cuando, mesDe } from '../v3/datos';
 
 const ErrorCajon = ({ texto }: { texto: string | null }) => (texto ? <p className="error-cajon" role="alert" data-testid="aviso-error">{texto}</p> : null);
+
+// ───────────────────────── Motivo de una reversa ─────────────────────────
+
+/** Motivo y fecha de la reversa de un pago: se piden al abrirlo (`GET /v1/pagos/:id`). */
+export function MotivoReversa({ pagoId }: { pagoId: string }) {
+  const { api } = useApp();
+  const cargar = useCallback(() => api.solicitar<PagoConReversa>('GET', `/v1/pagos/${pagoId}`), [api, pagoId]);
+  const { datos, error, prohibido, recargar } = useCarga(cargar);
+  return (
+    <div className="motivo-r" id={`motivo-${pagoId}`} data-testid={`motivo-${pagoId}`} role="region" aria-label="Reversa del pago" aria-live="polite">
+      {!datos && !error && !prohibido && <p>Leyendo el motivo…</p>}
+      {prohibido && <p>Su rol no puede ver el detalle de este pago.</p>}
+      {error && !datos && <p>{error} <button type="button" className="mini-bt neutro" onClick={() => void recargar()}>Reintentar</button></p>}
+      {datos && (datos.reversa
+        ? <dl><div><dt>Fecha de la reversa</dt><dd>{fechaPago(datos.reversa.creadaEn)}</dd></div><div><dt>Motivo</dt><dd>{datos.reversa.motivo}</dd></div></dl>
+        : <p>Este pago no tiene una reversa registrada.</p>)}
+    </div>
+  );
+}
+
+/** Botón que abre y cierra el motivo de un pago revertido. */
+export function VerMotivo({ pago, abierto, alternar }: { pago: VistaPago; abierto: boolean; alternar: () => void }) {
+  return (
+    <button type="button" className="mini-bt neutro" aria-expanded={abierto} aria-controls={abierto ? `motivo-${pago.id}` : undefined}
+      aria-label={`Motivo de la reversa del pago ${pago.comprobante}`} onClick={alternar}>{abierto ? 'Ocultar' : 'Motivo'}</button>
+  );
+}
 
 // ───────────────────────── Cuenta de un asociado ─────────────────────────
 
@@ -31,6 +58,7 @@ export function CajonCuenta({ asociadoId, cerrar, alCambiar, cobrar, revertir }:
   const [confirmarBaja, setConfirmarBaja] = useState(false);
   const [confirmarClave, setConfirmarClave] = useState(false);
   const [falla, setFalla] = useState<string | null>(null);
+  const [motivoDe, setMotivoDe] = useState<string | null>(null);
   const { enviando, ejecutar } = useEnvio();
 
   async function acceso() {
@@ -89,7 +117,10 @@ export function CajonCuenta({ asociadoId, cerrar, alCambiar, cobrar, revertir }:
                 <div><b>{mesDe(p.periodo)}</b><small>{p.comprobante} · {cuando(p.pagadoEn, true)}</small></div>
                 <span className={`chip ${p.estado === 'vigente' ? 'ok' : 'gris'}`}>{p.estado === 'vigente' ? 'Vigente' : 'Revertido'}</span>
                 <span className="m">{formatearSoles(p.importeCentimos)}</span>
-                {p.estado === 'vigente' && <button type="button" className="mini-bt" onClick={() => revertir(p, datos)}><Ic n="revertir" />Revertir</button>}
+                {p.estado === 'vigente'
+                  ? <button type="button" className="mini-bt" onClick={() => revertir(p, datos)}><Ic n="revertir" />Revertir</button>
+                  : <VerMotivo pago={p} abierto={motivoDe === p.id} alternar={() => setMotivoDe(motivoDe === p.id ? null : p.id)} />}
+                {motivoDe === p.id && <MotivoReversa pagoId={p.id} />}
               </div>
             ))}
           </div>

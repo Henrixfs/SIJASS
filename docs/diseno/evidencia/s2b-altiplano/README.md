@@ -38,13 +38,17 @@ Diferencias que quedan, a propósito: los datos son los de la demo (por ejemplo,
 | ![Consejo móvil](60-consejo-movil.webp) | Resumen del Consejo a 390 px |
 | ![Asociados móvil](62-asociados-movil.webp) | Padrón a 390 px |
 
+## Funciones recuperadas
+
+Vuelven el motivo y la fecha de las reversas, los filtros del padrón, la confirmación al reactivar una JASS, el detalle de cuota, los filtros de pagos, «Actualizar», la confirmación al salir del portal y la actividad reciente. Se revisaron a 320 y 1440 px con datos simulados (sin desborde y con los controles nuevos de 44 px o más) y la tarjeta de la clave se imprimió a PDF en Chrome: una página, solo la tarjeta. No se probó en una impresora física. Las capturas de arriba son anteriores a este ajuste.
+
 ## Comprobaciones (sobre la compilación final)
 
 | Comprobación | Resultado |
 |---|---|
-| `npm run lint`, `tsc -b`, `npm test` y `npm run build` en `tecnologia/sijass-web/` | Código 0; 158 pruebas |
+| `npm run lint`, `tsc -b`, `npm test` y `npm run build` en `tecnologia/sijass-web/` | Código 0; 164 pruebas |
 | `npx playwright test` en `tecnologia/e2e/` (API real y PostgreSQL) | 15 pruebas aprobadas |
 | `npx playwright test -c playwright.responsive.config.ts` | 23 pruebas aprobadas (320 a 1440 px: sin desborde, controles de 44 px, contraste y teclado) |
 | Recorrido con la API de la demo (todas las pantallas de las capturas) | Sin errores de consola y sin desborde a 390 px |
 
-Es evidencia **local**: falta la ejecución en CI. No es una prueba con personas reales.
+Es evidencia **local**; la ejecución en CI se ve en el PR. No es una prueba con personas reales.
