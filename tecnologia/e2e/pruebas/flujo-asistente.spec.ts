@@ -4,8 +4,8 @@ import { ingresar, persona as entrar, tokenDe } from '../ayudas.js';
 
 async function persona(browser: Browser, cuenta: typeof OPERADOR) {
   const { contexto, page } = await entrar(browser, cuenta);
-  await page.getByRole('link', { name: 'Asistente' }).click();
-  await expect(page.getByRole('heading', { name: 'Asistente técnico' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Secciones del personal' }).getByRole('link', { name: 'Asistente' }).click();
+  await expect(page.getByRole('heading', { name: 'Asistente documental' })).toBeVisible();
   return { contexto, page };
 }
 
@@ -14,7 +14,7 @@ test('el operador consulta al asistente: citas con documento, versión y página
   await expect(page.getByTestId('aviso-corpus-ejemplo')).toContainText('Documentos de EJEMPLO');
 
   await page.getByLabel('Su pregunta').fill('¿Cómo se hace la lectura con el comparador DPD?');
-  await page.getByRole('button', { name: 'Consultar' }).click();
+  await page.getByRole('button', { name: 'Preguntar' }).click();
   await expect(page.getByTestId('respuesta')).toHaveAttribute('data-estado', 'respondida');
   const primera = page.getByTestId('citas').getByRole('listitem').first();
   await expect(primera).toContainText('EJEMPLO — Guía de lectura de cloro residual con comparador DPD');
@@ -22,13 +22,13 @@ test('el operador consulta al asistente: citas con documento, versión y página
   await expect(primera).toContainText('comparador DPD');
 
   await page.getByLabel('Su pregunta').fill('¿Cuál es la capital de Francia?');
-  await page.getByRole('button', { name: 'Consultar' }).click();
+  await page.getByRole('button', { name: 'Preguntar' }).click();
   await expect(page.getByTestId('respuesta')).toHaveAttribute('data-estado', 'sin-evidencia');
   await expect(page.getByTestId('mensaje-asistente')).toContainText('No se encontró evidencia');
   await expect(page.getByTestId('citas')).toHaveCount(0);
 
   await page.getByLabel('Su pregunta').fill('¿Cuánto hipoclorito debo agregar al reservorio?');
-  await page.getByRole('button', { name: 'Consultar' }).click();
+  await page.getByRole('button', { name: 'Preguntar' }).click();
   await expect(page.getByTestId('respuesta')).toHaveAttribute('data-estado', 'fuera-de-alcance');
   await expect(page.getByTestId('mensaje-asistente')).toContainText('protocolo validado');
   await expect(page.getByTestId('citas')).toHaveCount(0);

@@ -73,14 +73,20 @@ async function contrastes(page: Page, selectores: string[]): Promise<Record<stri
       const c = canal / 255;
       return suma + [0.2126, 0.7152, 0.0722][i] * (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
     }, 0);
+    // Las capas semitransparentes se mezclan con las de atrás; una foto o degradado sin color de
+    // respaldo cuenta como negro (el peor caso para el texto oscuro de estas pantallas).
     const fondoDe = (el: Element): number[] | null => {
+      const capas: number[][] = [];
       for (let nodo: Element | null = el; nodo; nodo = nodo.parentElement) {
         const estilo = getComputedStyle(nodo);
         const [r, g, b, a] = canales(estilo.backgroundColor);
-        if ((a ?? 1) > 0.99) return [r, g, b];
-        if (estilo.backgroundImage !== 'none') return null;
+        const alfa = a ?? 1;
+        if (alfa > 0.99) { capas.push([r, g, b, 1]); break; }
+        if (alfa > 0) capas.push([r, g, b, alfa]);
+        else if (estilo.backgroundImage !== 'none') { capas.push([0, 0, 0, 1]); break; }
       }
-      return [255, 255, 255];
+      if (!capas.length || capas.at(-1)![3] < 1) capas.push([255, 255, 255, 1]);
+      return capas.reverse().reduce((abajo, [r, g, b, a]) => [r * a + abajo[0] * (1 - a), g * a + abajo[1] * (1 - a), b * a + abajo[2] * (1 - a)], [0, 0, 0]);
     };
     const resultado: Record<string, number> = {};
     for (const selector of lista) {
@@ -134,7 +140,7 @@ for (const ancho of [320, 360, 390, 768, 1440]) {
     const cajas = await botones.evaluateAll((els) => els.map((el) => { const c = el.getBoundingClientRect(); return { ancho: Math.round(c.width), alto: Math.round(c.height) }; }));
     for (const c of cajas) expect(Math.min(c.ancho, c.alto)).toBeGreaterThanOrEqual(56);
     expect(await controlesPequenos(page, 'form')).toEqual([]);
-    const paso1 = await contrastes(page, ['h1', '.descripcion-ingreso', '.tipo-acceso strong', '.tipo-acceso small', '.ayuda-ingreso span']);
+    const paso1 = await contrastes(page, ['h1', '.cristal .q', '.tipo-acceso strong', '.tipo-acceso small', '.cristal .ayuda']);
     exigirContraste(paso1);
     await captura(page, 'ingreso-1-elegir', ancho);
 
@@ -160,7 +166,7 @@ for (const ancho of [320, 360, 390, 768, 1440]) {
     await page.keyboard.press('Tab');
     expect(await enfocado(page)).toBe('Ingresar');
     expect(await controlesPequenos(page, 'form')).toEqual([]);
-    const paso2 = await contrastes(page, ['.etiqueta-ingreso', '#documento-ingreso', '.ayuda-campo', '.tipo-elegido', '.boton-ingreso']);
+    const paso2 = await contrastes(page, ['label[for="documento-ingreso"]', '#documento-ingreso', '.ayuda-c', '[data-testid="tipo-elegido"]', '.boton-ingreso']);
     exigirContraste(paso2);
     await sinDesborde(page);
     await captura(page, 'ingreso-2-datos', ancho);
@@ -245,17 +251,19 @@ for (const ancho of [320, 360, 390, 768, 1440]) {
     await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
     await page.waitForURL(/\/personal$/);
     // La pantalla del personal se carga bajo demanda: se espera su navegación (o el botón de menú en móvil).
-    const menu = page.getByRole('button', { name: 'Menú' });
-    await expect(menu.or(page.getByRole('navigation', { name: 'Secciones del personal' }))).toBeVisible();
+    const menu = page.getByRole('button', { name: 'Menú', exact: true });
+    await expect(menu.or(page.getByRole('navigation', { name: 'Secciones del personal' })).first()).toBeVisible();
     if (await menu.isVisible() && (await menu.getAttribute('aria-expanded')) === 'false') await menu.click();
     await page.getByRole('navigation', { name: 'Secciones del personal' }).getByRole('link', { name: 'Equipo', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Equipo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Equipo', exact: true })).toBeVisible();
     await sinDesborde(page);
     await captura(page, 'equipo-1-lista', ancho);
 
-    await page.getByLabel('Nombre completo').fill('Elena Tesorera de la comunidad San Miguel');
-    await page.getByLabel('Número de DNI').fill('30000001');
-    const agregar = page.getByRole('button', { name: 'Agregar' });
+    await page.getByRole('button', { name: 'Agregar persona' }).click();
+    const formulario = page.getByRole('dialog', { name: 'Agregar persona' });
+    await formulario.getByLabel('Nombre completo').fill('Elena Tesorera de la comunidad San Miguel');
+    await formulario.getByLabel('Número de DNI').fill('30000001');
+    const agregar = formulario.getByRole('button', { name: 'Agregar', exact: true });
     expect((await agregar.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await agregar.click();
 
@@ -269,7 +277,7 @@ for (const ancho of [320, 360, 390, 768, 1440]) {
     expect(await controlesPequenos(page, 'dialog[open]')).toEqual([]);
     const tamano = await dialogo.getByTestId('clave-temporal').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
     expect(tamano).toBeGreaterThanOrEqual(24);
-    const entrega = await contrastes(page, ['dialog[open] .clave-grande', 'dialog[open] .entrega-clave p', 'dialog[open] h2']);
+    const entrega = await contrastes(page, ['dialog[open] .clave-v3 .palabras span', 'dialog[open] .clave-v3 .nota', 'dialog[open] h2']);
     exigirContraste(entrega);
     await captura(page, 'entrega-clave', ancho, false);
 

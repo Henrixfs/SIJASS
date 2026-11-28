@@ -1,7 +1,10 @@
 import { useCallback, useState, type FormEvent } from 'react';
 import { mensajeDeError, useApp } from '../contexto';
 import { useCarga, useEnvio } from '../hooks';
-import { Aviso, Boton, Carga, ErrorConsulta, SinPermiso } from '../ui';
+import { FOTOS } from '../lib/fotos';
+import { SinPermiso } from '../ui';
+import { Banda, Bt, Cargando, Ic } from '../v3/base';
+import { TituloVista } from './NavegacionPersonal';
 
 interface Cita {
   documentoId: string;
@@ -23,113 +26,90 @@ interface Documentos {
   documentos: Array<{ id: string; titulo: string; version: string; estado: string; paginas: number }>;
 }
 
+const SUGERIDAS = ['¿Cómo se mide el cloro residual con un comparador DPD?', '¿Qué hago si hay una fuga de agua?'];
+
 /**
- * Asistente documental (s1d). Muestra respuestas extractivas con documento, versión y página, o la
- * abstención y el aviso de fuera de alcance. Todo se renderiza como texto (React lo escapa). No
- * hay ningún control de cálculo de dosis: ese cálculo requiere un protocolo validado.
+ * Asistente documental (maqueta v3). Respuestas extractivas con documento, versión y página, o la
+ * abstención. Todo se muestra como texto. No calcula dosis ni dictamina la calidad del agua.
  */
 export function Asistente() {
   const { api } = useApp();
   const cargarDocumentos = useCallback(() => api.solicitar<Documentos>('GET', '/v1/asistente/documentos'), [api]);
   const documentos = useCarga(cargarDocumentos);
   const [pregunta, setPregunta] = useState('');
+  const [preguntada, setPreguntada] = useState<string | null>(null);
   const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { enviando: consultando, ejecutar } = useEnvio();
 
-  async function consultar(e: FormEvent) {
-    e.preventDefault();
-    const texto = pregunta.trim();
-    if (!texto) {
-      setError('Escriba una pregunta para consultar.');
-      return;
-    }
+  async function consultar(texto: string) {
+    const q = texto.trim();
+    if (!q) return setError('Escribe una pregunta para consultar.');
     await ejecutar(async () => {
       setError(null);
       setRespuesta(null);
+      setPreguntada(q);
       try {
-        setRespuesta(await api.solicitar<Respuesta>('POST', '/v1/asistente/consultas', { pregunta: texto }));
+        setRespuesta(await api.solicitar<Respuesta>('POST', '/v1/asistente/consultas', { pregunta: q }));
       } catch (err) {
         setError(mensajeDeError(err));
       }
     });
   }
 
+  if (documentos.prohibido) return <SinPermiso />;
   const esEjemplo = (documentos.datos?.corpus ?? respuesta?.corpus) === 'ejemplo';
+  const docs = documentos.datos?.documentos ?? [];
   return (
-    <section aria-labelledby="titulo-asistente">
-      <h1 id="titulo-asistente">Asistente técnico</h1>
-      {esEjemplo && (
-        <p className="aviso" role="note" data-testid="aviso-corpus-ejemplo">
-          <strong>Documentos de EJEMPLO.</strong> El corpus que consulta este asistente es ficticio y no está aprobado: no lo use como procedimiento. Cuando se incorpore el corpus aprobado, este aviso desaparece.
-        </p>
-      )}
-      <p className="suave">
-        Responde solo con lo que dicen los documentos y cita documento, versión y página. Si no hay evidencia, lo indica. No calcula dosis ni dictamina la calidad del agua.
-      </p>
-
-      <form className="tarjeta" onSubmit={consultar} aria-label="Consultar al asistente">
-        <label>
-          Su pregunta
-          <textarea name="pregunta" required maxLength={500} rows={3} value={pregunta} disabled={consultando} onChange={(e) => setPregunta(e.target.value)} placeholder="Por ejemplo: ¿Cómo se hace la lectura con el comparador DPD?" />
-        </label>
-        <div className="pie-consulta"><small className="suave">{pregunta.length} / 500</small>
-        <Boton type="submit" variante="primario" disabled={consultando}>
-          {consultando ? 'Consultando…' : 'Consultar'}
-        </Boton></div>
-      </form>
-
-      {error && <Aviso tipo="error">{error}</Aviso>}
-      {consultando && <Carga />}
-      {documentos.error && <ErrorConsulta error={documentos.error} recargar={documentos.recargar} />}
-      {documentos.prohibido && <SinPermiso />}
-
-      {respuesta && (
-        <article className="respuesta" aria-live="polite" data-testid="respuesta" data-estado={respuesta.estado}>
-          {respuesta.estado === 'respondida' && (
-            <>
-              <h2>Respuesta</h2>
-              <p className="aviso" data-testid="mensaje-asistente">{respuesta.mensaje}</p>
-              <h3>Citas</h3>
-              <ol data-testid="citas">
-                {respuesta.citas.map((c) => (
-                  <li key={`${c.documentoId}-${c.pagina}`}>
-                    <p className="cita-origen">
-                      <strong>{c.documento}</strong> · versión {c.version} · página {c.pagina}
-                    </p>
-                    <blockquote>{c.fragmento}</blockquote>
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
-          {respuesta.estado === 'sin-evidencia' && (
-            <>
-              <h2>Sin evidencia</h2>
-              <p data-testid="mensaje-asistente">{respuesta.mensaje}</p>
-            </>
-          )}
-          {respuesta.estado === 'fuera-de-alcance' && (
-            <>
-              <h2>Fuera de alcance</h2>
-              <p data-testid="mensaje-asistente">{respuesta.mensaje}</p>
-            </>
-          )}
-        </article>
-      )}
-
-      {documentos.datos && (
-        <details className="documentos">
-          <summary>Documentos disponibles ({documentos.datos.documentos.length})</summary>
-          <ul data-testid="documentos">
-            {documentos.datos.documentos.map((d) => (
-              <li key={d.id}>
-                {d.titulo} · versión {d.version} · {d.paginas} {d.paginas === 1 ? 'página' : 'páginas'}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </section>
+    <>
+      <TituloVista titulo="Asistente documental" sub="Responde con citas de los documentos, o dice que no sabe" />
+      {esEjemplo && <p className="alerta" role="note" data-testid="aviso-corpus-ejemplo"><Ic n="shield" />Documentos de EJEMPLO, no aprobados: no los uses como procedimiento.</p>}
+      <div className="asis">
+        <div className="asis-i">
+          <form className="campo grande-c" aria-label="Consultar al asistente" onSubmit={(e: FormEvent) => { e.preventDefault(); void consultar(pregunta); }}>
+            <Ic n="lupa" />
+            <input name="pregunta" maxLength={500} placeholder="Escribe tu pregunta" value={pregunta} disabled={consultando} aria-label="Su pregunta" onChange={(e) => setPregunta(e.target.value)} />
+            <Bt type="submit" clase="teal" disabled={consultando}>{consultando ? 'Consultando…' : 'Preguntar'}</Bt>
+          </form>
+          <div className="sugeridas" role="group" aria-label="Preguntas sugeridas">
+            {SUGERIDAS.map((q) => <button key={q} type="button" aria-pressed={preguntada === q} disabled={consultando} onClick={() => { setPregunta(q); void consultar(q); }}>{q}</button>)}
+          </div>
+          {error && <p className="error-cajon" role="alert" data-testid="aviso-error">{error}</p>}
+          <div className="tarj respuesta" aria-live="polite">
+            {consultando && <Cargando texto="Buscando en los documentos…" />}
+            {!consultando && !respuesta && (
+              <div className="vacio-r"><Ic n="libro" className="grande" /><b>Pregunta lo que necesites</b><p>Respondo solo con lo que dicen los documentos y cito documento, versión y página. No calculo dosis ni califico el agua.</p></div>
+            )}
+            {respuesta && (
+              <div data-testid="respuesta" data-estado={respuesta.estado}>
+                {respuesta.estado === 'respondida' ? (
+                  <>
+                    <span className="sobre-r">Respuesta con citas</span>
+                    <p className="mensaje-asis" data-testid="mensaje-asistente">{respuesta.mensaje}</p>
+                    <ol data-testid="citas" className="citas-v3">
+                      {respuesta.citas.map((c, n) => (
+                        <li key={`${c.documentoId}-${c.pagina}`}>
+                          <blockquote><i>{n + 1}</i><p>{c.fragmento}</p><cite><Ic n="libro" /><span><strong>{c.documento}</strong> · versión {c.version} · página {c.pagina}</span></cite></blockquote>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
+                ) : (
+                  <div className="vacio-r">
+                    <Ic n={respuesta.estado === 'sin-evidencia' ? 'gota' : 'shield'} className="grande" />
+                    <b>{respuesta.estado === 'sin-evidencia' ? 'No encontré evidencia suficiente' : 'Fuera de alcance'}</b>
+                    <p data-testid="mensaje-asistente">{respuesta.mensaje}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="asis-d">
+          <Banda foto={FOTOS.humedal} sobre="Biblioteca" titulo={documentos.datos ? `${docs.length} ${docs.length === 1 ? 'documento' : 'documentos'}` : 'Documentos'}
+            texto={documentos.datos ? <span data-testid="documentos" className="docs-v3">{docs.length ? docs.map((d) => <span key={d.id}>{d.titulo} · versión {d.version} · {d.paginas} {d.paginas === 1 ? 'página' : 'páginas'}</span>) : 'Todavía no hay documentos.'}</span> : 'Leyendo la biblioteca…'} />
+        </div>
+      </div>
+    </>
   );
 }

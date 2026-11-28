@@ -7,6 +7,8 @@ interface Estado<T> {
   error: string | null;
   prohibido: boolean;
   cargando: boolean;
+  /** Momento (ms) de la última carga que terminó bien. */
+  actualizadoEn: number | null;
 }
 
 /**
@@ -15,16 +17,16 @@ interface Estado<T> {
  * es que el rol no tiene esa sección.
  */
 export function useCarga<T>(cargar: () => Promise<T>) {
-  const [estado, setEstado] = useState<Estado<T>>({ datos: null, error: null, prohibido: false, cargando: true });
+  const [estado, setEstado] = useState<Estado<T>>({ datos: null, error: null, prohibido: false, cargando: true, actualizadoEn: null });
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let activo = true;
     cargar().then(
-      (datos) => activo && setEstado({ datos, error: null, prohibido: false, cargando: false }),
+      (datos) => activo && setEstado({ datos, error: null, prohibido: false, cargando: false, actualizadoEn: Date.now() }),
       (e: unknown) => {
         if (!activo) return;
-        if (e instanceof ErrorApi && e.estado === 403) setEstado({ datos: null, error: null, prohibido: true, cargando: false });
+        if (e instanceof ErrorApi && e.estado === 403) setEstado({ datos: null, error: null, prohibido: true, cargando: false, actualizadoEn: null });
         else setEstado((s) => ({ ...s, error: mensajeDeError(e), cargando: false }));
       },
     );

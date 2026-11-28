@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { CLAVE_E2E, CONSEJO, PLATAFORMA, ROSA, TESORERO, type Cuenta } from '../datos.js';
-import { consultar, ingresar, persona, tokenPorApi } from '../ayudas.js';
+import { abrirCuenta, consultar, ingresar, irA, persona, tokenPorApi } from '../ayudas.js';
 
 // Cuentas que estas pruebas crean desde la propia interfaz (DNI ficticios, solo en la base desechable).
 const TESORERA: Cuenta = { documento: '30000001', nombre: 'Elena Tesorera E2E', tipo: 'administrador' };
@@ -17,24 +17,19 @@ const estado: { claveTesorera: string; claveMarcelina: string; claveRufino: stri
 
 test.describe.configure({ mode: 'serial' });
 
-/** Lee la clave temporal del cuadro de entrega, la comprueba y lo cierra con «Listo». */
-async function recibirClave(page: Page, titulo: string): Promise<string> {
-  const entrega = page.getByRole('dialog', { name: titulo });
-  await expect(entrega).toBeVisible();
-  const clave = (await entrega.getByTestId('clave-temporal').textContent())?.trim() ?? '';
+/** Lee la clave temporal que muestra un cajón, la comprueba y lo cierra con el botón dado. */
+async function recibirClave(page: Page, cajon: Locator, cerrar: string): Promise<string> {
+  await expect(cajon.getByTestId('clave-temporal')).toBeVisible();
+  const clave = (await cajon.getByTestId('clave-temporal').textContent())?.trim() ?? '';
   expect(clave).toMatch(TRES_PALABRAS);
-  await expect(entrega.getByText('no se podrá ver de nuevo')).toBeVisible();
-  await entrega.getByRole('button', { name: 'Listo' }).click();
+  await expect(cajon.getByText(/Se muestra una sola vez/).first()).toBeVisible();
+  await cajon.getByRole('button', { name: cerrar, exact: true }).first().click();
   await expect(page.getByTestId('clave-temporal')).toHaveCount(0);
   expect(await page.textContent('body')).not.toContain(clave);
   // La clave nunca queda en el almacenamiento del navegador.
   const guardado = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
   expect(guardado).not.toContain(clave);
   return clave;
-}
-
-async function irA(page: Page, seccion: string) {
-  await page.getByRole('navigation', { name: 'Secciones del personal' }).getByRole('link', { name: seccion, exact: true }).click();
 }
 
 /** Primer ingreso del personal: cambia la clave recibida por una elegida. */
@@ -75,11 +70,13 @@ test('el Consejo crea a Tesorería, que entra con la clave recibida, la cambia y
   const consejo = await persona(browser, CONSEJO);
   await expect(consejo.page.getByTestId('nombre-jass')).toHaveText('JASS Demostración');
   await irA(consejo.page, 'Equipo');
-  await consejo.page.getByLabel('Nombre completo').fill(TESORERA.nombre);
-  await consejo.page.getByLabel('Número de DNI').fill(TESORERA.documento);
-  await consejo.page.getByLabel('Rol').selectOption('tesorero');
-  await consejo.page.getByRole('button', { name: 'Agregar' }).click();
-  estado.claveTesorera = await recibirClave(consejo.page, 'Acceso creado');
+  await consejo.page.getByRole('button', { name: 'Agregar persona' }).click();
+  const formulario = consejo.page.getByRole('dialog', { name: 'Agregar persona' });
+  await formulario.getByLabel('Nombre completo').fill(TESORERA.nombre);
+  await formulario.getByLabel('Número de DNI').fill(TESORERA.documento);
+  await formulario.getByRole('button', { name: 'Tesorería' }).click();
+  await formulario.getByRole('button', { name: 'Agregar', exact: true }).click();
+  estado.claveTesorera = await recibirClave(consejo.page, consejo.page.getByRole('dialog', { name: 'Acceso creado' }), 'Listo');
   const fila = consejo.page.getByTestId(`fila-equipo-${TESORERA.nombre}`);
   await expect(fila).toContainText('Tesorería');
   await expect(fila).toContainText('Activo');
@@ -116,15 +113,18 @@ test('el Consejo crea a Tesorería, que entra con la clave recibida, la cambia y
 test('Tesorería crea el acceso de una asociada, que entra con la clave generada y ve su cuenta', async ({ browser }) => {
   const tesorera = await persona(browser, TESORERA, CLAVE_TESORERA);
   await irA(tesorera.page, 'Asociados');
-  await tesorera.page.locator('input[name="nombre"]').fill(MARCELINA.nombre);
-  await tesorera.page.locator('input[name="documento"]').fill(MARCELINA.documento);
   await tesorera.page.getByRole('button', { name: 'Registrar asociado' }).click();
+  const registro = tesorera.page.getByRole('dialog', { name: 'Registrar asociado' });
+  await registro.getByLabel('Nombre completo').fill(MARCELINA.nombre);
+  await registro.getByLabel('DNI (8 números)').fill(MARCELINA.documento);
+  await registro.getByRole('button', { name: 'Registrar', exact: true }).click();
+  await expect(tesorera.page.getByTestId('aviso-ok')).toContainText('quedó registrado');
   const fila = tesorera.page.getByTestId(`fila-${MARCELINA.documento}`);
-  await expect(fila).toContainText('Sin acceso');
-  await fila.getByRole('button', { name: 'Crear acceso' }).click();
-  await tesorera.page.getByRole('dialog').getByRole('button', { name: 'Crear acceso' }).click();
-  estado.claveMarcelina = await recibirClave(tesorera.page, 'Acceso creado');
-  await expect(fila).toContainText('Con acceso');
+  await expect(fila).toContainText('sin acceso');
+  const cuenta = await abrirCuenta(tesorera.page, MARCELINA.documento, MARCELINA.nombre);
+  await cuenta.getByRole('button', { name: 'Crear acceso' }).click();
+  estado.claveMarcelina = await recibirClave(tesorera.page, cuenta, 'Cerrar');
+  await expect(fila).toContainText('con acceso');
 
   const marcelina = await persona(browser, MARCELINA, estado.claveMarcelina);
   await expect(marcelina.page).toHaveURL(/\/portal$/);
@@ -156,11 +156,10 @@ test('tras el bloqueo por intentos fallidos, Tesorería restablece la clave y la
   await expect(page.getByTestId('error-ingreso')).toContainText('Acceso temporalmente bloqueado');
 
   const tesorera = await persona(browser, TESORERA, CLAVE_TESORERA);
-  await irA(tesorera.page, 'Asociados');
-  const fila = tesorera.page.getByTestId(`fila-${MARCELINA.documento}`);
-  await fila.getByRole('button', { name: 'Restablecer clave' }).click();
-  await tesorera.page.getByRole('dialog').getByRole('button', { name: 'Restablecer clave' }).click();
-  const nueva = await recibirClave(tesorera.page, 'Clave restablecida');
+  const cuenta = await abrirCuenta(tesorera.page, MARCELINA.documento, MARCELINA.nombre);
+  await cuenta.getByRole('button', { name: 'Restablecer clave' }).click();
+  await cuenta.getByRole('button', { name: 'Sí, restablecer' }).click();
+  const nueva = await recibirClave(tesorera.page, cuenta, 'Cerrar');
   expect(nueva).not.toBe(estado.claveMarcelina);
 
   // La clave anterior ya no sirve, la nueva entra aunque la cuenta estuviera bloqueada.
@@ -189,11 +188,13 @@ test('la plataforma crea una JASS y su Consejo solo ve lo suyo; al suspenderla, 
   await plataforma.page.getByRole('button', { name: 'Nueva JASS' }).click();
   const formulario = plataforma.page.getByRole('dialog', { name: 'Nueva JASS' });
   await formulario.getByLabel('Nombre de la JASS').fill(NOMBRE_JASS_NUEVA);
+  await formulario.getByRole('button', { name: 'Siguiente' }).click();
   await formulario.getByLabel('Departamento').fill('Ayacucho');
-  await formulario.getByLabel('Nombre completo').fill(RUFINO.nombre);
+  await formulario.getByRole('button', { name: 'Siguiente' }).click();
+  await formulario.getByLabel('Nombre de quien preside el Consejo').fill(RUFINO.nombre);
   await formulario.getByLabel('Número de DNI').fill(RUFINO.documento);
   await formulario.getByRole('button', { name: 'Crear JASS' }).click();
-  estado.claveRufino = await recibirClave(plataforma.page, 'JASS creada');
+  estado.claveRufino = await recibirClave(plataforma.page, plataforma.page.getByRole('dialog', { name: 'JASS creada' }), 'Listo');
   const filaJass = plataforma.page.getByTestId(`fila-jass-${NOMBRE_JASS_NUEVA}`);
   await expect(filaJass).toContainText('Activa');
   await expect(filaJass).toContainText('Ayacucho');
@@ -210,7 +211,8 @@ test('la plataforma crea una JASS y su Consejo solo ve lo suyo; al suspenderla, 
   await irA(page, 'Asociados');
   await expect(page.getByText('Aún no hay asociados registrados.')).toBeVisible();
   expect(await page.textContent('body')).not.toMatch(/Rosa Quispe|Luis Huamán|Ana Ccori|Marcelina/);
-  await irA(page, 'Reservorios');
+  await irA(page, 'El agua');
+  await expect(page.getByTestId('sin-reservorios')).toBeVisible();
   expect(await page.textContent('body')).not.toContain('Reservorio E2E');
   await irA(page, 'Equipo');
   await expect(page.getByTestId('tabla-equipo')).not.toContainText(TESORERA.nombre);
@@ -223,17 +225,17 @@ test('la plataforma crea una JASS y su Consejo solo ve lo suyo; al suspenderla, 
   const lista = JSON.parse((await consultar(page, tokenRufino, '/v1/asociados')).cuerpo) as { asociados: unknown[] };
   expect(lista.asociados).toEqual([]);
 
-  // Suspensión: sus cuentas no entran, y al reactivarla vuelven a entrar con la misma clave.
+  // Suspensión y reactivación (ambas con confirmación): suspendida no entra; reactivada vuelve a entrar con la misma clave.
   await filaJass.getByRole('button', { name: 'Suspender' }).click();
-  await plataforma.page.getByRole('dialog').getByRole('button', { name: 'Suspender la JASS' }).click();
-  await expect(plataforma.page.getByText(`${NOMBRE_JASS_NUEVA} quedó suspendida`)).toBeVisible();
+  await filaJass.getByRole('button', { name: 'Sí, suspender' }).click();
+  await expect(plataforma.page.getByTestId('aviso-ok')).toContainText(`${NOMBRE_JASS_NUEVA} quedó suspendida`);
   const suspendida = await browser.newContext();
   const paginaSuspendida = await suspendida.newPage();
   await ingresar(paginaSuspendida, RUFINO, CLAVE_RUFINO);
   await expect(paginaSuspendida.getByTestId('error-ingreso')).toContainText('Tu JASS está suspendida');
   await filaJass.getByRole('button', { name: 'Reactivar' }).click();
-  await plataforma.page.getByRole('dialog').getByRole('button', { name: 'Reactivar la JASS' }).click();
-  await expect(plataforma.page.getByText(`${NOMBRE_JASS_NUEVA} volvió a estar activa`)).toBeVisible();
+  await filaJass.getByRole('button', { name: 'Sí, reactivar' }).click();
+  await expect(plataforma.page.getByTestId('aviso-ok')).toContainText(`${NOMBRE_JASS_NUEVA} volvió a estar activa`);
   await paginaSuspendida.getByRole('button', { name: 'Ingresar', exact: true }).click();
   await paginaSuspendida.waitForURL(/\/personal$/);
 

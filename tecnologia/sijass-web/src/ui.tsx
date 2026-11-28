@@ -16,7 +16,7 @@ export function Aviso({ tipo, children }: { tipo: 'ok' | 'error' | 'advertencia'
 }
 
 export function SinPermiso() {
-  return <div data-testid="sin-permiso"><Aviso tipo="advertencia">Su rol no tiene acceso a esta sección.</Aviso></div>;
+  return <div data-testid="sin-permiso" className="sin-permiso" role="status"><p>Su rol no tiene acceso a esta sección.</p></div>;
 }
 
 export function Carga() {

@@ -94,9 +94,12 @@ export class ClienteApi {
 
   private async enviar(metodo: string, ruta: string, cuerpo?: unknown, cabeceras: Record<string, string> = {}): Promise<Response> {
     const encabezados: Record<string, string> = { Accept: 'application/json', ...cabeceras };
-    if (cuerpo !== undefined) encabezados['Content-Type'] = 'application/json';
+    // Un archivo (la foto de un reporte) viaja tal cual, con su propio tipo; lo demás, como JSON.
+    const binario = typeof Blob !== 'undefined' && cuerpo instanceof Blob;
+    if (binario) encabezados['Content-Type'] = cuerpo.type || 'application/octet-stream';
+    else if (cuerpo !== undefined) encabezados['Content-Type'] = 'application/json';
     if (this.tokenAcceso) encabezados.Authorization = `Bearer ${this.tokenAcceso}`;
-    return this.peticion(ruta, { method: metodo, headers: encabezados, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
+    return this.peticion(ruta, { method: metodo, headers: encabezados, body: cuerpo === undefined ? undefined : binario ? cuerpo : JSON.stringify(cuerpo) });
   }
 
   private async aError(r: Response): Promise<ErrorApi> {
@@ -222,6 +225,22 @@ export class ClienteApi {
   }
 
   async solicitar<T>(metodo: string, ruta: string, cuerpo?: unknown, cabeceras?: Record<string, string>): Promise<T> {
+    const r = await this.responder(metodo, ruta, cuerpo, cabeceras);
+    if (!r.ok) throw await this.aError(r);
+    if (r.status === 204) return undefined as T;
+    return (await r.json()) as T;
+  }
+
+  /** Descarga un archivo protegido (la foto de un reporte); `null` si no existe (`404`). */
+  async solicitarArchivo(ruta: string): Promise<Blob | null> {
+    const r = await this.responder('GET', ruta, undefined, { Accept: '*/*' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw await this.aError(r);
+    return r.blob();
+  }
+
+  /** Envía la solicitud y, ante un `401` de sesión vencida, renueva una vez y la repite. */
+  private async responder(metodo: string, ruta: string, cuerpo?: unknown, cabeceras?: Record<string, string>): Promise<Response> {
     const version = this.versionSesion;
     const token = this.tokenAcceso;
     let r = await this.enviar(metodo, ruta, cuerpo, cabeceras);
@@ -237,8 +256,6 @@ export class ClienteApi {
         this.onSesionExpirada();
       }
     }
-    if (!r.ok) throw await this.aError(r);
-    if (r.status === 204) return undefined as T;
-    return (await r.json()) as T;
+    return r;
   }
 }

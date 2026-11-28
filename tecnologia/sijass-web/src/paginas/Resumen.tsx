@@ -1,176 +1,243 @@
-import { useCallback } from 'react';
-import { ArrowUpRight, Clock, Droplet, FlaskConical, RefreshCw, TriangleAlert, UsersRound, Wallet } from 'lucide-react';
+/**
+ * Inicio de cada rol (maqueta v3). Consejo: el agua y la caja de un vistazo. Tesorería: la caja.
+ * Operación: medir el agua y atender reportes (sin dinero). Todas las cifras salen de la API.
+ */
+import { useState } from 'react';
 import { useApp } from '../contexto';
-import { useCarga } from '../hooks';
 import { formatearSoles } from '../lib/dinero';
-import { haceTiempo, horaLima, periodoTitulo } from '../lib/periodos';
-import { ROL_NOMBRE, seccionesPersonal } from '../lib/personal';
-import { Boton, ErrorConsulta, SinPermiso } from '../ui';
-import { IconoModulo } from '../identidad';
-import { ahoraEnLima } from '../lib/medicion';
-import { EnlacePersonal } from './NavegacionPersonal';
+import { FOTOS } from '../lib/fotos';
+import { CATEGORIAS } from '../lib/incidencias';
+import {
+  Av, Banda, Bt, Cargando, Columnas, Estanque, FalloCarga, fotoReservorio, Gotas, Heroe, Ic, IconoCat, useAvisar,
+} from '../v3/base';
+import { cuando, diaLargo, esHoy, mesDe, primerNombre, saludo, useCaja, useIncidencias, useServicio, valorCloro, type Caja, type Servicio } from '../v3/datos';
+import { CajonLectura, TarjetaRes } from './Agua';
+import { CajonesCaja, type Pedido } from './Cajones';
+import { ChipEstado, CLAVE_REPORTE, FilaInc } from './Reportes';
 
-interface FilaPadron { id: string; nombre: string; estado: 'activo' | 'baja'; saldoCentimos: number }
-interface Medicion { id: string; metodo: string; valor: number; unidad: string; tomadaEn: string; estado: string }
-interface Servicio {
-  reservorios: Array<{ id: string; nombre: string; ultima: Medicion | null; fallo: boolean }>;
-  recientes: Array<{ reservorio: string; medicion: Medicion }>;
-  consultadoEn: number;
-}
-
-const DIA_MS = 24 * 60 * 60 * 1000;
-
-function Esqueleto({ filas = 3 }: { filas?: number }) {
-  return <div className="resumen-esqueleto" role="status" aria-label="Cargando"><span className="solo-lectores">Cargando…</span>{Array.from({ length: filas }, (_, i) => <span key={i} className="esqueleto" aria-hidden="true" />)}</div>;
-}
-
-function Indicador({ icono, etiqueta, valor, nota, tono = 'claro', testid }: { icono: 'asociados' | 'saldo' | 'reservorios' | 'lecturas'; etiqueta: string; valor: string; nota: string; tono?: 'claro' | 'oscuro'; testid?: string }) {
-  const Icono = { asociados: UsersRound, saldo: Wallet, reservorios: Droplet, lecturas: FlaskConical }[icono];
-  return (
-    <article className={`indicador ${tono}`} aria-label={etiqueta}>
-      <span className="indicador-icono"><Icono size={20} aria-hidden="true" /></span>
-      <span className="indicador-etiqueta">{etiqueta}</span>
-      <strong className="indicador-valor" data-testid={testid}>{valor}</strong>
-      <span className="indicador-nota">{nota}</span>
-    </article>
-  );
+function useIr() {
+  const { navegar } = useApp();
+  return {
+    a: (seccion: string) => navegar(`/personal/${seccion}`),
+    reporte: (id: string) => {
+      try { sessionStorage.setItem(CLAVE_REPORTE, id); } catch { /* sin almacenamiento: se abre el primero */ }
+      navegar('/personal/reportes');
+    },
+  };
 }
 
 export function Resumen({ rol }: { rol: string }) {
-  const { api } = useApp();
-  const finanzas = rol === 'consejo' || rol === 'tesorero';
+  if (rol === 'tesorero') return <ResumenTesoreria />;
+  if (rol === 'operador') return <ResumenOperacion />;
+  return <ResumenConsejo />;
+}
 
-  const cargarPadron = useCallback(
-    () => finanzas ? api.solicitar<{ asociados: FilaPadron[] }>('GET', '/v1/asociados') : Promise.resolve(null),
-    [api, finanzas],
+function useEncabezado() {
+  const { sesion } = useApp();
+  return { dia: diaLargo(), jass: sesion?.jass?.nombre ?? 'Tu JASS', hola: `${saludo()}, ${primerNombre(sesion?.nombre ?? '') || 'equipo'}.` };
+}
+
+function CifrasCaja({ caja, recargar, error }: { caja: Caja | null; recargar: () => void; error: string | null }) {
+  if (error && !caja) return <FalloCarga texto={error} recargar={recargar} />;
+  if (!caja) return <Cargando texto="Sumando la caja…" />;
+  return null;
+}
+
+// ───────────────────────── Actualizar y actividad reciente ─────────────────────────
+
+interface Carga { cargando: boolean; error: string | null; actualizadoEn: number | null; recargar: () => Promise<void> }
+
+/** Pie de cada inicio: cuándo se leyeron los datos y «Actualizar» para volver a pedirlos. */
+function PieActualizar({ cargas }: { cargas: Carga[] }) {
+  const cargando = cargas.some((c) => c.cargando);
+  const leidas = cargas.map((c) => c.actualizadoEn).filter((x): x is number => x !== null);
+  const fallo = !cargando && leidas.length > 0 && cargas.some((c) => c.error);
+  return (
+    <div className="pie-act">
+      <span role="status">
+        {cargando ? 'Actualizando…' : fallo ? 'No se pudo actualizar todo: se muestra lo último que se leyó.'
+          : leidas.length ? `Última actualización: ${cuando(new Date(Math.min(...leidas)).toISOString())}` : ''}
+      </span>
+      <Bt clase="borde" ic="actualizar" disabled={cargando} onClick={() => cargas.forEach((c) => void c.recargar())}>Actualizar</Bt>
+    </div>
   );
-  const cargarServicio = useCallback(async (): Promise<Servicio> => {
-    const { reservorios } = await api.solicitar<{ reservorios: Array<{ id: string; nombre: string }> }>('GET', '/v1/reservorios');
-    const filas = await Promise.all(reservorios.map(async (r) => {
-      try {
-        const { mediciones } = await api.solicitar<{ mediciones: Medicion[] }>('GET', `/v1/reservorios/${r.id}/mediciones`);
-        const vigentes = mediciones.filter((m) => m.estado === 'vigente').sort((a, b) => Date.parse(b.tomadaEn) - Date.parse(a.tomadaEn));
-        return { id: r.id, nombre: r.nombre, ultima: vigentes[0] ?? null, fallo: false, vigentes: vigentes.slice(0, 5) };
-      } catch {
-        return { id: r.id, nombre: r.nombre, ultima: null, fallo: true, vigentes: [] as Medicion[] };
-      }
-    }));
-    const recientes = filas
-      .flatMap((f) => f.vigentes.map((medicion) => ({ reservorio: f.nombre, medicion })))
-      .sort((a, b) => Date.parse(b.medicion.tomadaEn) - Date.parse(a.medicion.tomadaEn))
-      .slice(0, 5);
-    return { reservorios: filas.map(({ id, nombre, ultima, fallo }) => ({ id, nombre, ultima, fallo })), recientes, consultadoEn: Date.now() };
-  }, [api]);
+}
 
-  const padron = useCarga(cargarPadron);
-  const servicio = useCarga(cargarServicio);
+/** Las cinco lecturas vigentes más recientes entre todos los reservorios. */
+function ActividadReciente({ servicio }: { servicio: Servicio }) {
+  const recientes = servicio.reservorios
+    .flatMap((r) => r.vigentes.slice(-5).map((m) => ({ reservorio: r.nombre, m })))
+    .sort((a, b) => Date.parse(b.m.tomadaEn) - Date.parse(a.m.tomadaEn))
+    .slice(0, 5);
+  return (
+    <section className="tarj actividad" aria-labelledby="titulo-actividad">
+      <h3 id="titulo-actividad">Actividad reciente <small>últimas lecturas</small></h3>
+      {recientes.length === 0 && <p className="nota">Todavía no hay mediciones registradas.</p>}
+      <ul>
+        {recientes.map(({ reservorio, m }) => (
+          <li className="fam corta" key={m.id}>
+            <span className="icono-act" aria-hidden="true"><Ic n="flask" /></span>
+            <div><b>Lectura de {reservorio}</b><small>{cuando(m.tomadaEn)}</small></div>
+            <span className="m">{valorCloro(m.valor)} {m.unidad}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
-  const principal = seccionesPersonal.find((s) => s.id === (rol === 'operador' ? 'campo' : 'asociados'));
-  const filas = padron.datos?.asociados ?? [];
-  const activos = filas.filter((f) => f.estado === 'activo');
-  const conSaldo = activos.filter((f) => f.saldoCentimos > 0);
-  const porCobrar = conSaldo.reduce((suma, f) => suma + f.saldoCentimos, 0);
-  const ahora = servicio.datos?.consultadoEn ?? 0;
-  const instante = new Date(ahora);
-  const lista = servicio.datos?.reservorios ?? [];
-  const conLecturaReciente = lista.filter((r) => r.ultima && ahora - Date.parse(r.ultima.tomadaEn) < DIA_MS).length;
-  const ultimaGeneral = lista.map((r) => r.ultima?.tomadaEn).filter((x): x is string => !!x).sort().at(-1);
+// ───────────────────────── Consejo ─────────────────────────
+
+function ResumenConsejo() {
+  const e = useEncabezado();
+  const ir = useIr();
+  const caja = useCaja();
+  const servicio = useServicio();
+  const inc = useIncidencias();
+  const c = caja.datos;
+  const t = c?.totales;
+  const activos = c?.asociados.filter((a) => a.estado === 'activo').length ?? 0;
+  const abiertas = (inc.datos ?? []).filter((i) => i.estado !== 'cerrada');
+  const familias = [...(t?.conSaldo ?? [])].sort((a, b) => b.saldoCentimos - a.saldoCentimos).slice(0, 2);
+  const reservorios = servicio.datos?.reservorios ?? [];
 
   return (
-    <section className="resumen" aria-labelledby="titulo-resumen">
-      <div className="resumen-cabecera">
-        <div>
-          <h1 id="titulo-resumen">Dashboard general</h1>
-          <p className="suave">Monitorea la operación y el servicio de tu JASS.</p>
+    <>
+      <Heroe foto={FOTOS.laguna69} sobre={`${e.dia} · ${e.jass}`} titulo={e.hola} texto="Así va el agua de tu comunidad hoy."
+        acciones={<><Bt clase="agua" ic="megafono" onClick={() => ir.a('reportes')}>Ver reportes</Bt><Bt clase="claro" ic="wallet" onClick={() => ir.a('cuotas')}>Cuotas y pagos</Bt></>}
+        vidrio={<><small>Saldo por cobrar</small><div className="n" data-testid="indicador-por-cobrar">{t ? formatearSoles(t.pendiente) : '…'}</div><small data-testid="indicador-con-saldo">{t ? `${t.conSaldo.length} de ${activos} asociados con saldo` : 'Leyendo el padrón…'}</small></>} />
+      <CifrasCaja caja={c} error={caja.error} recargar={() => void caja.recargar()} />
+      {c && t && (
+        <div className="fila-2">
+          <Estanque pct={t.pct} cobrado={t.cobrado} emitido={t.emitido} />
+          <Columnas porMes={t.porMes} importeCuota={t.importeCuota} />
+          <section className="tarj">
+            <h3>Familias con saldo <small>{t.conSaldo.length}</small></h3>
+            {familias.length === 0 && <p className="nota" style={{ padding: '12px 0' }}>Todas las familias están al día.</p>}
+            {familias.map((a) => {
+              const n = c.cuentas[a.id]?.cuotas.filter((x) => x.pendienteCentimos > 0).length;
+              return <div className="fam" key={a.id}><Av id={a.id} tam="m" /><div><b>{a.nombre}</b><small>{n !== undefined ? `${n} ${n === 1 ? 'cuota' : 'cuotas'} con saldo` : 'Con saldo'}</small></div><span className="m">{formatearSoles(a.saldoCentimos)}</span></div>;
+            })}
+            <Bt clase="teal ancho" onClick={() => ir.a('asociados')}>Ver asociados</Bt>
+          </section>
         </div>
-        <span className="chip-periodo" data-testid="periodo-actual"><Clock size={16} aria-hidden="true" />{periodoTitulo(ahoraEnLima(new Date()).slice(0, 7))}</span>
-      </div>
-
-      {principal && (
-        <section className="resumen-hero" aria-label="Acceso principal">
-          <svg className="hero-ondas" viewBox="0 0 560 180" preserveAspectRatio="xMaxYMax slice" aria-hidden="true" focusable="false">
-            <g fill="none" stroke="#2cc5ae" strokeLinecap="round">
-              <path d="M0 150 C80 140 150 150 230 110 C310 70 380 95 460 60 C500 44 530 30 560 20" strokeWidth="1.8" />
-              <path d="M40 175 C120 165 200 170 280 135 C350 105 430 120 560 70" strokeWidth="1" strokeOpacity=".5" />
-            </g>
-            <circle cx="342" cy="88" r="12" fill="#2cc5ae" fillOpacity=".2" /><circle cx="342" cy="88" r="4.5" fill="#44e0c4" />
-            <circle cx="472" cy="55" r="3.5" fill="#9af0dd" />
-          </svg>
-          <span className="hero-etiqueta">Operación del servicio</span>
-          <h2>El servicio de agua de tu comunidad</h2>
-          <p>{principal.descripcion}.</p>
-          <EnlacePersonal id={principal.id} className="hero-boton"><IconoModulo id={principal.id} />Abrir {principal.nombre.toLowerCase()}<ArrowUpRight size={18} aria-hidden="true" /></EnlacePersonal>
-        </section>
       )}
-
-      <div className="indicadores">
-        {finanzas && (padron.prohibido ? null : padron.cargando && !padron.datos ? <article className="indicador claro"><Esqueleto filas={3} /></article> : padron.error && !padron.datos ? (
-          <article className="indicador claro indicador-error" role="alert"><TriangleAlert size={20} aria-hidden="true" /><strong>No pudimos cargar el padrón</strong><Boton onClick={() => void padron.recargar()}>Reintentar</Boton></article>
-        ) : (
-          <>
-            <Indicador icono="asociados" etiqueta="Asociados activos" valor={String(activos.length)} nota={`${filas.length - activos.length} ${filas.length - activos.length === 1 ? 'dado' : 'dados'} de baja · ${filas.length} en el padrón`} testid="indicador-activos" />
-            <Indicador icono="saldo" tono="oscuro" etiqueta="Saldo por cobrar" valor={formatearSoles(porCobrar)} nota="Suma de los saldos pendientes del padrón" testid="indicador-por-cobrar" />
-            <Indicador icono="asociados" etiqueta="Asociados con saldo" valor={String(conSaldo.length)} nota={activos.length ? `de ${activos.length} activos` : 'Sin asociados activos'} testid="indicador-con-saldo" />
-          </>
-        ))}
-        {servicio.cargando && !servicio.datos
-          ? <article className="indicador claro"><Esqueleto filas={3} /></article>
-          : servicio.datos && (
-            <>
-              <Indicador icono="reservorios" etiqueta="Reservorios registrados" valor={String(lista.length)} nota={ultimaGeneral ? `Última lectura ${haceTiempo(ultimaGeneral, instante)}` : 'Aún sin lecturas'} testid="indicador-reservorios" />
-              {!finanzas && <Indicador icono="lecturas" tono="oscuro" etiqueta="Con lectura en 24 h" valor={`${conLecturaReciente} de ${lista.length}`} nota="Según las lecturas manuales vigentes" testid="indicador-lecturas" />}
-            </>
-          )}
-      </div>
-
-      <div className="resumen-columnas">
-        <section className="resumen-panel" aria-labelledby="titulo-reservorios">
-          <header><h2 id="titulo-reservorios">Reservorios</h2><span className="chip-neutro">{lista.length} en registro</span></header>
-          <p className="suave">Última lectura manual de cloro residual</p>
-          {servicio.cargando && !servicio.datos && <Esqueleto />}
-          {servicio.prohibido && <SinPermiso />}
-          {servicio.error && !servicio.datos && <ErrorConsulta error={servicio.error} recargar={servicio.recargar} />}
-          {servicio.datos && lista.length === 0 && <p className="vacio" data-testid="sin-reservorios-resumen">Aún no hay reservorios registrados.</p>}
-          {lista.length > 0 && (
-            <ul className="resumen-lista">
-              {lista.map((r) => {
-                const reciente = r.ultima && ahora - Date.parse(r.ultima.tomadaEn) < DIA_MS;
-                return (
-                  <li key={r.id}>
-                    <span className="icono-lista"><Droplet size={18} aria-hidden="true" /></span>
-                    <span className="texto-lista"><strong>{r.nombre}</strong>
-                      <small>{r.fallo ? 'No pudimos consultar sus lecturas' : r.ultima ? `${r.ultima.valor.toLocaleString('es-PE')} ${r.ultima.unidad} · ${haceTiempo(r.ultima.tomadaEn, instante)}` : 'Sin lecturas registradas'}</small></span>
-                    <span className={`chip-estado ${r.ultima ? (reciente ? 'ok' : 'aviso') : 'neutro'}`}><i aria-hidden="true" />{r.ultima ? (reciente ? 'Lectura reciente' : 'Sin lectura reciente') : 'Sin lecturas'}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        <section className="resumen-panel" aria-labelledby="titulo-actividad">
-          <header><h2 id="titulo-actividad">Actividad reciente</h2></header>
-          <p className="suave">Últimas mediciones registradas</p>
-          {servicio.cargando && !servicio.datos && <Esqueleto />}
-          {servicio.datos && servicio.datos.recientes.length === 0 && <p className="vacio">Todavía no hay mediciones registradas.</p>}
-          {servicio.datos && servicio.datos.recientes.length > 0 && (
-            <ul className="resumen-lista">
-              {servicio.datos.recientes.map(({ reservorio, medicion }) => (
-                <li key={medicion.id}>
-                  <span className="icono-lista"><FlaskConical size={18} aria-hidden="true" /></span>
-                  <span className="texto-lista"><strong>Lectura de {reservorio}</strong><small>{medicion.valor.toLocaleString('es-PE')} {medicion.unidad}</small></span>
-                  <span className="hora-lista">{haceTiempo(medicion.tomadaEn, instante)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="fila-3">
+        {servicio.datos ? reservorios.slice(0, 2).map((r, i) => <TarjetaRes key={r.id} r={r} foto={fotoReservorio(i)} metodos={servicio.datos!.metodos} onClick={() => ir.a('agua')} />)
+          : servicio.error ? <FalloCarga texto={servicio.error} recargar={() => void servicio.recargar()} /> : <Cargando texto="Leyendo los reservorios…" />}
+        {servicio.datos && reservorios.length === 0 && <section className="tarj vacio" data-testid="sin-reservorios-resumen"><b>Aún no hay reservorios</b><p>Créalos en «El agua».</p><Bt clase="borde" onClick={() => ir.a('agua')}>Ir a El agua</Bt></section>}
+        <section className="tarj rep-mini">
+          <h3>Reportes abiertos <small>{inc.datos ? abiertas.length : '…'}</small></h3>
+          {inc.datos && abiertas.length === 0 && <p className="nota">No hay reportes abiertos.</p>}
+          {abiertas.slice(0, 3).map((i) => (
+            <button type="button" className="mini-inc" key={i.id} onClick={() => ir.reporte(i.id)}>
+              <Av id={i.reportadoPor?.asociadoId ?? i.id} tam="s" /><IconoCat categoria={i.categoria} tam="s" />
+              <span><b>{CATEGORIAS[i.categoria].texto}</b><small>{i.reportadoPor?.nombre ?? 'Asociado'}</small></span>
+              <ChipEstado i={i} />
+            </button>
+          ))}
+          <Bt clase="borde ancho" ic="megafono" onClick={() => ir.a('reportes')}>Atender reportes</Bt>
         </section>
       </div>
+      {servicio.datos && <ActividadReciente servicio={servicio.datos} />}
+      <PieActualizar cargas={[caja, servicio, inc]} />
+    </>
+  );
+}
 
-      <footer className="resumen-pie">
-        <span>{servicio.datos ? `Última actualización · hoy a las ${horaLima(instante)}` : 'Actualizando…'} · Rol {ROL_NOMBRE[rol] ?? ''}</span>
-        <Boton onClick={() => { void padron.recargar(); void servicio.recargar(); }} disabled={padron.cargando || servicio.cargando}><RefreshCw size={16} aria-hidden="true" /> Actualizar</Boton>
-      </footer>
-    </section>
+// ───────────────────────── Tesorería ─────────────────────────
+
+function ResumenTesoreria() {
+  const e = useEncabezado();
+  const ir = useIr();
+  const caja = useCaja();
+  const [pedido, setPedido] = useState<Pedido | null>(null);
+  const c = caja.datos;
+  const t = c?.totales;
+  const ultimos = (t?.pagos ?? []).filter((p) => p.estado === 'vigente').slice(0, 3);
+  const deudores = [...(t?.conSaldo ?? [])].sort((a, b) => b.saldoCentimos - a.saldoCentimos).slice(0, 2);
+  const activos = c?.asociados.filter((a) => a.estado === 'activo').length ?? 0;
+
+  return (
+    <>
+      <Heroe foto={FOTOS.orilla} sobre={`${e.dia} · Tesorería`} titulo={e.hola} texto="Así va la caja de la JASS."
+        acciones={<><Bt clase="agua" ic="wallet" onClick={() => setPedido({ tipo: 'pago', id: null })}>Registrar pago</Bt><Bt clase="claro" ic="mas" onClick={() => setPedido({ tipo: 'generar' })}>Generar cuotas</Bt></>}
+        vidrio={<><small>Cobrado</small><div className="n" data-testid="indicador-cobrado">{t ? formatearSoles(t.cobrado) : '…'}</div><small data-testid="indicador-por-cobrar">{t ? `Falta cobrar ${formatearSoles(t.pendiente)}` : 'Leyendo la caja…'}</small></>} />
+      <CifrasCaja caja={c} error={caja.error} recargar={() => void caja.recargar()} />
+      {c && t && (
+        <>
+          <div className="fila-2">
+            <Estanque pct={t.pct} cobrado={t.cobrado} emitido={t.emitido} />
+            <Columnas porMes={t.porMes} importeCuota={t.importeCuota} />
+            <section className="tarj">
+              <h3>Últimos pagos <small>{ultimos.length}</small></h3>
+              {ultimos.length === 0 && <p className="nota" style={{ padding: '12px 0' }}>Todavía no hay pagos.</p>}
+              {ultimos.map((p) => <div className="fam corta" key={p.id}><Av id={p.asociadoId} tam="s" /><div><b>{p.nombre}</b><small>{mesDe(p.periodo)} · {cuando(p.pagadoEn, true)}</small></div><span className="m">{formatearSoles(p.importeCentimos)}</span></div>)}
+            </section>
+          </div>
+          <div className="fila-3 cobrar">
+            {deudores.map((a) => (
+              <article className="tarj deudor" key={a.id}>
+                <Av id={a.id} tam="xl" />
+                <div className="info"><b>{a.nombre}</b><span className="monto">{formatearSoles(a.saldoCentimos)}</span></div>
+                {c.cuentas[a.id] ? <Gotas cuotas={c.cuentas[a.id].cuotas} /> : <div className="gotas" />}
+                <Bt clase="teal ancho" ic="wallet" onClick={() => setPedido({ tipo: 'pago', id: a.id })}>Cobrar</Bt>
+              </article>
+            ))}
+            <Banda foto={FOTOS.bofedales} sobre={t.conSaldo.length ? 'Por cobrar' : 'Todo al día'} titulo={formatearSoles(t.pendiente)} texto={`${activos - t.conSaldo.length} al día · ${t.conSaldo.length} con saldo`}>
+              <Bt clase="agua" ic="users" onClick={() => ir.a('asociados')}>Ver asociados</Bt>
+            </Banda>
+          </div>
+        </>
+      )}
+      <PieActualizar cargas={[caja]} />
+      <CajonesCaja pedido={pedido} setPedido={setPedido} caja={c} recargar={() => void caja.recargar()} />
+    </>
+  );
+}
+
+// ───────────────────────── Operación ─────────────────────────
+
+function ResumenOperacion() {
+  const e = useEncabezado();
+  const ir = useIr();
+  const servicio = useServicio();
+  const inc = useIncidencias();
+  const avisar = useAvisar();
+  const [lectura, setLectura] = useState<{ id: string | null } | null>(null);
+  const lista = servicio.datos?.reservorios ?? [];
+  const hoy = lista.filter((r) => r.ultima && esHoy(r.ultima.tomadaEn));
+  const falta = lista.filter((r) => !hoy.includes(r));
+  const abiertas = (inc.datos ?? []).filter((i) => i.estado !== 'cerrada');
+
+  return (
+    <>
+      <Heroe foto={FOTOS.gocta} sobre={`${e.dia} · Operación`} titulo={e.hola} texto="Tu jornada: medir el agua y atender reportes."
+        acciones={<><Bt clase="agua" ic="flask" disabled={!lista.length} onClick={() => setLectura({ id: falta[0]?.id ?? null })}>Registrar lectura</Bt><Bt clase="claro" ic="megafono" onClick={() => ir.a('reportes')}>Ver reportes</Bt></>}
+        vidrio={<><small>Reservorios con lectura hoy</small><div className="n" data-testid="indicador-lecturas">{servicio.datos ? `${hoy.length} de ${lista.length}` : '…'}</div><small>{!servicio.datos ? 'Leyendo los reservorios…' : falta.length ? `Falta: ${falta.map((r) => r.nombre).join(', ')}` : 'Todos tienen lectura de hoy'}</small></>} />
+      {servicio.error && !servicio.datos && <FalloCarga texto={servicio.error} recargar={() => void servicio.recargar()} />}
+      {!servicio.datos && !servicio.error && <Cargando texto="Leyendo los reservorios…" />}
+      {servicio.datos && lista.length === 0 && <section className="tarj vacio" data-testid="sin-reservorios-resumen"><b>Aún no hay reservorios</b><p>Pide al Consejo que los registre.</p></section>}
+      {lista.length > 0 && (
+        <div className="fila-res">
+          {lista.slice(0, 3).map((r, i) => (
+            <div className="res-w" key={r.id}>
+              <TarjetaRes r={r} foto={fotoReservorio(i)} metodos={servicio.datos!.metodos} onClick={() => ir.a('agua')} />
+              <Bt clase="agua anotar" ic="mas" aria-label={`Anotar lectura de ${r.nombre}`} onClick={() => setLectura({ id: r.id })}>Anotar</Bt>
+            </div>
+          ))}
+        </div>
+      )}
+      <section className="tarj bandeja-mini">
+        <h3>Reportes por atender <small>{inc.datos ? abiertas.length : '…'}</small></h3>
+        <div className="rejilla-inc">
+          {abiertas.slice(0, 4).map((i) => <FilaInc key={i.id} i={i} onClick={() => ir.reporte(i.id)} />)}
+          {inc.datos && abiertas.length === 0 && <p className="nota">No hay reportes por atender.</p>}
+        </div>
+      </section>
+      {servicio.datos && lista.length > 0 && <ActividadReciente servicio={servicio.datos} />}
+      <PieActualizar cargas={[servicio, inc]} />
+      {lectura && <CajonLectura reservorios={lista} inicial={lectura.id} cerrar={() => setLectura(null)} alGuardar={() => { setLectura(null); avisar('Lectura guardada'); void servicio.recargar(); }} />}
+    </>
   );
 }

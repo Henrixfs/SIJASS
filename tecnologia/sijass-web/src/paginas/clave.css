@@ -1,3 +1,5 @@
+/* Capa antigua: cualquier regla de v3 (sin capa) gana sobre estas. */
+@layer antiguo {
 /* Cambio de clave y entrega de claves temporales (s2a). */
 .pagina-clave { min-height: 100svh; max-width: none; margin: 0; padding: 24px 20px; display: grid; place-items: center; background: #f2f7fa; }
 .tarjeta-clave { width: min(100%, 30rem); padding: 28px 26px; background: #fff; border: 1px solid #e3edf2; border-radius: 28px; box-shadow: 0 18px 50px rgb(8 38 58 / 9%); color: #102b3b; }
@@ -31,19 +33,22 @@
 }
 .acciones-clave { display: flex; gap: 12px; flex-wrap: wrap; }
 .acciones-clave button { flex: 1 1 9rem; }
+}
+
+/* Tarjeta de la clave para imprimir (hija directa de <body>). Sin capa: manda sobre el resto. */
 .tarjeta-impresa { display: none; }
 
 @media print {
-  body * { visibility: hidden !important; }
-  .tarjeta-impresa, .tarjeta-impresa * { visibility: visible !important; }
-  .tarjeta-impresa {
-    display: block; position: fixed; left: 0; top: 0; width: 90mm; padding: 6mm; border: 1px solid #000; border-radius: 4mm;
-    color: #000; background: #fff; font: 11pt/1.4 'Inter Tight', system-ui, sans-serif;
+  body:has(> .tarjeta-impresa) { margin: 0 !important; padding: 0 !important; min-height: 0 !important; background: #fff !important; }
+  body:has(> .tarjeta-impresa) > :not(.tarjeta-impresa) { display: none !important; }
+  body > .tarjeta-impresa {
+    display: block; box-sizing: border-box; width: 90mm; margin: 0; padding: 6mm; border: 1px solid #000; border-radius: 4mm;
+    color: #000; background: #fff; font: 11pt/1.4 'Inter Tight', system-ui, sans-serif; overflow-wrap: anywhere;
   }
-  .tarjeta-impresa h3 { margin: 0 0 3mm; font: 800 14pt/1.1 'Manrope', system-ui, sans-serif; }
-  .tarjeta-impresa dl { margin: 0 0 3mm; }
-  .tarjeta-impresa dt { font-size: 9pt; text-transform: uppercase; letter-spacing: .06em; }
-  .tarjeta-impresa dd { margin: 0 0 2mm; font-weight: 700; }
-  .tarjeta-impresa .clave-impresa { font: 800 16pt/1.2 'Manrope', system-ui, sans-serif; padding: 2mm 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
-  .tarjeta-impresa p { font-size: 9pt; margin: 3mm 0 0; }
+  body > .tarjeta-impresa h3 { margin: 0 0 3mm; font: 800 14pt/1.1 'Manrope', system-ui, sans-serif; color: #000; }
+  body > .tarjeta-impresa dl { margin: 0 0 3mm; }
+  body > .tarjeta-impresa dt { font-size: 9pt; text-transform: uppercase; letter-spacing: .06em; }
+  body > .tarjeta-impresa dd { margin: 0 0 2mm; font-weight: 700; }
+  body > .tarjeta-impresa .clave-impresa { font: 800 16pt/1.2 'Manrope', system-ui, sans-serif; padding: 2mm 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
+  body > .tarjeta-impresa p { margin: 3mm 0 0; font-size: 9pt; color: #000; }
 }

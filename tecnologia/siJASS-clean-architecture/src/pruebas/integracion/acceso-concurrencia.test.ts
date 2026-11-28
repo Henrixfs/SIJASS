@@ -102,7 +102,7 @@ describe('concurrencia de acceso y pagos (PostgreSQL)', () => {
       const s = await e.casos.autenticar.ejecutar({ documento: esc.tesoreroA.documento, contrasena: CLAVE });
       const intentos = await Promise.allSettled(Array.from({ length: 5 }, () => e.casos.renovar.ejecutar({ tokenRefresco: s.tokenRefresco })));
       assert.equal(intentos.filter((i) => i.status === 'fulfilled').length, 1, `ronda ${ronda}`);
-      for (const i of intentos) if (i.status === 'rejected') assert.ok(i.reason instanceof ErrorNoAutenticado);
+      for (const i of intentos) if (i.status === 'rejected') assert.ok(i.reason instanceof ErrorNoAutenticado, `ronda ${ronda}: ${String(i.reason)}`);
     }
   });
 
